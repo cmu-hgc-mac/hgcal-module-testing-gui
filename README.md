@@ -1,4 +1,4 @@
-# ModuleTestWrapper
+# HGCal Module Testing GUI
 A GUI for HGCAL hexaboard and silicon module testing
 
 ## Motivation
@@ -8,8 +8,8 @@ We have been using detailed procedures for module testing, and though these do w
 The GUI can be installed by simply cloning this repository. You will also need to  install `PySimpleGUI` (and let's preemptively install `psycopg2` as well):
 ```
 pip3 install PySimpleGUI psycopg2
-git clone https://gitlab.cern.ch/acrobert/moduletestwrapper.git
-cd moduletestwrapper
+git clone https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui.git
+cd hgcal-module-testing-gui
 ```
 
 Also, if you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
