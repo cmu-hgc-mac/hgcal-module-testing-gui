@@ -1,7 +1,7 @@
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
-from Keithley2400 import Keithley2400
+from Keithley2410 import Keithley2410
 from time import sleep
 from dbtools import *
 import os
@@ -384,7 +384,7 @@ def connect_HV(state):
             ps = 1
             update_state(state, 'ps', ps)
         else:
-            ps = Keithley2400()
+            ps = Keithley2410()
             update_state(state, 'ps', ps)
         keith.close()
     
