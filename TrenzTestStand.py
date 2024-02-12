@@ -23,7 +23,7 @@ class TrenzTestStand:
         self.fwloaded = False
         self.services = False
         self.hostname = hostname
-        print(f' >> Connecting to Trenz at {self.hostname}...')
+        print(f' >> TrenzTestStand: Connecting to Trenz at {self.hostname}...')
 
         time.sleep(2)
         
@@ -42,13 +42,14 @@ class TrenzTestStand:
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username='root', pkey=k)
         # at this point, can consider to be "connected"
-        print(' >> Connected')
+        print(' >> TrenzTestStand: Connected')
 
     def _runcmd(self, cmd):
         """
         Class to run an arbitrary bash command over ssh. Currently sleeps for three seconds to ensure safety.
         """
-        
+
+        print(' >> TrenzTestStand:', cmd)
         ssh_stdin, ssh_stdout, ssh_stderr = self.ssh.exec_command(cmd)
         time.sleep(3)
         ssh_stdin.close()
@@ -72,16 +73,16 @@ class TrenzTestStand:
                             '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f', # LD Right
                             '40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f'] # LD Right
         for line in ssh_stdout.readlines():
-            print(' >> fw:', line.strip('\n'))
+            print('   >> fw:', line.strip('\n'))
             # check FW load              
             if 'Loaded the device tree overlay successfully using the zynqMP FPGA manager' in line:
-                print(' >> Loaded firmware')
+                print(' >> TrenzTestStand: Loaded firmware')
                 firmware_loaded = True
             
             # check channels in listdevice
             for dl in listdevice_lines:
                 if dl in line:
-                    print(' >> Discovered ROC channels')
+                    print(' >> TrenzTestStand: Discovered ROC channels')
                     channels_found = True
             
             if firmware_loaded and channels_found:
@@ -123,7 +124,7 @@ class TrenzTestStand:
         if check1 and check2:
             daq_initiated = True
         if daq_initiated:
-            print(' >> DAQ server initiated')
+            print(' >> TrenzTestStand: DAQ server initiated')
         
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status i2c-server.service')    
         board_discovered = False
@@ -135,7 +136,7 @@ class TrenzTestStand:
         i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
                            '[I2C] Board identification: V3 LD Semi or Half HB']
         for line in ssh_stdout.readlines():
-            print(' >> i2c:', line.strip('\n'))
+            print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 check1 = True
 
@@ -146,15 +147,15 @@ class TrenzTestStand:
         if check1 and check2:
             board_discovered = True
         if board_discovered:
-            print(' >> Identified LD Full Hexaboard')
+            print(' >> TrenzTestStand: Identified LD Full Hexaboard')
 
         if board_discovered and daq_initiated and error_check:
             self.services = True
-            print(' >> Started services successfully')
+            print(' >> TrenzTestStand: Started services successfully')
             return True
         else:
             self.services = False
-            print(' -- Error in starting services')
+            print(' -- TrenzTestStand: Error in starting services')
             return False
 
     def statusservers(self):
@@ -170,6 +171,7 @@ class TrenzTestStand:
             error_check = False
 
         for line in ssh_stdout.readlines():
+            print('   >> daq:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 daq_running = True
 
@@ -180,14 +182,15 @@ class TrenzTestStand:
             error_check = False
 
         for line in ssh_stdout.readlines():
+            print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 i2c_running = True
 
         if daq_running and  i2c_running:
-            print(' >> Services up and running')
+            print(' >> TrenzTestStand: Services up and running')
             self.services = True
         else:
-            print(f' -- Services not running: DAQ {daq_running} I2C {i2c_running}')
+            print(f' -- TrenzTestStand: Services not running: DAQ {daq_running} I2C {i2c_running}')
             self.services = False
         return daq_running, i2c_running
 
@@ -200,7 +203,7 @@ class TrenzTestStand:
         Shuts the Trenz down remotely. Tested many times and works properly.
         """
 
-        print(' >> Shutting down the Trenz test stand')
+        print(' >> TrenzTestStand: Shutting down the Trenz test stand')
         ssh_stdout, ssh_stderr = self._runcmd('shutdown now')
         time.sleep(5)
         return ssh_stdout.readlines(), ssh_stderr.readlines()

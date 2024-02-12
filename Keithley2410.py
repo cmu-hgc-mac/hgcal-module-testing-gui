@@ -73,7 +73,7 @@ class Keithley2410:
         self._write("SYSTem:LOCal")
 
     def _write(self, writeStr):
-        print('write', writeStr)
+        print(' >> Keithley2410 Write:', writeStr)
         """Write command with built-in delay. Defaults to 100ms
         """
         self._inst.write(writeStr)
@@ -82,12 +82,12 @@ class Keithley2410:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
-        print('query', queryStr)
+        print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
 
         response = self._inst.query(queryStr, wait).strip("\r\n")
-        print('resp', response)
+        print(' >> Keithley2410 Response:', response)
         return response
 
     def _read(self):

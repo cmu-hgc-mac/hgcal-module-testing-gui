@@ -15,7 +15,6 @@ with open('configuration.yaml', 'r') as file:
 sys.path.insert(1, './hexmap')
 from plot_summary import make_hexmap_plots_from_file
 import plot_summary
-print(plot_summary.__file__)
 
 class CentosPC:
     """
@@ -37,7 +36,7 @@ class CentosPC:
         self.initiated = False
         # start the DAQ client
         os.system('systemctl restart daq-client.service')
-        print(' >> DAQ client started. PC ready to run tests.')
+        print(' >> CentosPC: DAQ client started. PC ready to run tests.')
 
         self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
         self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
@@ -60,17 +59,19 @@ class CentosPC:
         Restarts DAQ client service by running a bash command, then checks the status and returns it.
         """
 
+        print(' >> CentosPC: systemctl restart daq-client.service')
         os.system('systemctl restart daq-client.service')
         sleep(1)
+        print(' >> CentosPC: systemctl status daq-client')
         stdout = os.popen('systemctl status daq-client').read().split('\n')
         client = False
         for line in stdout:
             if 'Active: active (running)' in line:
-                print(' >> DAQ client running')
+                print(' >> CentosPC: DAQ client running')
                 client = True
 
         if not client:
-            print(' -- Error in DAQ client')
+            print(' -- CentosPC: Error in DAQ client')
 
         return client
         
@@ -78,16 +79,17 @@ class CentosPC:
         """
         Checks the status of the DAQ client and returns it.
         """
-        
+
+        print(' >> CentosPC: systemctl status daq-client')
         stdout = os.popen('systemctl status daq-client').read().split('\n')
         client = False
         for line in stdout:
             if 'Active: active (running)' in line:
-                print(' >> DAQ client running')
+                print(' >> CentosPC: DAQ client running')
                 client = True
                 
         if not client:
-            print(' -- Error in DAQ client')
+            print(' -- CentosPC: Error in DAQ client')
         return client
 
     def _run_script(self, scriptname, config=None):
@@ -108,7 +110,7 @@ class CentosPC:
         
         script = self.scriptloc + scriptname + '.py'
 
-        print(f' >> Running {scriptname}.py...')
+        print(f' >> CentosPC: Running {scriptname}.py...')
         if not self.initiated:
             os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
         else:
@@ -116,7 +118,7 @@ class CentosPC:
 
         runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{scriptname}/*')
         runs.sort()
-        print(f' >> Output of {scriptname}.py located in {runs[-1]}')
+        print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
         self.initiated = True
 
         return f'{scriptname}/{runs[-1]}'
@@ -129,13 +131,13 @@ class CentosPC:
         dirname = self._run_script('pedestal_run')
         
         if BV is not None:
-            print('>>> ',configuration["DataLoc"], self.modulename, dirname)
-            #os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-            #return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
-            return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-            
-        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-        
+            print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
+            try:
+                os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
+                return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
+            except:
+                print(' -- CentosPC: outdict renaming failed; continuing')
+                return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
         
     def pedestal_scan(self):
         self._run_script('pedestal_scan')
@@ -164,13 +166,12 @@ class CentosPC:
 
         # use the last run by default but allow any                                             
         labelind = ind if ind != -1 else len(runs)-1
-        print(BV, runs, labelind)
         if BV is None and 'BV' in runs[labelind]:
             BV = runs.split('BV').rstrip('\n ')    
         label = f'{self.modulename}_run{labelind}' if BV is None else f'{self.modulename}_run{labelind}_BV{BV}'
 
         make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}', label=label)
-        print(f' >> Summary plots located in ~/data/{self.modulename}')
+        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename}')
 
         return f'{configuration["DataLoc"]}/{self.modulename}/{label}'
             
@@ -191,4 +192,4 @@ def static_make_hexmaps(modulename, ind=-1):
     label = f'{modulename}_run{labelind}' if BV is None else f'{modulename}_run{labelind}_BV{BV}'
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)
-    print(f' >> Summary plots located in {configuration["DataLoc"]}/{modulename}')
+    print(f' >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{modulename}')
