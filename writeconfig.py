@@ -8,12 +8,12 @@ config_dict = {'DebugMode': True,
                #'HexmapPath': '/home/hgcal/hexmap',
                'HVResource': 'ASRL/dev/ttyUSB0::INSTR',
                'HVTerminal': 'Rear', # 'Front' for front terminals, 'Rear' for rear terminals
-               'HVWiresPolarization': 'Reverse' # 'Reverse' for reverse bias (V in [0, 800]) 'Forward' for forward bias (V in [-800, 0])
+               'HVWiresPolarization': 'Reverse', # 'Reverse' for reverse bias (V in [0, 800]) 'Forward' for forward bias (V in [-800, 0])
                'PCKeyLoc': '/home/hgcal/.ssh/id_rsa',
                'HasHVSwitch': True,
                'HasRHSensor': False,
-               'Inspectors': ['Andrew', 'Sindhu', 'Jessica', 'Eva', 'Pritam', 'Aleesha']
+               'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt']
                }
 
-with open('test_config.yaml','w') as yconf:
+with open('configuration.yaml','w') as yconf:
     yaml_string=yaml.dump(config_dict, yconf)
