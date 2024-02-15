@@ -1,6 +1,8 @@
 import pyvisa
 from time import sleep
 from datetime import datetime
+from math import copysign
+import numpy as np
 
 import yaml
 configuration = {}
@@ -13,9 +15,9 @@ class Keithley2410:
         # Initiate and configure PyVISA:
         self._rm = pyvisa.ResourceManager('@py')
         self._resource_list = self._rm.list_resources()
-        print(self._resource_list)
+        print(" >> Keithley2410:", self._resource_list)
         #self._inst = self._rm.open_resource(self._resource_list[1])
-        self._inst = self._rm.open_resource(self._resource_list[1])
+        self._inst = self._rm.open_resource(configuration['HVResource'])
         self._inst.read_termination = "\r\n"
         self._inst.write_termination = "\r\n"
 
@@ -38,6 +40,8 @@ class Keithley2410:
         self._write("*RST")
         self._write("SYSTem:REMote")
 
+        self.voltage_now = 0.
+
         if configuration['HVTerminal'] == 'Rear':
             self._write('ROUTe:TERMinals REAR')
         elif configuration['HVTerminal'] == 'Front':
@@ -55,6 +59,8 @@ class Keithley2410:
         if configuration['HasHVSwitch']:
             self.set_output_enable(1)
         self.set_output(0)
+        self._write('SOURce1:CLEar:AUTO OFF')
+        self.check_for_errors()
 
         self.display_string("Adapter connected.")
         
@@ -85,7 +91,6 @@ class Keithley2410:
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-
         response = self._inst.query(queryStr, wait).strip("\r\n")
         print(' >> Keithley2410 Response:', response)
         return response
@@ -148,7 +153,7 @@ class Keithley2410:
                 opc_status = int(status_raw.decode('ASCII').strip("\r\n"))
             except pyvisa.errors.VisaIOError:
                 sleep(1)
-        response = self._query("FETCh?", 1.)
+        response = self._query("FETCh?", 5.)
         return response
 
     def get_id(self):
@@ -170,8 +175,11 @@ class Keithley2410:
             self._write(f"OUTPut{self._channel}:ENABle OFF")
 
     def set_output(self, onoff):
-        """Sets the output on or off.
+        """Sets the output on or off. Also sets voltage output to zero to keep state consistent
+        and structure class properly for ramping.
         """
+        if self.voltage_now != 0.:
+            self.set_source_voltage(0.)
         if onoff:
             self._write(f"OUTPut ON")
         else:
@@ -186,7 +194,10 @@ class Keithley2410:
         """Sets the output off                                                                                                                                                                            
         """
         self.set_output(False)
-                        
+                 
+    def get_output(self):
+        return bool(int(self._query(f"OUTPut?")))
+       
     def set_current_limit(self, ilimit):
         """Sets the current compliance limit.
         """
@@ -251,11 +262,29 @@ class Keithley2410:
         else:
             raise ValueError("Invalid mode selection")
 
-    def set_source_voltage(self, value):
-        """Sets the source mode to fixed voltage with the defined value.
+    def set_source_voltage(self, value, bv_ramp_step = 25., wait_time = 0.5):
+        """Sets the source mode to fixed voltage with the defined value. If the set voltage is
+        sufficiently different from the current voltage, the output will be slowly ramped to that
+        new voltage.
         """
+        if not self.get_output() and value != 0.:
+            raise ValueError('Output must be on to change output voltage')
+            return
+
         if self._VOLTAGE_LIMIT_LOW <= abs(value) <= self._vlimit:
+
             self.set_source_voltage_mode("fixed")
+
+            # ramp up the voltage slowly if it's very different than current voltage
+            # do this only if the 
+            difference = value - self.voltage_now
+            if abs(difference) > bv_ramp_step:
+                for i in range(1, int(abs(difference) // bv_ramp_step) + 1):
+                    this_voltage = self.voltage_now + bv_ramp_step*i*copysign(1, difference)
+                    self._write(f"SOURce{self._channel}:VOLTage {this_voltage}")
+                    sleep(wait_time)
+
+            self.voltage_now = value
             self._write(f"SOURce{self._channel}:VOLTage {value}")
         else:
             raise ValueError("Invalid set voltage")
@@ -264,7 +293,7 @@ class Keithley2410:
         """Renaming of above function for compatibility
         """
         self.set_source_voltage(value)
-                
+
     def set_source_current(self, value):
         """Sets the source mode to fixed current with the defined value.
         """
@@ -272,7 +301,7 @@ class Keithley2410:
             self.set_source_current_mode("fixed")
             self._write(f"SOURce{self._channel}:CURRent {value}")
         else:
-            raise ValueError("Invalid set voltage")
+            raise ValueError("Invalid set current")
     def set_sense_mode(self, mode):
         """Sets the sense mode to either "voltage" or "current"
         """
@@ -303,7 +332,6 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         measurement = self._query("READ?", 1.) ### fix 1s delay
-        print('meas', measurement, measurement[1], self._parse_data(measurement))
         return float(self._parse_data(measurement)[0]['current'])
 
     def measureCurrent(self):
@@ -318,6 +346,7 @@ class Keithley2410:
         if Vmin >= self._VOLTAGE_LIMIT_LOW and Vmax <= self._vlimit:
 
             self.display_string("Sweeping...")
+            self.set_source_voltage(0.)
 
             Vstep = (Vmax - Vmin) / steps
             self.set_sense_mode("current")
@@ -332,6 +361,7 @@ class Keithley2410:
             self._write(f"SOURce{self._channel}:DELay {delay_s}")
             self.set_output(1)
             sweep_data = self._read_async()
+            self.voltage_now = Vmax
             self.set_output(0)
             parsed_data = self._parse_data(sweep_data)
 
@@ -350,12 +380,12 @@ class Keithley2410:
         date = current_date.isoformat().split('T')[0]
         time = current_date.isoformat().split('T')[1].split('.')[0]
 
-        steps = int(Vmax//step)+1
-        ivdata = self.voltage_sweep(0, Vmax, steps)
-
+        steps = int(Vmax//step)
+        ivdata = self.voltage_sweep(0, Vmax+step, steps+1)
+        
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
-                
-        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(ivdata), 'date': date, 'time': time}
+
+        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(temparray), 'date': date, 'time': time}
         self.IVdata.append(datadict)
                 
         return datadict
@@ -369,3 +399,24 @@ class Keithley2410:
         sleep(2.0)
         self._write('DISP:WIND1:TEXT:STAT OFF')
         self._write('DISP:WIND2:TEXT:STAT OFF')
+
+    # Clear the Keithley error cache and print errors present
+    def check_for_errors(self, ln=None):
+        err_string = ''
+        if ln == None:
+            while True:
+                err = self._query('SYSTem:ERRor?')
+                if (err[0:3] != '+0,' and err[0:2] != '0,'):
+                    err_string += err
+                else:
+                    break
+        else:
+            for i in range(ln):
+                err = self._query('SYSTem:ERRor?')
+                if (err[0:3] != '+0,' and err[0:2] != '0,'):
+                    err_string += err
+                else:
+                    break
+        if err_string != '':
+            print('>> Found error: {}'.format(err_string))
+            raise ValueError(err_string)

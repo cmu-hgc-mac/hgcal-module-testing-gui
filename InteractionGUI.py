@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
+from Keithley2400 import Keithley2400
 from Keithley2410 import Keithley2410
 from time import sleep
 from dbtools import *
@@ -79,7 +80,7 @@ def end_session(state):
     function uses those flags to tell the user what must be done (and in what order) to safely shut down the
     system. In general, shutting it down broadly follows five steps:
         - Disabling the HV power
-        - De-powering the DCDC
+        - De-powering the DCDC or Low Voltage Supply
         - Shutting down the Trenz
         - De-powering the Trenz
         - Disconnecting all of the parts and the module
@@ -91,25 +92,26 @@ def end_session(state):
     if density == 'L':
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
-    else:
-        raise NotImplementedError
+    elif density == 'H':
+        if shape not in ['F']:
+            raise NotImplementedError
                             
     ending = waiting_window("Ending session...")
     sleep(2)
 
     # First disable HV if it's on
-    # This part assumes the 'ps' is instantiated
+    # This part assumes the 'ps' is instantiated; a reasonable assumption if the HV output is on
     if state['-HV-Output-On-']:
         state['ps'].outputOff()
         update_state(state, '-HV-Output-On-', False, 'black')
 
-    # De-power and disconnect the DCDC and Hexacontroller
+    # De-power and disconnect the DCDC/LV Power and Hexacontroller
     # Have to nest these steps because of shutdown order
     if state['-DCDC-Connected-']:
         if state['-DCDC-Powered-']:
 
-            command = "Disconnect DCDC power"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if shape == 'F' else "Turn off low voltage power"
-            button = "Disconnected" if shape == 'F' else "Depowered"
+            command = "Disconnect DCDC power"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
+            button = "Depowered"
             do_something_window(command, button)
             update_state(state, '-DCDC-Powered-', False, 'black')
             
@@ -134,14 +136,14 @@ def end_session(state):
                 do_something_window("Disconnect hexacontroller from trophy", "Disconnected")
                 update_state(state, '-Hexactrl-Connected-', False, 'black')
 
-        # Disconnect trophy, looback, and DCDC
+        # Disconnect trophy, looback, and DCDC/LV Cables
         if state['-Trophy-Connected-']:
-            if shape == 'F':
+            if density+shape == 'LF':
                 do_something_window("Disconnect loopback", "Disconnected")
             do_something_window("Disconnect trophy", "Disconnected")
             update_state(state, '-Trophy-Connected-', False, 'black')
             
-        command = "Disconnect DCDC" if shape == 'F' else "Disconnect low voltage wires"
+        command = "Disconnect DCDC" if density+shape == 'LF' else "Disconnect low voltage cables"
         do_something_window(command, "Disconnected")
         update_state(state, '-DCDC-Connected-', False, 'black')
 
@@ -197,59 +199,34 @@ def initial_module_checks(state):
     if density == 'L':
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
-    else:
-        raise NotImplementedError
+    elif density == 'H':
+        if shape not in ['F']:
+            raise NotImplementedError
 
     do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
         
-    # Check pad resistances for shorts
-    # Entering values is optional and values are not stored (for the moment)
-    #resistances = {'P1V2D': None, 'P1V2A': None, 'P1V5C': None, 'P1V5D': None}
-    #layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")], [sg.Text("Input optional")],
-    #          [sg.Text("P1V2D: "), sg.Input(s=5, key="-P1V2D-val-"), sg.Combo(['Ω', 'kΩ', 'MΩ'], key="-P1V2D-unit-")],
-    #          [sg.Text("P1V2A: "), sg.Input(s=5, key="-P1V2A-val-"), sg.Combo(['Ω', 'kΩ', 'MΩ'], key="-P1V2A-unit-")],
-    #          [sg.Text("P1V5C: "), sg.Input(s=5, key="-P1V5C-val-"), sg.Combo(['Ω', 'kΩ', 'MΩ'], key="-P1V5C-unit-")],
-    #          [sg.Text("P1V5D: "), sg.Input(s=5, key="-P1V5D-val-"), sg.Combo(['Ω', 'kΩ', 'MΩ'], key="-P1V5D-unit-")],
-    #          [sg.Button("Continue (no shorts)"), sg.Button("Found a short")]]
-    #
-    #window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
-    
-    #while True:
-    #    event, values = window.read()
-    #    if event == "Continue (no shorts)":
-    #        for key in resistances.keys():
-    #            if values[f'-{key}-val-'] != '':
-    #                resval = float(values[f'-{key}-val-']) 
-    #                resunit = values[f'-{key}-unit-']
-    #                
-    #                if resunit == 'Ω':
-    #                    resistances[key] = resval
-    #                elif resunit == 'kΩ':
-    #                    resistances[key] = resval*1000
-    #                elif resunit == 'MΩ':
-    #                    resistances[key] = resval*1000000
-    #                
-    #        break
-    #    if event == sg.WIN_CLOSED or event == "Found a short":
-    #        window.close()
-    #        end_session(state)
-    #        return 'END'
-    #
-    #window.close()
+    pads_LF = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
+    pads_LR_LL = ["P1V2D", "P1V2A", "P1V5"]
+    pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D']
 
-    pads_full = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
-    pads_right = ["P1V2D", "P1V2A", "P1V5"]
-    
-    if shape == 'F':
-        thesepads = pads_full
-    elif shape == 'R':
-        thesepads = pads_right
-
+    if density == 'L':
+        if shape == 'F':
+            thesepads = pads_LF
+        elif shape == 'R' or shape == 'L':
+            thesepads = pads_LR_LL
+    if density == 'H':
+        if shape == 'F':
+            thesepads = pads_HF
+            
     layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
+    colleft = []
+    colright = []
     idx = 2
     for pad in thesepads:
-        layout.append([sg.Text(f"{pad}: "), sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
+        colleft.append([sg.Text(f"{pad}: ")])
+        colright.append([sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
         idx += 1
+    layout.append([sg.Column(colleft), sg.Column(colright)])
     layout.append([sg.Button("Continue")])
     
     window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
@@ -258,7 +235,6 @@ def initial_module_checks(state):
         event, values = window.read()
         if event == "Continue":
             noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
-            #if not (values["-P1V2D-No-Short-"] and values["-P1V2A-No-Short-"] and values["-P1V5C-No-Short-"] and values["-P1V5D-No-Short-"]):
             if not noshorts:
                 window.close()
                 end_session(state)
@@ -280,27 +256,26 @@ def initial_module_checks(state):
             return 'END'
 
         open_box(state)
-        #do_something_window("Open lid of dark box", "Opened", title="Open Dark Box Lid")
-        #update_state(state, '-Box-Closed-', False, 'black')
 
     # Check the voltage on the pads to ensure correct power
-    command = "Connect DCDC to hexaboard" if shape == 'F' else "Connect low voltage wires"
-    do_something_window(command, "Connected", title="Connect DCDC")
+    command = "Connect DCDC to hexaboard" if density+shape == 'LF' else "Connect low voltage wires"
+    do_something_window(command, "Connected")
     update_state(state, '-DCDC-Connected-', True, 'green')
 
-    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if shape == 'F' else "Turn on low voltage power"
-    button = "Connected" if shape == 'F' else "Powered"
-    do_something_window(command, button, title="Power DCDC")
+    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
+    do_something_window(command, "Powered")
     update_state(state, '-DCDC-Powered-', True, 'green')
 
-    layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")], [sg.Text("Input optional")]]
-
+    layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")]]
+    colleft = []
+    colright = []
     idx = 2
     for pad in thesepads:
-        expect = '1.2-1.25V' if 'V2' in pad else '1.47-1.5V'
-        layout.append([sg.Text(f"{pad} expect {expect}: "), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
+        expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
+        colleft.append([sg.Text(f"{pad} expect {expect}: ")])
+        colright.append([sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
         idx += 1
-
+    layout.append([sg.Column(colleft), sg.Column(colright)])
     layout.append([sg.Button("Continue")])
 
     window = sg.Window("Module Test: Probe power pads", layout, margins=(200,100))
@@ -324,8 +299,8 @@ def initial_module_checks(state):
             
     window.close()
 
-    command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if shape == 'F' else "Turn off low voltage power"
-    do_something_window(command, "Disconnected", title="Depower DCDC")
+    command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
+    do_something_window(command, "Disconnected")
     update_state(state, '-DCDC-Powered-', False, 'black')
     return 'CONT'
 
@@ -399,7 +374,15 @@ def check_leakage_current(state):
     ending the session.
     """
 
-    leakage_current = {0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
+    leakage_current = {} #{0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
+    # best to set the keys in the dict according to bias direction
+    # and then use those keys
+    for vltg in [0, 1, 10, 100, 300, 600]:
+        if configuration['HVWiresPolarization'] == 'Forward':
+            leakage_current[-vltg] = None
+        else:
+            leakage_current[vltg] = None
+
     connect_HV(state)
 
     ivprobe = waiting_window('Verifying module IV behavior...')
@@ -407,16 +390,16 @@ def check_leakage_current(state):
     if state['-Debug-Mode-']:
         sleep(5)
     else:
-        state['ps'].setVoltage(0.)
         state['ps'].outputOn()
         update_state(state, '-HV-Output-On-', True, 'green')
         
         for key in leakage_current.keys():
+
             state['ps'].setVoltage(key)
             _, current, _ = state['ps'].measureCurrent()
             leakage_current[key] = current
-            print(key, current*1000000.)
-            if np.abs(current)*1000000. > 1. and key < 500:
+            print(' >> Checking leakage current:', key, current*1000000.)
+            if np.abs(current)*1000000. > 1. and abs(key) < 500:
                 nominal = False
                 break
 
@@ -461,11 +444,14 @@ def configure_test_stand(state, trenzhostname):
     if density == 'L':
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
+    elif density == 'H':
+        if shape not in ['F']:
+            raise NotImplementedError
     else:
         raise NotImplementedError
-                            
+        
     do_something_window("Connect trophy board to hexaboard", "Connected", title="Connect Trophy")
-    if shape == 'F':
+    if density+shape == 'LF':
         do_something_window("Connect loopback board to hexaboard", "Connected", title="Connect Loopback")
     update_state(state, '-Trophy-Connected-', True, 'green')
     do_something_window("Ensure NOTHING is powered", "No power")
@@ -473,7 +459,7 @@ def configure_test_stand(state, trenzhostname):
     update_state(state, '-Hexactrl-Connected-', True, 'green')
     if state['-Live-Module-']:
         close_box(state)
-    do_something_window("Connect hexacontroller power cable"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Connected", title='Power Hexacontroller')
+    do_something_window("Connect hexacontroller power cable"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Powered", title='Power Hexacontroller')
     update_state(state, '-Hexactrl-Powered-', True, 'green')
     
     connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{trenzhostname}')
@@ -481,16 +467,15 @@ def configure_test_stand(state, trenzhostname):
         sleep(5)
         ts = None
     else:
-        ts = TrenzTestStand(trenzhostname) # will take some time if the Trenz was just powered
+        ts = TrenzTestStand(trenzhostname, state['-Module-Serial-']) # will take some time if the Trenz was just powered
     connecting.close()
     update_state(state, '-Hexactrl-Accessed-', True, 'green')
     update_state(state, 'ts', ts)
 
-    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if shape == 'F' else "Turn on low voltage power"
-    button = "Connected" if shape == 'F' else "Powered"
-    do_something_window(command, button, title="Power DCDC")
+    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
+    do_something_window(command, "Powered")
     update_state(state, '-DCDC-Powered-', True, 'green')
-    loading = waiting_window("Loading firmware on hexacontroller...", title="Loading Firmware...", description='fw-loader load hexaboard-hd-tester-v1p1-trophy-v3 && listdevice')
+    loading = waiting_window("Loading firmware on hexacontroller...", title="Loading Firmware...", description='fw-loader load [firmware] && listdevice')
     if state['-Debug-Mode-']:
         sleep(5)
         fwloaded = True
@@ -549,9 +534,9 @@ def run_pedestals(state, BV):
         hexpath = ''
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].setVoltage(BV)
-            update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(BV)
         state['pc'].pedestal_run(BV=BV)
         if state['-Live-Module-']:
             state['ps'].outputOff()
@@ -588,9 +573,9 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].setVoltage(BV)
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(BV)
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
         if state['-Live-Module-']:
@@ -610,9 +595,9 @@ def scan_vref(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].setVoltage(BV)
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(BV)
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
         if state['-Live-Module-']:

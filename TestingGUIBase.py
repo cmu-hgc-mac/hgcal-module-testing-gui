@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
+from Keithley2400 import Keithley2400
 from time import sleep
 from InteractionGUI import *
 import yaml
@@ -82,7 +83,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['TrenzHostname'], default_value=configuration['TrenzHostname'][0], key="-TrenzHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
-               [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('Not Implemented', visible=False, key='-Not-Implemented-')]]
+               [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
 
 # Select Tests fields only shown if able to bias the module
 BVonly = [[sg.Text('Bias Voltage (per run): '),
@@ -98,16 +99,16 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
-             [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True)]]
+             [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
 
 # Status Bar version 2
 sbcol1 = sg.Frame('', [[sg.Text("Debug Mode: "), sg.Push(), LEDIndicator(key='-Debug-Mode-')],
                        [sg.Text("Is Live Module: "), sg.Push(), LEDIndicator(key='-Live-Module-')],
                        [sg.Text("HV Cable Connected: "), sg.Push(), LEDIndicator(key='-HV-Connected-')]])
 sbcol2 = sg.Frame('', [[sg.Text("Dark Box Closed: "), sg.Push(), LEDIndicator(key='-Box-Closed-')],
-                       [sg.Text("HV Output On: "), sg.Push(), LEDIndicator(key='-HV-Output-On-')],
-                       [sg.Text("DCDC Connected: "), sg.Push(), LEDIndicator(key='-DCDC-Connected-')]])
-sbcol3 = sg.Frame('', [[sg.Text("DCDC Powered: "), sg.Push(), LEDIndicator(key='-DCDC-Powered-')],
+                       [sg.Text("HV Output Powered: "), sg.Push(), LEDIndicator(key='-HV-Output-On-')],
+                       [sg.Text("DCDC Connected: ", key='-DCDC-Connected-Txt-'), sg.Push(), LEDIndicator(key='-DCDC-Connected-')]])
+sbcol3 = sg.Frame('', [[sg.Text("DCDC Powered: ", key='-DCDC-Powered-Txt-'), sg.Push(), LEDIndicator(key='-DCDC-Powered-')],
                        [sg.Text("Trophy Connected: "), sg.Push(), LEDIndicator(key='-Trophy-Connected-')],
                        [sg.Text("Hexacontroller Connected: "), sg.Push(), LEDIndicator(key='-Hexactrl-Connected-')]])
 sbcol4 = sg.Frame('', [[sg.Text("Hexacontroller Powered: "), sg.Push(), LEDIndicator(key='-Hexactrl-Powered-')],
@@ -256,6 +257,15 @@ def update_state(field, val, color=None):
         assert color is not None
         SetLED(basewindow, field, color)
 
+def show_string(string, field='Left'):
+    basewindow[f'-Display-Str-{field}-'].update(string)
+    basewindow[f'-Display-Str-{field}-'].update(visible=True)
+    basewindow.refresh()
+    sleep(2)
+    basewindow[f'-Display-Str-{field}-'].update(visible=False)
+    basewindow.refresh()
+
+        
 # Initial setup
 event, values = basewindow.read(timeout = 10)
 disable_ts_tests()
@@ -331,6 +341,15 @@ while True:
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
 
+    # Only usign DCDC if LD Full
+    if majortype[1] != 'L' or minortype[0] != 'F':
+        basewindow['-DCDC-Connected-Txt-'].update("LV Cables Connected")
+        basewindow['-DCDC-Powered-Txt-'].update("LV Output Powered")
+    else:
+        basewindow['-DCDC-Connected-Txt-'].update("DCDC Connected")
+        basewindow['-DCDC-Powered-Txt-'].update("DCDC Powered")
+        
+        
     # Set the module index
     mind = values['-Module-Index-'].rstrip()
     serlen = 4 if values['-IsLive-'] else 5 # hexaboards have 5 digits, live modules 4
@@ -355,21 +374,25 @@ while True:
     # Now, check for button presses
     # Configure test stand starts the Trenz assembly and startup process
     if event == "Configure Test Stand":
-        
+
+        # If live module or hexaboard isn't selected, skip
+        if not values['-IsLive-'] and not values['-IsHB-']:
+            show_string("Invalid Setup")
+            continue
+            
         # If module serial isn't defined well, skip
         if moduleindex == '' or values['-TrenzHostname-'].rstrip() == '':
+            show_string("Invalid Setup")
             continue
         if values['-IsHB-'] and vendorid == '':
+            show_string("Invalid Setup")
             continue
 
         # Catch non-implemented denisities and geometries
         if values['-HD-'] or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
-            basewindow['-Not-Implemented-'].update(visible=True)
-            basewindow.refresh()
-            sleep(2)
-            basewindow['-Not-Implemented-'].update(visible=False)
-            basewindow.refresh()
+            show_string("Not Implemented")
             continue
+        # HD Full implemented but not tested, so let's disable it for now
         
         trenzhostname = values['-TrenzHostname-'].rstrip()
 
@@ -410,17 +433,15 @@ while True:
 
         # If module serial isn't defined well, skip
         if values['-IsHB-']:
+            show_string("Invalid Setup")
             continue
         if moduleindex == '':
+            show_string("Invalid Setup")
             continue
 
         # Catch non-implemented denisities and geometries
-        if values['-HD-'] or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
-            basewindow['-Not-Implemented-'].update(visible=True)
-            basewindow.refresh()
-            sleep(2)
-            basewindow['-Not-Implemented-'].update(visible=False)
-            basewindow.refresh()
+        if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+            show_string("Not Implemented")
             continue
         
         # Initialize state dictionary
@@ -465,12 +486,14 @@ while True:
             # If services not running properly, do not proceed with tests (but it does not automatically end session)
             if not (values['-FW-Loaded-'] and values['-DAQ-Server-'] and values['-I2C-Server-'] and values['-DAQ-Client-']):
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Error in Statuses", field="Right")
                 continue
 
         # If running an electrical test, re-check just to make sure
         if values['-Pedestal-Scan-'] or values['-Vref-Scan-'] or values['-Pedestal-Run-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Error in Statuses", field="Right")
                 continue
 
         # For pedestal scan, check to make sure bias voltage is entered if needed and then run
@@ -478,6 +501,7 @@ while True:
             psbv = values['-Bias-Voltage-PedScan-'].rstrip()
             if (psbv == '' or not psbv.isnumeric()) and values['-IsLive-']:
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid Instructions", field="Right")
                 continue
 
             if values['-IsLive-']:
@@ -490,6 +514,7 @@ while True:
             vsbv = values['-Bias-Voltage-Vref-'].rstrip()
             if (vsbv == '' or not vsbv.isnumeric()) and values['-IsLive-']:
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid Instructions", field="Right")
                 continue
             
             if values['-IsLive-']:
@@ -503,6 +528,7 @@ while True:
             # Check to make sure number of runs is entered
             if values['-N-Pedestals-'].rstrip() == '' or not values['-N-Pedestals-'].rstrip().isnumeric():
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid Instructions", field="Right")
                 continue
 
             # Only allow up to six runs at a time
@@ -525,6 +551,7 @@ while True:
 
             if (nBVs < nPedestals and values['-IsLive-']):
                 basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid Instructions", field="Right")
                 continue
 
             # Run
@@ -573,12 +600,6 @@ while True:
 
         # Reset test values
         clear_tests()
-        #basewindow['-Pedestal-Scan-'].update(value=False)
-        #basewindow['-Vref-Scan-'].update(value=False)
-        #basewindow['-Pedestal-Run-'].update(value=False)
-        #basewindow['-N-Pedestals-'].update(value='')
-        #basewindow['-Ambient-IV-'].update(value=False)
-        #basewindow['-Dry-IV-'].update(value=False)
             
         basewindow['Run Tests'].update(disabled=False)
 

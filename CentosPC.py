@@ -51,8 +51,11 @@ class CentosPC:
                 self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-semi.yaml'
             else: # T B 5
                 raise NotImplementedError
-        elif density == 'H': # F L R T B 5
-            raise NotImplementedError
+        elif density == 'H':
+            if shape == 'F':
+                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initHD-trophyV3.yaml'
+            else: # L R T B 5
+                raise NotImplementedError
                 
     def restart_daq(self):
         """

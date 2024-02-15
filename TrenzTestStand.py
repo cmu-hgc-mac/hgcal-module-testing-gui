@@ -14,7 +14,7 @@ class TrenzTestStand:
     """
 
     
-    def __init__(self, hostname, keyloc=configuration['PCKeyLoc']):
+    def __init__(self, hostname, modulename, keyloc=configuration['PCKeyLoc']):
         """
         Instantiates object. Can run as soon as Trenz is powered; will wait until ping succeeds to try 
         to connect. Some issues with this that are being debugged.
@@ -44,6 +44,20 @@ class TrenzTestStand:
         # at this point, can consider to be "connected"
         print(' >> TrenzTestStand: Connected')
 
+        density = modulename.split('-')[1][1]
+        shape = modulename.split('-')[2][0]
+        self.fw = ''
+        if density == 'L':
+            if shape in ['F', 'L', 'R']:
+                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v3'
+            else: # T B 5
+                raise NotImplementedError
+        elif density == 'H':
+            if shape == 'F':
+                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
+            else: # L R T B 5
+                raise NotImplementedError
+        
     def _runcmd(self, cmd):
         """
         Class to run an arbitrary bash command over ssh. Currently sleeps for three seconds to ensure safety.
@@ -65,13 +79,18 @@ class TrenzTestStand:
         """
 
         #input('    Connect DCDC power cord and press enter.')
-        ssh_stdout, ssh_stderr = self._runcmd('fw-loader load hexaboard-hd-tester-v1p1-trophy-v3 && listdevice')
+
+
+        
+        ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw} && listdevice')
 
         firmware_loaded = False
         channels_found = False
-        listdevice_lines = ['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', # LD Full
-                            '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f', # LD Right
-                            '40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f'] # LD Right
+        listdevice_lines = ['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', # LD Full and HD Full
+                            '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f', # LD Semi 
+                            '40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', # LD Semi and HD Full
+                            '50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', # LD Semi and HD Full
+                            '60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f'] # HD Full
         for line in ssh_stdout.readlines():
             print('   >> fw:', line.strip('\n'))
             # check FW load              
@@ -134,7 +153,8 @@ class TrenzTestStand:
         check1 = False
         check2 = False
         i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
-                           '[I2C] Board identification: V3 LD Semi or Half HB']
+                           '[I2C] Board identification: V3 LD Semi or Half HB',
+                           '[I2C] Board identification: V3 HD Full HB']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
