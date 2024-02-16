@@ -32,7 +32,7 @@ class Keithley2410:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
         self._ilimit = 105e-6  # Current limit in A
-        self._vlimit = 800  # Voltage limit in V
+        self._vlimit = 821  # Voltage limit in V - 821 to configure sweep to 800 correctly
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
 
@@ -66,6 +66,9 @@ class Keithley2410:
         
         # store all IV curves since this class was created
         self.IVdata = []
+
+        self.bv_ramp_step = 25.
+        self.bv_ramp_wait = 0.5
                 
     def __del__(self):
         self._inst.close()
@@ -262,7 +265,7 @@ class Keithley2410:
         else:
             raise ValueError("Invalid mode selection")
 
-    def set_source_voltage(self, value, bv_ramp_step = 25., wait_time = 0.5):
+    def set_source_voltage(self, value):
         """Sets the source mode to fixed voltage with the defined value. If the set voltage is
         sufficiently different from the current voltage, the output will be slowly ramped to that
         new voltage.
@@ -278,11 +281,11 @@ class Keithley2410:
             # ramp up the voltage slowly if it's very different than current voltage
             # do this only if the 
             difference = value - self.voltage_now
-            if abs(difference) > bv_ramp_step:
-                for i in range(1, int(abs(difference) // bv_ramp_step) + 1):
-                    this_voltage = self.voltage_now + bv_ramp_step*i*copysign(1, difference)
+            if abs(difference) > self.bv_ramp_step:
+                for i in range(1, int(abs(difference) // self.bv_ramp_step) + 1):
+                    this_voltage = self.voltage_now + self.bv_ramp_step*i*copysign(1, difference)
                     self._write(f"SOURce{self._channel}:VOLTage {this_voltage}")
-                    sleep(wait_time)
+                    sleep(self.bv_ramp_wait)
 
             self.voltage_now = value
             self._write(f"SOURce{self._channel}:VOLTage {value}")
@@ -339,7 +342,7 @@ class Keithley2410:
         """
         return '', self.get_sense_current(), ''
 
-    def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1):
+    def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
         Optional parameters Ilimit and delay_s set the current limit and time delay.
         """
@@ -348,7 +351,7 @@ class Keithley2410:
             self.display_string("Sweeping...")
             self.set_source_voltage(0.)
 
-            Vstep = (Vmax - Vmin) / steps
+            Vstep = (Vmax - Vmin) / steps 
             self.set_sense_mode("current")
             self.set_current_limit(Ilimit)
             self._write(f"SOURce{self._channel}:FUNCtion VOLTage")
@@ -357,7 +360,7 @@ class Keithley2410:
             self._write(f"SOURce{self._channel}:VOLTage:STEP {Vstep}")
             self._write(f"SOURce{self._channel}:VOLTage:MODE SWEep")
             self._write(f"SOURce{self._channel}:SWEep:SPACing LINear")
-            self._write(f"TRIGger:COUNt {steps}")
+            self._write(f"TRIGger:COUNt {steps+1}")
             self._write(f"SOURce{self._channel}:DELay {delay_s}")
             self.set_output(1)
             sweep_data = self._read_async()
@@ -381,7 +384,7 @@ class Keithley2410:
         time = current_date.isoformat().split('T')[1].split('.')[0]
 
         steps = int(Vmax//step)
-        ivdata = self.voltage_sweep(0, Vmax+step, steps+1)
+        ivdata = self.voltage_sweep(0, Vmax, steps)
         
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
 

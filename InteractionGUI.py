@@ -1,7 +1,6 @@
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
-from Keithley2400 import Keithley2400
 from Keithley2410 import Keithley2410
 from time import sleep
 from dbtools import *
