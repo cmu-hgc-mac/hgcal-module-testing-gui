@@ -18,7 +18,7 @@ ssh-keygen # follow the prompts, no need to enter a password or use a name other
 ssh-copy-id -i ~/.ssh/id_rsa root@[TrenzFPGAHostname]
 ```
 
-The GUI uses PyVISA to control the power supply. CMU uses an RS232 cable to control it; if you have another type of cable, you may have to re-implement part of the code. To discover the VISA resource name, run the following in a python shell:
+The GUI uses PyVISA to control the HV power supply. CMU uses an RS232 cable to control it; if you have another type of cable, you may have to re-implement part of the code. To discover the VISA resource name, run the following in a python shell:
 ```
 import pyvisa
 rm = pyvisa.ResourceManager()
@@ -52,7 +52,7 @@ Currently, the GUI has to be run on the Centos PC used for testing. The GUI can 
 
 The GUI consists of three main windows. The "Module Setup" window controls the selection of the module type and number (which determines the serial number) and other settings. The "Select Tests" window is initially disabled and allows the user to select which tests to run once the system is set up. The "Status Bar" summarizes the current status of the testing system with several indicators. Several values and settings are stored in the `configuration.yaml` file, including the site code ('CM' for CMU) and things like the test stand IP address. Lastly, the GUI has a "Debug Mode" which can be toggled with the checkbox on the bottom. In Debug Mode, the GUI will run normally but will not interface with any of the testing equipment, but it will interface with the user, so it is helpful for understanding the flow of testing and ensuring things are being done as expected inside the GUI. 
 
-Currently, the GUI only functions for LD Full modules and hexaboards. Other densities and geometries will be added shortly.
+Currently, the GUI only functions for LD Full, Left, and Right modules and hexaboards. Other densities and geometries will be added shortly. HD Full testing is implemented but not tested, so it is currently disabled.
 
 The Module Setup is how the module serial number is defined. The GUI can either test bare hexaboards or live modules; the density and geometry of the module is selectable. For hexaboards, the hexaboard version must be selected (either V3 or Production) and the manufacturer code must be entered. For live modules, the sensor thickness and baseplate type must be selected. For both, the module index must be entered and the test stand IP selected. The "Module Serial Number" text updates as you enter this information. If only tests involving bias voltage (that is, IV curves) are desired, the system can then be initiated with the "Only IV Test" button. This button will guide the user through the steps to connect the HV cable and also automatically connect to the power supply. This button does nothing for hexaboards as IV tests are meaningless. If full electrical tests are desired, the "Configure Test Stand" button will guide the user through the steps to connect and power the test stand and automatically start the required services. Once either of these are pressed, the Module Setup window is disabled.
 
