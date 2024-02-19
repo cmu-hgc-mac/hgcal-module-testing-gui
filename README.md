@@ -54,6 +54,9 @@ The GUI consists of three main windows. The "Module Setup" window controls the s
 
 Currently, the GUI only functions for LD Full, Left, and Right modules and hexaboards. Other densities and geometries will be added shortly. HD Full testing is implemented but not tested, so it is currently disabled.
 
+### It is **always safe** to exit the GUI (i.e. by canceling the python process) and shut the testing system down manually.
+If you encounter an error or the GUI closes suddenly, shut the testing system down the way you would if you were testing a module without the GUI.
+
 The Module Setup is how the module serial number is defined. The GUI can either test bare hexaboards or live modules; the density and geometry of the module is selectable. For hexaboards, the hexaboard version must be selected (either V3 or Production) and the manufacturer code must be entered. For live modules, the sensor thickness and baseplate type must be selected. For both, the module index must be entered and the test stand IP selected. The "Module Serial Number" text updates as you enter this information. If only tests involving bias voltage (that is, IV curves) are desired, the system can then be initiated with the "Only IV Test" button. This button will guide the user through the steps to connect the HV cable and also automatically connect to the power supply. This button does nothing for hexaboards as IV tests are meaningless. If full electrical tests are desired, the "Configure Test Stand" button will guide the user through the steps to connect and power the test stand and automatically start the required services. Once either of these are pressed, the Module Setup window is disabled.
 
 For the initial part of the module test, you will need a multimeter to check the hexaboard for shorts and to verify the power is correct. When checking the power, **do not short the probes**.
