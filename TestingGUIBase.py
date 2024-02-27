@@ -130,7 +130,7 @@ statusbar = [[sbcol1, sbcol2, sbcol3, sbcol4, sbcol5]]
 leftcol = sg.Frame('', [[sg.Frame('Module Setup', modulesetup)], [sg.Checkbox('Debug Mode', key='-DEBUG-MODE-', enable_events=True, default=DEBUG_MODE), sg.Button("Close GUI")]])
 rightcol = sg.Frame('', [[sg.Frame('Select Tests', testsetup)], [sg.Button("End Session")]])
 
-layout = [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured)],
+layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)],
           [sg.Text("Carnegie Mellon University", text_color=cmured, font=('Arial', 20))],
           [leftcol, rightcol],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
