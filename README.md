@@ -5,9 +5,9 @@ A GUI for HGCAL hexaboard and silicon module testing
 We have been using detailed procedures for module testing, and though these do work, I found it was very easy for people new to the system to skip steps and make mistakes. Additionally, it seemed that a large portion of the test sequence can be automated. A GUI would greatly simplify training, force users to follow the correct steps in the correct order, and hide the parts of the sequence that require special skills (i.e. bash) behind automation. Also, looking to the future, a GUI could be integrated with the database and/or serve as the starting point for the multimodule testing GUI.
 
 ## Installing the GUI
-The GUI can be installed by simply cloning this repository. You will also need to  install `PySimpleGUI` (and let's preemptively install `psycopg2` as well):
+The GUI can be installed by simply cloning this repository. You will also need to  install `PySimpleGUI` (and let's preemptively install `psycopg2` and `asyncpg` as well):
 ```
-pip3 install PySimpleGUI psycopg2
+pip3 install PySimpleGUI psycopg2 asyncpg
 git clone https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui.git
 cd hgcal-module-testing-gui
 ```
