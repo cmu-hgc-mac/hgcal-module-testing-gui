@@ -6,7 +6,7 @@ config_dict = {'DebugMode': True,
                'MACSerial': 'CM',
                'DataLoc': '/home/hgcal/data/',
                #'HexmapPath': '/home/hgcal/hexmap',
-               'HVResource': 'ASRL/dev/ttyUSB0::INSTR'
+               'HVResource': 'ASRL/dev/ttyUSB0::INSTR',
                'HVTerminal': 'Rear', # 'Front' for front terminals, 'Rear' for rear terminals
                'HVWiresPolarization': 'Reverse', # 'Reverse' for reverse bias (V in [0, 800]) 'Forward' for forward bias (V in [-800, 0])
                'PCKeyLoc': '/home/hgcal/.ssh/id_rsa',
