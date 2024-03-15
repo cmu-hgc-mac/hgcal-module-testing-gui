@@ -53,7 +53,7 @@ class CentosPC:
                 raise NotImplementedError
         elif density == 'H':
             if shape == 'F':
-                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initHD-trophyV3.yaml'
+                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initHD_trophyV3.yaml'
             else: # L R T B 5
                 raise NotImplementedError
                 
