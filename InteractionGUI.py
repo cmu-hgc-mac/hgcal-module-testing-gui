@@ -642,7 +642,7 @@ def take_IV_curve(state, step=20):
        sleep(5)
     else:
         HVswitch_tripped = state['ps'].switch_state()
-        if not HVswitch_tripped:
+        if not HVswitch_tripped and configuration['HasHVSwitch']:
             print('>> HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
@@ -650,7 +650,7 @@ def take_IV_curve(state, step=20):
         if configuration['HVWiresPolarization'] == 'Forward':
             step = -step
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
-        update_state(state, '-HV-Output-On-', True, 'black')
+        update_state(state, '-HV-Output-On-', False, 'black')
         inspector = state['-Inspector-']
         save_and_upload(curve, state['-Module-Serial-'], '', RH, Temp, inspector) # saves IV curve as pickle object
     curvew.close()
