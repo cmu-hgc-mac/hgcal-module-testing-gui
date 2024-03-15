@@ -389,7 +389,7 @@ while True:
             continue
 
         # Catch non-implemented denisities and geometries
-        if values['-HD-'] or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
             continue
         # HD Full implemented but not tested, so let's disable it for now
@@ -440,7 +440,7 @@ while True:
             continue
 
         # Catch non-implemented denisities and geometries
-        if values['-HD-'] or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
             continue
         
