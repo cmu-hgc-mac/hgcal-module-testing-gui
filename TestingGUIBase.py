@@ -479,6 +479,8 @@ while True:
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
 
+        os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}')
+        
         # Start by checking test stand services
         if current_state['-Hexactrl-Accessed-']:
             check_services(current_state)

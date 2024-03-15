@@ -271,8 +271,8 @@ def initial_module_checks(state):
     idx = 2
     for pad in thesepads:
         expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
-        colleft.append([sg.Text(f"{pad} expect {expect}: ")])
-        colright.append([sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
+        colleft.append([sg.Text(f"{pad}:")])
+        colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
         idx += 1
     layout.append([sg.Column(colleft), sg.Column(colright)])
     layout.append([sg.Button("Continue")])
