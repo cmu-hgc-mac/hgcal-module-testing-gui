@@ -115,8 +115,10 @@ class CentosPC:
 
         print(f' >> CentosPC: Running {scriptname}.py...')
         if not self.initiated:
+            print('  >> {scriptname}.py:', f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
             os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
         else:
+            print('  >> {scriptname}.py:', f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} > /dev/null 2>&1')
             os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} > /dev/null 2>&1')
 
         runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{scriptname}/*')
