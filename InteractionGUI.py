@@ -535,7 +535,7 @@ def run_pedestals(state, BV):
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(BV)
+            state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run(BV=BV)
         if state['-Live-Module-']:
             state['ps'].outputOff()
@@ -574,7 +574,7 @@ def scan_pedestals(state, BV):
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(BV)
+            state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
         if state['-Live-Module-']:
@@ -596,7 +596,7 @@ def scan_vref(state, BV):
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(BV)
+            state['ps'].setVoltage(float(BV))
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
         if state['-Live-Module-']:
