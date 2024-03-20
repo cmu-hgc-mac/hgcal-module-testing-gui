@@ -1,5 +1,6 @@
 import paramiko
 import time
+import pathlib
 import os
 
 import yaml
@@ -7,13 +8,26 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+listeddevices = {'LF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', '00: -- -- -- -- -- -- -- 07 08 09 0a 0b 0c 0d 0e 0f'],
+                        ['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f'],
+                        ['20: -- -- -- -- -- -- -- -- 28 29 2a 2b 2c 2d 2e 2f', '20: -- -- -- -- -- -- -- 27 28 29 2a 2b 2c 2d 2e 2f']],
+                 'LR': [['40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f'],
+                        ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']],
+                 'LL': [['40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f'],
+                        ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']],
+                 'HF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', '00: -- -- -- -- -- -- -- 07 08 09 0a 0b 0c 0d 0e 0f'],
+                        ['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f'],
+                        ['20: -- -- -- -- -- -- -- -- 28 29 2a 2b 2c 2d 2e 2f', '20: -- -- -- -- -- -- -- 27 28 29 2a 2b 2c 2d 2e 2f'],
+                        ['40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f'],
+                        ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f'],
+                        ['60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f', '60: -- -- -- -- -- -- -- 67 68 69 6a 6b 6c 6d 6e 6f']]}
+    
 class TrenzTestStand:
     """
     Class that wraps the Trenz-based testing system. The class connects to the Trenz using a paramiko
     SSH client and then runs commands over ssh.
     """
-
-    
+   
     def __init__(self, hostname, modulename, keyloc=configuration['PCKeyLoc']):
         """
         Instantiates object. Can run as soon as Trenz is powered; will wait until ping succeeds to try 
@@ -57,7 +71,9 @@ class TrenzTestStand:
                 self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
             else: # L R T B 5
                 raise NotImplementedError
-        
+
+        self.hbtype = density+shape
+            
     def _runcmd(self, cmd):
         """
         Class to run an arbitrary bash command over ssh. Currently sleeps for three seconds to ensure safety.
@@ -78,34 +94,27 @@ class TrenzTestStand:
         Returns True if proper startup detected, otherwise returns False.
         """
 
-        #input('    Connect DCDC power cord and press enter.')
-
-
-        
         ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw} && listdevice')
+        stdout = ssh_stdout.read().decode('ascii')
 
         firmware_loaded = False
-        channels_found = False
-        listdevice_lines = ['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', # LD Full and HD Full
-                            '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f', # LD Semi 
-                            '40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', # LD Semi and HD Full
-                            '50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', # LD Semi and HD Full
-                            '60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f'] # HD Full
-        for line in ssh_stdout.readlines():
-            print('   >> fw:', line.strip('\n'))
-            # check FW load              
-            if 'Loaded the device tree overlay successfully using the zynqMP FPGA manager' in line:
-                print(' >> TrenzTestStand: Loaded firmware')
-                firmware_loaded = True
-            
-            # check channels in listdevice
-            for dl in listdevice_lines:
-                if dl in line:
-                    print(' >> TrenzTestStand: Discovered ROC channels')
-                    channels_found = True
-            
-            if firmware_loaded and channels_found:
-                break
+        channels_found = True
+        
+        for line in stdout.split('\n'):
+            print('   >> fw:', line)
+
+        # check fw load
+        if 'Loaded the device tree overlay successfully using the zynqMP FPGA manager' in stdout:
+            print(' >> TrenzTestStand: Loaded firmware')
+            firmware_loaded = True
+
+        # check channels in listdevice
+        for addressbar in listeddevices[self.hbtype]:
+            if addressbar[0] not in stdout and addressbar[1] not in stdout:
+                channels_found = False
+
+        if channels_found:
+            print(' >> TrenzTestStand: Discovered ROC channels')
 
         if firmware_loaded and channels_found:
             self.fwloaded = True
