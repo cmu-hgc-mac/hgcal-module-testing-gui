@@ -166,8 +166,6 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         if column != 'adc_mean' and column != 'adc_stdd':
             continue
 
-        print(column)
-        
         patches = []
         colors = np.array([])
         
@@ -186,23 +184,39 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # for live module if actual channels have same noise as disconnected channels, label
         med_nc = df_data[column][nc_mask].median()
         uncon = np.abs(df_data[column] - med_nc) < upplim/40.
+        # not using for the moment because I'm unhappy with functionality
+        # but will still print channel numbers
+        
+        # if actual channels have significantly higher noise than normal channels, label
+        med_norm = df_data[column][norm_mask].median()
+        mean_norm = df_data[column][norm_mask].mean()
+        std_norm = df_data[column][norm_mask].std()
+        noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+        highval = (df_data[column] - med_norm) > noisy_limit
+        # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
         # for all modules, label if zero or max value
         zeros = df_data[column] == 0
         maxes = df_data[column] >= upplim
-        
+
         fig, ax = plt.subplots(figsize = (16,12))
 
         # label pads if on HB (pad is <0 if it's a common mode or non-connected channel)
         for x, y, pad in df.loc[(zeros | maxes) & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
+
             for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                 ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+            for x, y, pad in df.loc[highval & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
+                ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+            
 
         # mean noise information
         if (column == 'adc_stdd' or column == 'adc_iqr'):
-            print(column, np.mean(df_data[column][norm_mask]), np.mean(df_data[column][calib_mask]), np.mean(df_data[column][cm0_mask]), np.mean(df_data[column][cm1_mask]), np.mean(df_data[column][nc_mask]))
+            print(' >> Hexmap mean noise: col  norm  calib  cm0  cm1  nc')
+            print('   ', column, np.mean(df_data[column][norm_mask]), np.mean(df_data[column][calib_mask]),
+                  np.mean(df_data[column][cm0_mask]), np.mean(df_data[column][cm1_mask]), np.mean(df_data[column][nc_mask]))
 
         ax.add_collection(patch_col)
         ax.set_xlim([-7.274, +7.274])
@@ -213,8 +227,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.text(5, 6, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')            
         if (column == 'adc_stdd'):
             ax.text(-6.8, -5.8, r'Channels:')
-            ax.text(-6.8, -6.3, f'{np.sum((zeros | maxes) & (df_data["pad"] > 0))} Dead')
-            ax.text(-6.8, -6.8, f'{np.sum(uncon & (df_data["pad"] > 0) & ~(calib_mask))} Unbonded')
+            ax.text(-6.8, -6.3, f'{np.sum((zeros) & (df_data["pad"] > 0))} Dead')
+            #ax.text(-6.8, -6.8, f'{np.sum(uncon & (df_data["pad"] > 0) & ~(calib_mask))} Unbonded')
+            ax.text(-6.8, -6.8, f'{np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
         
         plt.colorbar(patch_col, label = column.replace('_',' '))
 
@@ -229,7 +244,6 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 
         # save the figure
         figname = figdir + str(label) + "_" + column + ".png"
-        print(figname)
         plt.savefig(figname)
     return 1
 
@@ -240,18 +254,19 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 # figdir: the output directory for the plots
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
 # label: a label to put in the plot names
-def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = "LF", label = None):
+def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = None):
     # fix label
     if label == None:
-            label = os.path.basename(fname)
-            label = label[:-5]
+        label = os.path.basename(fname)
+        label = label[:-5]
 
-    moduleserial = fname.split('/')[-4]
-    density = moduleserial.split('-')[1][1]
-    shape = moduleserial.split('-')[2][0]
-    hb_type = density+shape
+    if hb_type is None:
+        moduleserial = fname.split('/')[-4]
+        density = moduleserial.split('-')[1][1]
+        shape = moduleserial.split('-')[2][0]
+        hb_type = density+shape
 
-    print(moduleserial, hb_type)
+        #print(moduleserial, hb_type)
     
     livemod = 'ML' in fname or 'MH' in fname
             
@@ -269,7 +284,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = "LF", label = No
         tree = f["runsummary"]["summary"]
         df_data = tree.pandas.df()
     except:
-        print("No tree found!")
+        print(" -- No tree found!")
         return 0
 
     df_data = add_mapping(df_data, hb_type = hb_type)
@@ -294,7 +309,7 @@ if __name__ == "__main__":
     # parser arguments
     parser.add_argument("infname", type=str, help="Input summary file name")
     parser.add_argument("-d", "--figdir", type=str, default=None, help="Plot directory, if None (default), use same directory as input file")
-    parser.add_argument("-t", "--hb_type", type=str, default="LF", help="Hexaboard type", choices=["LF","LR","HF"])
+    parser.add_argument("-t", "--hb_type", type=str, default=None, help="Hexaboard type", choices=["LF","LL","LR","HF"])
     parser.add_argument("-l", "--label", type=str, default=None, help="Label to use in plots")
 
     args = parser.parse_args()
