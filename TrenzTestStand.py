@@ -1,6 +1,5 @@
 import paramiko
 import time
-import pathlib
 import os
 
 import yaml
