@@ -43,7 +43,7 @@ class CentosPC:
 
         density = modulename.split('-')[1][1]
         shape = modulename.split('-')[2][0]
-
+        
         if density == 'L':
             if shape == 'F':
                 self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-trophyV3.yaml'
@@ -56,6 +56,15 @@ class CentosPC:
                 self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initHD_trophyV3.yaml'
             else: # L R T B 5
                 raise NotImplementedError
+
+
+        os.system(f'cp {self.config} current_config.yaml')
+        self.config = 'current_config.yaml'
+
+        self.outyaml = {'pedestal_scan': 'trimmed_pedestal.yaml', 'sampling_scan': 'best_phase.yaml',
+                        'vrefinv_scan': 'vrefinv.yaml', 'vrefnoinv_scan': 'vrefnoinv.yaml',
+                        'toa_vref_scan_noinj': 'toa_vref.yaml', 'toa_vref_scan': 'toa_vref.yaml',
+                        'toa_trim_scan': 'trimmed_toa.yaml'}
                 
     def restart_daq(self):
         """
@@ -106,6 +115,8 @@ class CentosPC:
         the flag from outside the class if you want it to run -I at any given time.
 
         The environment script is run every time because os.system deletes the shell after the call is over.
+
+        If the script run produces an output configuration file, this function uses it to modify the original configuration file with its values.
         """
 
         if config is None:
@@ -124,6 +135,10 @@ class CentosPC:
         print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
         self.initiated = True
 
+        if scriptname in self.outyaml.keys():
+            print(f' >> CentosPC: Updating configuration file with {scriptname}/{runs[-1]}/{self.outyaml[scriptname]}')
+            updateconf(self.config, configuration["DataLoc"]+'/'+self.modulename+'/'+scriptname+'/'+runs[-1]+'/'+self.outyaml[scriptname])
+            
         return f'{scriptname}/{runs[-1]}'
         
     def pedestal_run(self, BV=None):
@@ -196,3 +211,38 @@ def static_make_hexmaps(modulename, ind=-1):
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)
     print(f' >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{modulename}')
+
+
+def recursive_update(conf, mod):
+
+    newconf = conf
+    for key in mod.keys():
+
+        if key in conf.keys():
+            if conf[key] != mod[key]:
+                if type(mod[key]) == dict:
+                    recursive_update(conf[key], mod[key])
+                else:
+                    if conf[key] != mod[key]:
+                        newconf[key] = mod[key]
+
+        else:
+            newconf[key] = mod[key]
+
+    return newconf
+
+def updateconf(conffile, updfile):
+
+    conf = {}
+    with open(conffile, 'r') as fileconf:
+        conf = yaml.safe_load(fileconf)
+        
+    mod = {}
+    with open(updfile, 'r') as fileupd:
+        mod = yaml.safe_load(fileupd)
+        
+    conf = recursive_update(conf, mod)
+
+    with open(conffile,'w') as filenew:
+        yaml_string=yaml.dump(conf, filenew)
+

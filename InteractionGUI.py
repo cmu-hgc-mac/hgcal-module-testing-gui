@@ -536,12 +536,16 @@ def run_pedestals(state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
+
         state['pc'].pedestal_run(BV=BV)
+        pedestal_upload(state['-Module-Serial-'])
+        
         if state['-Live-Module-']:
             state['ps'].outputOff()
             update_state(state, '-HV-Output-On-', False, 'black')
         try:
             hexpath = state['pc'].make_hexmaps(BV=BV)
+            plots_upload(state['-Module-Serial-'], hexpath)
         except:
             hexpath = ''
     pedestals.close()
@@ -651,8 +655,8 @@ def take_IV_curve(state, step=20):
             step = -step
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
-        inspector = state['-Inspector-']
-        save_and_upload(curve, state['-Module-Serial-'], '', RH, Temp, inspector) # saves IV curve as pickle object
+
+        iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object and uploads to db
     curvew.close()
     return 'CONT'
         
