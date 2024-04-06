@@ -1,5 +1,6 @@
 import pyvisa
 from time import sleep
+from time import time
 from datetime import datetime
 from math import copysign
 import numpy as np
@@ -344,15 +345,15 @@ class Keithley2410:
 
     def measureCurrentLoop(self):
         # Measure current                                                                                                                                             
-        # NOTE: currently sleeping 5sec to stabilize measurement                                                                                         
+        # NOTE: currently sleeping 3sec to stabilize measurement                                                                                         
         # Current stabilizes much faster when you ask for a measurement continually                                                                                              
         if self._sense_mode != "current":
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
 
-	start = time()
-	while True:
-	    outdata = self.query("READ?")
+        start = time()
+        while True:
+            outdata = self.query("READ?")
             if time() - start >= 3.:
                 break
         measurement = self.query("READ?")
