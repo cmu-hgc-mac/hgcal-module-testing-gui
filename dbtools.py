@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 from datetime import datetime 
 import os
 #import psycopg2
-from postgres_tools_testing import upload_PostgreSQL
+from postgres_tools_testing import upload_PostgreSQL, fetch_PostgreSQL
 import pandas as pd
 import glob
 import uproot3 as uproot
@@ -40,6 +40,18 @@ def save_and_upload(datadict, modulename, inspector, upload=False):
 
     iv_save(datadict, modulename)
 
+def read_table(tablename='module_pedestal_test'):
+
+    coro = fetch_PostgreSQL(tablename)
+    print(coro)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+    print(result)
+
+    for r in result: 
+        print(r)
+
+
 def pedestal_upload(modulename, RH = '0', ind=-1):
 
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
@@ -57,7 +69,11 @@ def pedestal_upload(modulename, RH = '0', ind=-1):
         print("No tree found!")
         return 0
 
-    df_data = add_mapping(df_data, hb_type = 'LD')
+    density = modulename.split('-')[1][1]
+    shape = modulename.split('-')[2][0]
+    hb_type = density+shape
+
+    df_data = add_mapping(df_data, hb_type = hb_type)
 
     nDeadChan = 0
     Temp = '21' ##### XYZ fix temp, inspector, comment, dead chan
@@ -85,6 +101,15 @@ def pedestal_upload(modulename, RH = '0', ind=-1):
     coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
+
+    # temporarily
+    coro = fetch_PostgreSQL('module_pedestal_test')
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+    
+    for r in result: 
+        print(r)
+
 
 def iv_upload(datadict, modulename):
 

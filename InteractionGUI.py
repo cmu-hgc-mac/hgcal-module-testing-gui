@@ -538,8 +538,11 @@ def run_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
 
         state['pc'].pedestal_run(BV=BV)
-        pedestal_upload(state['-Module-Serial-'])
-        
+        try:
+            pedestal_upload(state['-Module-Serial-'])
+        except Exception as e: 
+            print('  ---',e)
+
         if state['-Live-Module-']:
             state['ps'].outputOff()
             update_state(state, '-HV-Output-On-', False, 'black')

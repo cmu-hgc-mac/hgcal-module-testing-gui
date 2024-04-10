@@ -11,7 +11,10 @@ from matplotlib.patches import RegularPolygon, Rectangle
 from matplotlib.collections import PatchCollection
 from matplotlib.legend_handler import HandlerPatch
 
-from hexaboard_geometries import *
+try:
+    from hexaboard_geometries import *
+except ModuleNotFoundError:
+    from hexmap.hexaboard_geometries import *
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 font = {"size": 25}

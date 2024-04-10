@@ -124,7 +124,7 @@ class CentosPC:
         
         script = self.scriptloc + scriptname + '.py'
 
-        print(f' >> CentosPC: Running {scriptname}.py...')
+        print(f' >> CentosPC: Running {scriptname}.py with config {config}...')
         if not self.initiated:
             os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
         else:
@@ -136,8 +136,8 @@ class CentosPC:
         self.initiated = True
 
         if scriptname in self.outyaml.keys():
-            print(f' >> CentosPC: Updating configuration file with {scriptname}/{runs[-1]}/{self.outyaml[scriptname]}')
-            updateconf(self.config, configuration["DataLoc"]+'/'+self.modulename+'/'+scriptname+'/'+runs[-1]+'/'+self.outyaml[scriptname])
+            print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
+            updateconf(self.config, runs[-1]+'/'+self.outyaml[scriptname])
             
         return f'{scriptname}/{runs[-1]}'
         

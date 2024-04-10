@@ -38,7 +38,7 @@ async def upload_PostgreSQL(table_name, db_upload_data):
         host = 'cmsmac04.phys.cmu.edu',
         database = 'hgcdb',
         user = 'teststand_user',
-        password = confguration['DBPassword'])
+        password = configuration['DBPassword'])
     
     print('Connection successful.')
 
@@ -53,8 +53,8 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     """
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
     if table_exists:
-        print(f'Executing query: {query}')
         query = get_query(table_name)
+        print(f'Executing query: {query}')
         await conn.execute(query, *db_upload_data)
         print(f'Data is successfully uploaded to the {table_name}!')
     else:
