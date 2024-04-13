@@ -35,10 +35,11 @@ def get_query(table_name):
 
 async def upload_PostgreSQL(table_name, db_upload_data):
     conn = await asyncpg.connect(
-        host = 'cmsmac04.phys.cmu.edu',
-        database = 'hgcdb',
-        user = 'teststand_user',
-        password = configuration['DBPassword'])
+        host = configuration['DBHostname'],
+        database = configuration['DBDatabase'],
+        user = configuration['DBUsername'],
+        password = configuration['DBPassword']
+    )
     
     print('Connection successful.')
 
@@ -89,10 +90,10 @@ def get_query_read(component_type):
 
 async def fetch_PostgreSQL(component_type):
     conn = await asyncpg.connect(
-        host='cmsmac04.phys.cmu.edu',
-        database='hgcdb',
-        user='teststand_user',
-        password='hgcal'
+        host = configuration['DBHostname'],
+        database = configuration['DBDatabase'],
+        user = configuration['DBUsername'],
+	password = configuration['DBPassword']
     )
     value = await conn.fetch(get_query_read(component_type))
     await conn.close()

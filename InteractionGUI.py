@@ -3,7 +3,6 @@ from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
 from time import sleep
-from dbtools import *
 import os
 
 import yaml
@@ -11,6 +10,9 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+if configuration['HasLocalDB']:
+    from dbtools import *
+    
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
@@ -538,18 +540,23 @@ def run_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
 
         state['pc'].pedestal_run(BV=BV)
-        try:
-            pedestal_upload(state['-Module-Serial-'])
-        except Exception as e: 
-            print('  ---',e)
+        
+        if configuration['HasLocalDB']:
+            try:
+                pedestal_upload(state['-Module-Serial-']) # uploads pedestals to database
+            except Exception as e: 
+                print('  ---', e)
 
         if state['-Live-Module-']:
             state['ps'].outputOff()
             update_state(state, '-HV-Output-On-', False, 'black')
         try:
             hexpath = state['pc'].make_hexmaps(BV=BV)
-            plots_upload(state['-Module-Serial-'], hexpath)
-        except:
+            if configuration['HasLocalDB']:
+                plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
+                
+        except Exception as e:
+            print('  ---', e)
             hexpath = ''
     pedestals.close()
     return hexpath
@@ -659,7 +666,10 @@ def take_IV_curve(state, step=20):
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
-        iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object and uploads to db
+        if configuration['HasLocalDB']:
+            iv_upload(curve, state['-Module-Serial-']) # saves IV curve as pickle object and uploads to local db
+        else:
+            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
     curvew.close()
     return 'CONT'
         
