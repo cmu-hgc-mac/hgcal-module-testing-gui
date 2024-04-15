@@ -388,7 +388,7 @@ class Keithley2410:
         
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
 
-        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(temparray), 'date': date, 'time': time}
+        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(temparray), 'date': date, 'time': time, 'datetime': current_date}
         self.IVdata.append(datadict)
                 
         return datadict

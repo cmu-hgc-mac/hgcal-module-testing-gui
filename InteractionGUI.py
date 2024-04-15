@@ -648,8 +648,8 @@ def take_IV_curve(state, step=20):
         window.close()
 
     else:
-        pass # Not implemented - automatically query RH and Temp from sensor
-    
+        RH, Temp = add_RH_T(state)
+        
     curvew = waiting_window(f'Taking IV curve...')
 
     if state['-Debug-Mode-']:
@@ -756,5 +756,17 @@ def plot_IV_curves(state):
 
         os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
 
+def add_RH_T(state):
+    """
+    Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
+    general to all MACs.
+    """
 
-        
+    from AirControl import AirControl
+    controller = AirControl()
+    RH = controller.get_humidity()
+    T = controller.get_humidity()
+    state['-Box-RH-'] = RH
+    state['-Box-T-'] = T
+
+    return RH, T

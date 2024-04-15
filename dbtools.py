@@ -26,6 +26,8 @@ def iv_save(datadict, modulename):
     os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}')
     with open(f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
+
+    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl'
         
 def save_and_upload(datadict, modulename, inspector, upload=False):
 
@@ -52,8 +54,10 @@ def read_table(tablename):
         print(r)
 
 
-def pedestal_upload(modulename, RH = '0', ind=-1):
+def pedestal_upload(state, ind=-1):
 
+    modulename = state['-Module-Serial-']
+    
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
     runs.sort()
     fname = runs[-1]+'/pedestal_run0.root'
@@ -76,16 +80,28 @@ def pedestal_upload(modulename, RH = '0', ind=-1):
     df_data = add_mapping(df_data, hb_type = hb_type)
 
     nDeadChan = 0
-    Temp = '21' ##### XYZ fix temp, inspector, comment, dead chan
+    ##### XYZ fix dead chan
+    if configuration['HasRHSensor']:
+        if '-Box-RH-' not in state.keys(): # should already exist
+            add_RH_T(state)
+        RH = str(state['-Box-RH-'])
+        T = str(state['-Box-T-'])
+    else:
+        RH = 'N/A'
+        T = 'N?A'
+
     now = datetime.now()
-    db_upload_ped = [modulename, RH, Temp, df_data['chip'].tolist(), df_data['channel'].tolist(), 
+
+    comment = runs[-1].split('/')[-1] # for now, comment is dir name of raw test results
+    
+    db_upload_ped = [modulename, RH, T, df_data['chip'].tolist(), df_data['channel'].tolist(), 
                      df_data['channeltype'].tolist(), df_data['adc_median'].tolist(), df_data['adc_iqr'].tolist(), 
                      df_data['tot_median'].tolist(), df_data['tot_iqr'].tolist(), df_data['toa_median'].tolist(), 
                      df_data['toa_iqr'].tolist(), df_data['adc_mean'].tolist(), df_data['adc_stdd'].tolist(), 
                      df_data['tot_mean'].tolist(), df_data['tot_stdd'].tolist(), df_data['toa_mean'].tolist(), 
                      df_data['toa_stdd'].tolist(), df_data['tot_efficiency'].tolist(), df_data['tot_efficiency_error'].tolist(), 
                      df_data['toa_efficiency'].tolist(), df_data['toa_efficiency_error'].tolist(), df_data['pad'].tolist(), 
-                     df_data['x'].tolist(), df_data['y'].tolist(), nDeadChan, now.date(), now.time(), 'acrobert', 'First upload']
+                     df_data['x'].tolist(), df_data['y'].tolist(), nDeadChan, now.date(), now.time(), state['-Inspector-'], 'First upload']
 
     if 'BV' in runs[ind] and '320-M' in modulename:
         BV = runs.split('BV').rstrip('\n ')
@@ -105,17 +121,21 @@ def pedestal_upload(modulename, RH = '0', ind=-1):
     read_table(table)
 
 
-def iv_upload(datadict, modulename):
+def iv_upload(datadict, state):
 
+    modulename = state['-Module-Serial-']
+    
     iv_save(datadict, modulename)
     
-    datadict = pickle.load(open(pick, 'rb'))
     data = datadict['data']
     
     RH = datadict['RH']
     Temp = datadict['Temp'] 
-    #### XYZ fix status, inspector, comment
-    db_upload_iv = [modulename, RH, Temp, 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(), 'acrobert', 'First upload']
+    #### XYZ what should be commented?
+    #### XYZ status? etc.
+    {datadict["date"]}_{datadict["time"]}_{datadict["RH"]}
+    db_upload_iv = [modulename, RH, Temp, 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
+                    datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
 
     coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
     loop = asyncio.get_event_loop()
@@ -135,33 +155,53 @@ def plots_upload(modulename, hexpath, ind=-1):
     dname = runs[ind]
 
     print(">> Uploading pedestal plots of %s board from directory %s into database" %(modulename, dname))
-    
-    ### XYZ - fix to use glob for variable chip number
-    with open(dname+'/noise_vs_channel_chip0.png', 'rb') as f:
-        noise0 = f.read()
-    with open(dname+'/noise_vs_channel_chip1.png', 'rb') as f:
-        noise1 = f.read()
-    with open(dname+'/noise_vs_channel_chip2.png', 'rb') as f:
-        noise2 = f.read()
-    with open(dname+'/pedestal_vs_channel_chip0.png', 'rb') as f:
-        pedestal0 = f.read()
-    with open(dname+'/pedestal_vs_channel_chip1.png', 'rb') as f:
-        pedestal1 = f.read()
-    with open(dname+'/pedestal_vs_channel_chip2.png', 'rb') as f:
-        pedestal2 = f.read()
-    with open(dname+'/total_noise_chip0.png', 'rb') as f:
-        totnoise0 = f.read()
-    with open(dname+'/total_noise_chip1.png', 'rb') as f:
-        totnoise1 = f.read()
-    with open(dname+'/total_noise_chip2.png', 'rb') as f:
-        totnoise2 = f.read()
 
-    db_upload_plots = [modulename, hexmean, hexstdd, [noise0, noise1, noise2], [pedestal0, pedestal1, pedestal2], [totnoise0, totnoise1, totnoise2], 'acrobert', 'First upload']
+    
+    noiseplots = glob.glob(dname+'/noise_vs_channel_chip*.png')
+    noise = []
+    for chip in noiseplots:
+        with open(chip, 'rb') as f:
+            noise.append(f.read())
+
+    pedestalplots = glob.glob(dname+'/pedestal_vs_channel_chip*.png')
+    pedestal = []
+    for chip in pedestalplots:
+        with open(chip, 'rb') as f:
+            pedestal.append(f.read())
+            
+    totnoiseplots = glob.glob(dname+'/total_noise_chip*.png')
+    totnoise = []
+    for chip in totnoiseplots:
+        with open(chip, 'rb') as f:
+            totnoise.append(f.read())
+            
+    #with open(dname+'/noise_vs_channel_chip0.png', 'rb') as f:
+    #    noise0 = f.read()
+    #with open(dname+'/noise_vs_channel_chip1.png', 'rb') as f:
+    #    noise1 = f.read()
+    #with open(dname+'/noise_vs_channel_chip2.png', 'rb') as f:
+    #    noise2 = f.read()
+    #with open(dname+'/pedestal_vs_channel_chip0.png', 'rb') as f:
+    #    pedestal0 = f.read()
+    #with open(dname+'/pedestal_vs_channel_chip1.png', 'rb') as f:
+    #    pedestal1 = f.read()
+    #with open(dname+'/pedestal_vs_channel_chip2.png', 'rb') as f:
+    #    pedestal2 = f.read()
+    #with open(dname+'/total_noise_chip0.png', 'rb') as f:
+    #    totnoise0 = f.read()
+    #with open(dname+'/total_noise_chip1.png', 'rb') as f:
+    #    totnoise1 = f.read()
+    #with open(dname+'/total_noise_chip2.png', 'rb') as f:
+    #    totnoise2 = f.read()
+
+    comment = hexpath.split('_')[-3] # 'runX'
+    
+    db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
-    #read_table('module_pedestal_plots')
+    read_table('module_pedestal_plots')
 
 
 # example of how to read
