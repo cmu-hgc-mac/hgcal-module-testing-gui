@@ -189,7 +189,7 @@ class CentosPC:
         label = f'{self.modulename}_run{labelind}' if BV is None else f'{self.modulename}_run{labelind}_BV{BV}'
 
         make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}', label=label)
-        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename}')
+        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename} as run{labelind}')
 
         return f'{configuration["DataLoc"]}/{self.modulename}/{label}'
             

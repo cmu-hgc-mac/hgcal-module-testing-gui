@@ -550,14 +550,14 @@ def run_pedestals(state, BV):
         if state['-Live-Module-']:
             state['ps'].outputOff()
             update_state(state, '-HV-Output-On-', False, 'black')
-        try:
-            hexpath = state['pc'].make_hexmaps(BV=BV)
-            if configuration['HasLocalDB']:
-                plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
+        #try:
+        hexpath = state['pc'].make_hexmaps(BV=BV)
+        if configuration['HasLocalDB']:
+            plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
                 
-        except Exception as e:
-            print('  ---', e)
-            hexpath = ''
+        #except Exception as e:
+        #    print('  ---', e)
+        #    hexpath = ''
     pedestals.close()
     return hexpath
 

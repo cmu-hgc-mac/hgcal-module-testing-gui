@@ -36,17 +36,17 @@ def save_and_upload(datadict, modulename, inspector, upload=False):
         db_upload_iv = [modulename, datadict['RH'], datadict['Temp'], 
                         data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(), 
                         dt.date(), dt.time(), inspector, '']
-        upload_PostgreSQL(table_name = 'module_iv_test', db_upload = db_upload_iv)
+        upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
 
     iv_save(datadict, modulename)
 
-def read_table(tablename='module_pedestal_test'):
+def read_table(tablename):
 
     coro = fetch_PostgreSQL(tablename)
-    print(coro)
+    #print(coro)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
-    print(result)
+    #print(result)
 
     for r in result: 
         print(r)
@@ -102,13 +102,7 @@ def pedestal_upload(modulename, RH = '0', ind=-1):
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
-    # temporarily
-    coro = fetch_PostgreSQL('module_pedestal_test')
-    loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(coro)
-    
-    for r in result: 
-        print(r)
+    read_table(table)
 
 
 def iv_upload(datadict, modulename):
@@ -122,13 +116,18 @@ def iv_upload(datadict, modulename):
     Temp = datadict['Temp'] 
     #### XYZ fix status, inspector, comment
     db_upload_iv = [modulename, RH, Temp, 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(), 'acrobert', 'First upload']
-    upload_PostgreSQL(table_name = 'module_iv_test', db_upload = db_upload_iv)
+
+    coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    read_table('module_iv_test')
         
 def plots_upload(modulename, hexpath, ind=-1):
 
-    with open(f'{configuration["DataLoc"]}/{modulename}/{label}_adc_mean.png', 'rb') as f:
+    with open(f'{hexpath}_adc_mean.png', 'rb') as f:
         hexmean = f.read()
-    with open(f'{configuration["DataLoc"]}/{modulename}/{label}_adc_stdd.png', 'rb') as f:
+    with open(f'{hexpath}_adc_stdd.png', 'rb') as f:
         hexstdd = f.read()
     
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
@@ -137,6 +136,7 @@ def plots_upload(modulename, hexpath, ind=-1):
 
     print(">> Uploading pedestal plots of %s board from directory %s into database" %(modulename, dname))
     
+    ### XYZ - fix to use glob for variable chip number
     with open(dname+'/noise_vs_channel_chip0.png', 'rb') as f:
         noise0 = f.read()
     with open(dname+'/noise_vs_channel_chip1.png', 'rb') as f:
@@ -156,9 +156,12 @@ def plots_upload(modulename, hexpath, ind=-1):
     with open(dname+'/total_noise_chip2.png', 'rb') as f:
         totnoise2 = f.read()
 
-    db_upload_plots = [modulename, hexmean, hexstdd, noise0, noise1, noise2, pedestal0, pedestal1, pedestal2, totnoise0, totnoise1, totnoise2, 'acrobert', 'First upload']
-    upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload = db_upload_iv)
-    
+    db_upload_plots = [modulename, hexmean, hexstdd, [noise0, noise1, noise2], [pedestal0, pedestal1, pedestal2], [totnoise0, totnoise1, totnoise2], 'acrobert', 'First upload']
+    coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    #read_table('module_pedestal_plots')
 
 
 # example of how to read

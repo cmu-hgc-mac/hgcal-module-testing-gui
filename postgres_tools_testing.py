@@ -27,7 +27,7 @@ def get_query(table_name):
     elif table_name == 'module_pedestal_plots':
         pre_query = f""" 
         INSERT INTO {table_name} 
-        (module_name, adc_mean_hexmap, adc_stdd_hexmap, noise_channel_chip0, noise_channel_chip1, noise_channel_chip2, pedestal_channel_chip0, pedestal_channel_chip1, pedestal_channel_chip2, total_noise_chip0, total_noise_chip1, total_noise_chip2, inspector, comment_plot_test) 
+        (module_name, adc_mean_hexmap, adc_stdd_hexmap, noise_channel_chip, pedestal_channel_chip, total_noise_chip, inspector, comment_plot_test) 
         VALUES  """  ### maintain space
     data_placeholder = ', '.join(['${}'.format(i) for i in range(1, len(pre_query.split(','))+1)])
     query = f"""{pre_query} {'({})'.format(data_placeholder)}"""
@@ -78,6 +78,11 @@ def get_query_read(component_type):
             FROM module_iv_test
             WHERE inspector = 'acrobert'
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""    
+    #elif component_type == 'module_pedestal_plots':
+    #    query = f"""SELECT module_name, inspector, comment_plot_test
+    #        FROM module_pedestal_plots
+    #        WHERE inspector = 'acrobert'
+    #        LIMIT 10;"""
     elif component_type == 'baseplate':
         query = """SELECT bp_name, thickness, geometry, resolution 
         FROM bp_inspect 
