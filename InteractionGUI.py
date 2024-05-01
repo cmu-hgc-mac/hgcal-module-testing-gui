@@ -667,9 +667,12 @@ def take_IV_curve(state, step=20):
         update_state(state, '-HV-Output-On-', False, 'black')
 
         if configuration['HasLocalDB']:
-            iv_upload(curve, state['-Module-Serial-']) # saves IV curve as pickle object and uploads to local db
+            try:
+                iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
+            except:
+                pass
         else:
-            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+            iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()
     return 'CONT'
         
@@ -765,7 +768,7 @@ def add_RH_T(state):
     from AirControl import AirControl
     controller = AirControl()
     RH = controller.get_humidity()
-    T = controller.get_humidity()
+    T = controller.get_temperature()
     state['-Box-RH-'] = RH
     state['-Box-T-'] = T
 

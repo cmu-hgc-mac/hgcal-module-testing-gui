@@ -5,7 +5,7 @@ from Keithley2410 import Keithley2410
 from time import sleep
 from InteractionGUI import *
 import yaml
-
+from datetime import datetime, timedelta
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
 then creates the GUI layout and then the GUI window. Once done, the script runs a loop which tracks and responds to the user's
@@ -500,7 +500,9 @@ while True:
 
         # add RH, T to state dict now
         # values also modified at the start of an IV curve
-        RH, Temp = add_RH_T(current_state)
+        
+        if configuration['HasRHSensor']:
+            RH, Temp = add_RH_T(current_state)
 
         # For pedestal scan, check to make sure bias voltage is entered if needed and then run
         if values['-Pedestal-Scan-']:
@@ -582,8 +584,8 @@ while True:
             do_something_window('Open dry air valve', 'Open')
 
             drytime = time.time()
-            dry_date = datetime.datetime.now()
-            finalIV_date = dry_date + datetime.timedelta(seconds=final_dry_time)
+            dry_date = datetime.now()
+            finalIV_date = dry_date + timedelta(seconds=final_dry_time)
             finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
 
         # Could run tests here

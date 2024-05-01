@@ -46,7 +46,7 @@ class CentosPC:
         
         if density == 'L':
             if shape == 'F':
-                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-trophyV3.yaml'
+                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-trophyV3-inctoa.yaml'
             elif shape == 'L' or shape == 'R':
                 self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-semi.yaml'
             else: # T B 5

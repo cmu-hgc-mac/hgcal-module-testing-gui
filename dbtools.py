@@ -133,8 +133,7 @@ def iv_upload(datadict, state):
     Temp = datadict['Temp'] 
     #### XYZ what should be commented?
     #### XYZ status? etc.
-    {datadict["date"]}_{datadict["time"]}_{datadict["RH"]}
-    db_upload_iv = [modulename, RH, Temp, 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
+    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
                     datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
 
     coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
@@ -143,7 +142,7 @@ def iv_upload(datadict, state):
 
     read_table('module_iv_test')
         
-def plots_upload(modulename, hexpath, ind=-1):
+def plots_upload(modulename, hexpath, inspector='acrobert', ind=-1):
 
     with open(f'{hexpath}_adc_mean.png', 'rb') as f:
         hexmean = f.read()
@@ -196,7 +195,7 @@ def plots_upload(modulename, hexpath, ind=-1):
 
     comment = hexpath.split('_')[-3] # 'runX'
     
-    db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
+    db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, inspector, comment]
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
