@@ -93,18 +93,18 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 
 # Select Tests section
 other_scripts = ['delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
-                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan' 'vrefnoinv_scan']
+                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
              
              # old attempt at pedestal trimming
              #[sg.Checkbox('Pedestal Scan', key='-Pedestal-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedScan-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedScan-')],
              #[sg.Checkbox('Vref Inv and NoInv Scan', key='-Vref-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-Vref-Text-'), sg.Input(s=5, key='-Bias-Voltage-Vref-')],
              
-             [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-TrimPed-Text-'), sg.Input(s=5, key='-Bias-Voltage-TrimPed-')],
+             [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
-              sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')]
+              sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -177,7 +177,7 @@ def disable_module_setup():
 # Functions for enabling/disabling select tests fields
 def toggle_ts_tests(enabled):
     keys = ['-Pedestal-Run-', '-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', 
-            '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', 'Restart Services', '-Trim-Pedestals-', '-Bias-Voltage-TrimPed-', '-Other-Script-', 
+            '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', 'Restart Services', '-Trim-Pedestals-', '-Bias-Voltage-PedTrim-', '-Other-Script-', 
             '-Bias-Voltage-Other-']#'-Pedestal-Scan-', '-Bias-Voltage-PedScan-', '-Vref-Scan-', '-Bias-Voltage-Vref-', '-Full-Test-', '-Bias-Voltage-Full-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -204,12 +204,14 @@ def disable_iv_tests():
 
 # Function to clear the values of the tests in the Select Tests section
 def clear_tests():
-    for key in ['-Pedestal-Run-','-Trim-Pedestals--', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']: #'-Vref-Scan-', '-Pedestal-Scan-'
+    for key in ['-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']: #'-Vref-Scan-', '-Pedestal-Scan-'
         basewindow[key].update(False)
     for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
 6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']: #, '-Bias-Voltage-PedScan-', '-Bias-Voltage-Vref-']
         basewindow[key].update('')
-
+    basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
+    basewindow['-Bias-Voltage-Other-'].update(value='300')
+        
 # Variables that will be set by the user and then used to create the module serial number
 trenzhostname = ''
 livemodule = None
