@@ -802,11 +802,20 @@ def add_RH_T(state):
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
     general to all MACs.
     """
-
     from AirControl import AirControl
-    controller = AirControl()
-    RH = controller.get_humidity()
-    T = controller.get_temperature()
+    
+    RH = None
+    T = None
+    for i in range(10):
+        controller = AirControl()
+        try:
+            RH = controller.get_humidity()
+            T = controller.get_temperature()
+            break
+        except Exception as e:
+            print('  ---RH/T exception:', e)
+            print(f'  ---Trying again (attempt {i})')
+
     state['-Box-RH-'] = RH
     state['-Box-T-'] = T
 

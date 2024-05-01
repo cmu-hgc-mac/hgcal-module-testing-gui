@@ -4,7 +4,7 @@ import time
 class AirControl:
 
     def __init__(self):
-        self.nano = serial.Serial('/dev/ttyUSB1', 115200, timeout=2) #Change port if needed, default /dev/TTYUSB1
+        self.nano = serial.Serial('/dev/ttyUSB1', 115200, timeout=2) #Change port if needed, default /dev/ttyUSB1
 
     def __del__(self):
         self.nano.close()
@@ -23,7 +23,6 @@ class AirControl:
         """Returns the current humidity as an integer percentage
         """
         environment_string = self.nano.readline().decode('ASCII').rstrip()
-        print(environment_string)
         humidity_string = environment_string.split(',')[0]
         return int(humidity_string)
 
@@ -31,7 +30,6 @@ class AirControl:
         """Returns the current temperature in degrees Celcius as an integer
         """
         environment_string = self.nano.readline().decode('ASCII').rstrip()
-        print(environment_string)
         temperature_string = environment_string.split(',')[1]
         return int(temperature_string)
         
