@@ -1,5 +1,5 @@
 import pyvisa
-from time import sleep
+from time import sleep, time
 from datetime import datetime
 from math import copysign
 import numpy as np
@@ -325,8 +325,14 @@ class Keithley2410:
         if self._sense_mode != "voltage":
             self.set_sense_mode("voltage")
         self._write("CONFigure:VOLTage:DC")
-        measurement = self._query("READ?", 1.)
+        measurement = self._query("READ?")
         return float(self._parse_data(measurement)[0]['voltage'])
+
+    def measureVoltage(self):
+        """Renaming of above function for compatibility
+        """
+        return self.get_sense_voltage(), '', ''
+
 
     def get_sense_current(self):
         """Returns the sensed current
@@ -334,7 +340,13 @@ class Keithley2410:
         if self._sense_mode != "current":
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
-        measurement = self._query("READ?", 1.) ### fix 1s delay
+        #measurement = self._query("READ?", 1.) ### fix 1s delay
+        start = time()
+        while True:
+            measurement = self._query("READ?", 0.)
+            if time() - start >= 5.:
+                break
+        measurement = self._query("READ?", 0.)
         return float(self._parse_data(measurement)[0]['current'])
 
     def measureCurrent(self):
@@ -423,3 +435,60 @@ class Keithley2410:
         if err_string != '':
             print('>> Found error: {}'.format(err_string))
             raise ValueError(err_string)
+
+    # Take IV curve
+    # Storing/plotting curve handled elsewhere
+    def takeIVold(self, maxV, stepV, RH, Temp, errcheck_step=5):
+
+        self.setVoltage(0.)
+        self.outputOn()
+
+        ln = int(maxV//stepV)+1
+        data = [] # append measurements to this list as rows
+
+        self.display_string('Looping...')
+        print(f'>> Looping to {maxV}V in steps of {stepV}V')
+        sleep(5)
+
+        # Record date
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+        time = current_date.isoformat().split('T')[1].split('.')[0]
+
+        # Count the number of measurements that hit current compliance
+        # Break the loop after the second to save time
+        compl_ctr = 0
+        for i in range(0, ln):
+            if i % errcheck_step == 0:
+                self.check_for_errors(1) # Periodically check Keithley error cache
+
+            vltg = i*stepV
+            self.setVoltage(vltg)
+            # Delay here doesn't work for some reason
+            # maybe because the Keithley isn't in measure mode?
+            #sleep(measdelay)
+            _, current, _ = self.measureCurrent()
+            voltage, _, _ = self.measureVoltage()
+            resistance = voltage / current
+
+            data.append([vltg, voltage, np.abs(current), resistance])
+
+            print(f'   Set {vltg} V Act {round(voltage,2)} V Meas {round(np.abs(current)*1000000.,2)} muA')
+            if np.abs(current)*1000000. > 100.:
+                print(f'>> Hit compliance {np.abs(current)*1000000.}muA at step {i}')
+                compl_ctr += 1
+
+            if compl_ctr == 3:
+                break
+
+        self.display_string('Loop finished.')
+        print('>> Loop finished')
+        
+        # Make output dictionary and return
+        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time}
+        self.IVdata.append(datadict)
+        print('>> Disabling output')
+        self.setVoltage(0.)
+        self.outputOff()
+
+        return datadict

@@ -545,16 +545,20 @@ def run_pedestals(state, BV):
             try:
                 pedestal_upload(state['-Module-Serial-']) # uploads pedestals to database
             except Exception as e: 
-                print('  ---', e)
+                print('  ---Pedestal upload exception:', e)
+                ### XYZ save as csv?
 
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
+        #if state['-Live-Module-']:
+        #    state['ps'].outputOff()
+        #    update_state(state, '-HV-Output-On-', False, 'black')
         #try:
         hexpath = state['pc'].make_hexmaps(BV=BV)
         if configuration['HasLocalDB']:
-            plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
-                
+            try:
+                plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
+            except Exception as e:
+                print('  ---Plots upload exception:', e)
+                ### XYZ save as csv?
         #except Exception as e:
         #    print('  ---', e)
         #    hexpath = ''
@@ -569,10 +573,44 @@ def multi_run_pedestals(state, BV_list):
     hexpath = ''
     for BV in BV_list:
         hexpath = run_pedestals(state, BV)
-
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
         os.system(f'xdg-open {hexpath}_adc_mean.png')
         os.system(f'xdg-open {hexpath}_adc_stdd.png')
+
+def trim_pedestals(state, BV):
+    """
+    """
+    trimming = waiting_window(f"Trimming Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
+    
+    if state['-Debug-Mode-']:
+        sleep(5)
+    else:
+        if state['-Live-Module-'] and BV is not None:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(float(BV))
+        state['pc'].pedestal_run()
+        state['pc'].pedestal_scan()
+        state['pc'].vrefnoinv_scan()
+        state['pc'].vrefinv_scan()
+
+    trimming.close()
+
+def run_other_script(script, state, BV):
+    """
+    """
+    running = waiting_window(f"Running {script}.py (BV={BV})...", description=f'python3 {script}.py [options...]')
+
+    if state['-Debug-Mode-']:
+        sleep(5)
+    else:
+        if state['-Live-Module-'] and BV is not None:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(float(BV))
+        state['pc']._run_script(script)
+
+    running.close()
 
 def scan_pedestals(state, BV):
     """
@@ -591,9 +629,9 @@ def scan_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
+        #if state['-Live-Module-']:
+        #    state['ps'].outputOff()
+        #    update_state(state, '-HV-Output-On-', False, 'black')
     pedestals.close()
     
 def scan_vref(state, BV):
@@ -613,9 +651,9 @@ def scan_vref(state, BV):
             state['ps'].setVoltage(float(BV))
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
+        #if state['-Live-Module-']:
+        #    state['ps'].outputOff()
+        #    update_state(state, '-HV-Output-On-', False, 'black')
     vref.close()
 
 def take_IV_curve(state, step=20):
@@ -669,8 +707,8 @@ def take_IV_curve(state, step=20):
         if configuration['HasLocalDB']:
             try:
                 iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
-            except:
-                pass
+            except Exception as e:
+                print('  ---IV upload exception:', e)
         else:
             iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()

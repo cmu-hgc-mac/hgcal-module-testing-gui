@@ -79,8 +79,9 @@ def pedestal_upload(state, ind=-1):
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
-    nDeadChan = 0
-    ##### XYZ fix dead chan
+    count_dead_chan = 0
+    list_dead_pad = []
+    ##### XYZ fix dead chan/pad
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
             add_RH_T(state)
@@ -88,7 +89,7 @@ def pedestal_upload(state, ind=-1):
         T = str(state['-Box-T-'])
     else:
         RH = 'N/A'
-        T = 'N?A'
+        T = 'N/A'
 
     now = datetime.now()
 
@@ -101,7 +102,7 @@ def pedestal_upload(state, ind=-1):
                      df_data['tot_mean'].tolist(), df_data['tot_stdd'].tolist(), df_data['toa_mean'].tolist(), 
                      df_data['toa_stdd'].tolist(), df_data['tot_efficiency'].tolist(), df_data['tot_efficiency_error'].tolist(), 
                      df_data['toa_efficiency'].tolist(), df_data['toa_efficiency_error'].tolist(), df_data['pad'].tolist(), 
-                     df_data['x'].tolist(), df_data['y'].tolist(), nDeadChan, now.date(), now.time(), state['-Inspector-'], 'First upload']
+                     df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, list_dead_pad, now.date(), now.time(), state['-Inspector-'], 'First upload']
 
     if 'BV' in runs[ind] and '320-M' in modulename:
         BV = runs.split('BV').rstrip('\n ')
@@ -133,7 +134,8 @@ def iv_upload(datadict, state):
     Temp = datadict['Temp'] 
     #### XYZ what should be commented?
     #### XYZ status? etc.
-    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0, 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
+    #### XYZ IV ratio?
+    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., [0., 0.], data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
                     datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
 
     coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)

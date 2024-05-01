@@ -171,7 +171,7 @@ class CentosPC:
 
     def sampling_scan(self):
         self._run_script('sampling_scan')
-        
+                
     def make_hexmaps(self, ind=-1, BV=None):
         """
         Makes fancy hexmap plots. By default, it will take the most recent pedestal run by default, though this can be 
