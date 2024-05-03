@@ -14,6 +14,11 @@ def get_query(table_name):
         INSERT INTO {table_name}  
         (module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, count_dead_chan, list_dead_pad, date_test, time_test, inspector, comment) 
         VALUES   """  ### maintain space
+        pre_query = f""" 
+        INSERT INTO {table_name}  
+        (module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, count_dead_chan, date_test, time_test, inspector, comment) 
+        VALUES   """  ### maintain space
+
     elif table_name == 'module_iv_test':
         pre_query = f""" 
         INSERT INTO {table_name} 
@@ -84,7 +89,7 @@ def get_query_read(table_name, part_name = None):
             FROM {table_name}   
             WHERE module_name = '{part_name}';"""
     elif table_name == 'module_pedestal_plots':
-        query = f"""SELECT adc_mean_hexmap                                                                                           
+        query = f"""SELECT module_name, inspector, comment_plot_test                                                                                           
             FROM {table_name}                                                                                                                                                                                
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:

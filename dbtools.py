@@ -50,8 +50,7 @@ def read_table(tablename):
     result = loop.run_until_complete(coro)
     #print(result)
 
-    for r in result: 
-        print(r)
+    print(result[-1])
 
 
 def pedestal_upload(state, ind=-1):
@@ -60,7 +59,9 @@ def pedestal_upload(state, ind=-1):
     
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
     runs.sort()
-    fname = runs[-1]+'/pedestal_run0.root'
+    fname = runs[ind]+'/pedestal_run0.root'
+
+    print(runs[ind])
 
     print(">> Uploading pedestal run of %s board from summary file %s into database" %(modulename, fname))
 
@@ -102,7 +103,8 @@ def pedestal_upload(state, ind=-1):
                      df_data['tot_mean'].tolist(), df_data['tot_stdd'].tolist(), df_data['toa_mean'].tolist(), 
                      df_data['toa_stdd'].tolist(), df_data['tot_efficiency'].tolist(), df_data['tot_efficiency_error'].tolist(), 
                      df_data['toa_efficiency'].tolist(), df_data['toa_efficiency_error'].tolist(), df_data['pad'].tolist(), 
-                     df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, list_dead_pad, now.date(), now.time(), state['-Inspector-'], 'First upload']
+                     #df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, list_dead_pad, now.date(), now.time(), state['-Inspector-'], 'First upload']
+                     df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, now.date(), now.time(), state['-Inspector-'], 'First upload']
 
     if 'BV' in runs[ind] and '320-M' in modulename:
         BV = runs.split('BV').rstrip('\n ')
@@ -155,9 +157,8 @@ def plots_upload(modulename, hexpath, inspector='acrobert', ind=-1):
     runs.sort()
     dname = runs[ind]
 
-    print(">> Uploading pedestal plots of %s board from directory %s into database" %(modulename, dname))
+    print("  >> Uploading pedestal plots of %s board from directory %s into database" %(modulename, dname))
 
-    
     noiseplots = glob.glob(dname+'/noise_vs_channel_chip*.png')
     noise = []
     for chip in noiseplots:
@@ -175,7 +176,7 @@ def plots_upload(modulename, hexpath, inspector='acrobert', ind=-1):
     for chip in totnoiseplots:
         with open(chip, 'rb') as f:
             totnoise.append(f.read())
-            
+                
     #with open(dname+'/noise_vs_channel_chip0.png', 'rb') as f:
     #    noise0 = f.read()
     #with open(dname+'/noise_vs_channel_chip1.png', 'rb') as f:
@@ -195,7 +196,8 @@ def plots_upload(modulename, hexpath, inspector='acrobert', ind=-1):
     #with open(dname+'/total_noise_chip2.png', 'rb') as f:
     #    totnoise2 = f.read()
 
-    comment = hexpath.split('_')[-3] # 'runX'
+    print(hexpath)
+    comment = hexpath.split('_')[-2] # 'runX'
     
     db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, inspector, comment]
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
@@ -228,3 +230,27 @@ hxb_pedestal_test:
 module_pedestal_plots:
 (module_name, adc_mean_hexmap, adc_stdd_hexmap, noise_channel_chip0, noise_channel_chip1, noise_channel_chip2, pedestal_channel_chip0, pedestal_channel_chip1, pedestal_channel_chip2, total_noise_chip0, total_noise_chip1, total_noise_chip2, inspector, comment_plot_test)                                                                                                                                
 """
+
+def add_RH_T(state):
+    """                                                                                                                                                                                                    
+    Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not                                                                 
+    general to all MACs.                                                                                                                                                                      
+    """
+    from AirControl import AirControl
+
+    RH = None
+    T = None
+    for i in range(10):
+        controller = AirControl()
+        try:
+            RH = controller.get_humidity()
+            T = controller.get_temperature()
+            break
+        except Exception as e:
+            print('  ---RH/T exception:', e)
+            print(f'  ---Trying again (attempt {i})')
+
+    state['-Box-RH-'] = RH
+    state['-Box-T-'] = T
+
+    return RH, T

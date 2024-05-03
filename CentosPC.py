@@ -139,7 +139,8 @@ class CentosPC:
             print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
             updateconf(self.config, runs[-1]+'/'+self.outyaml[scriptname])
             
-        return f'{scriptname}/{runs[-1]}'
+        thisrun = runs[-1].split('/')[-1]
+        return f'{scriptname}/{thisrun}'
         
     def pedestal_run(self, BV=None):
         """
@@ -149,6 +150,7 @@ class CentosPC:
         dirname = self._run_script('pedestal_run')
         
         if BV is not None:
+            #mv /home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run//home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run/run_20240503_140227 /home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run//home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run/run_20240503_140227_BV400
             print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
             try:
                 os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')

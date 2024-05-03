@@ -264,8 +264,8 @@ def init_state():
     current_state['-Inspector-'] = inspector
     
 # Update the value of a field in the state dict and update LED color if exists
-def update_state(field, val, color=None):
-    current_state[field] = val
+def update_state(state, field, val, color=None):
+    state[field] = val
     if field[0] == '-':
         assert color is not None
         SetLED(basewindow, field, color)

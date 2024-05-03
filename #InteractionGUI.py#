@@ -376,7 +376,7 @@ def check_leakage_current(state):
     """
 
     leakage_current = {} #{0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
-    # best to set the keys in the dict according to bias direction
+[6~    # best to set the keys in the dict according to bias direction
     # and then use those keys
     for vltg in [0, 1, 10, 100, 300, 600]:
         if configuration['HVWiresPolarization'] == 'Forward':
@@ -543,7 +543,7 @@ def run_pedestals(state, BV):
         
         if configuration['HasLocalDB']:
             try:
-                pedestal_upload(state) # uploads pedestals to database
+                pedestal_upload(state['-Module-Serial-']) # uploads pedestals to database
             except Exception as e: 
                 print('  ---Pedestal upload exception:', e)
                 ### XYZ save as csv?
