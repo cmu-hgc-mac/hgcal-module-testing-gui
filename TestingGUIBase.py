@@ -492,6 +492,11 @@ while True:
         clear_setup()
         enable_module_setup()
 
+        if configuration['HasRHSensor']:
+            from AirControl import AirControl
+            ac = AirControl()
+	    ac.set_air_off()
+        
     # Run the selected tests
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
@@ -623,10 +628,18 @@ while True:
             else:
                 time_to_wait = float(values['-DryIV-Wait-Time-'])
             final_dry_time = 60*(time_to_wait)
-            
-            from InteractionGUI import do_something_window
-            do_something_window('Open dry air valve', 'Open')
 
+            
+            if not configuration['HasRHSensor']:
+                from InteractionGUI import do_something_window
+                do_something_window('Open dry air valve', 'Open')
+            else:
+                from AirControl import AirControl
+                ac = AirControl()
+                ac.set_air_on()
+                
+            sleep(1)
+                
             drytime = time.time()
             dry_date = datetime.now()
             finalIV_date = dry_date + timedelta(seconds=final_dry_time)

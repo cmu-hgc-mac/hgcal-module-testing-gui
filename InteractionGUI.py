@@ -11,7 +11,7 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from dbtools import *
+    from dbtools import iv_save, pedestal_upload, iv_upload, plots_upload
     
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))

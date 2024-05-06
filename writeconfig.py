@@ -5,7 +5,6 @@ config_dict = {'DebugMode': True,
                'TrenzHostname': ['cmshgcaltb4.lan.local.cmu.edu'],
                'MACSerial': 'CM',
                'DataLoc': '/home/hgcal/data/',
-               #'HexmapPath': '/home/hgcal/hexmap',
                'HVResource': 'ASRL/dev/ttyUSB0::INSTR',
                'HVTerminal': 'Rear', # 'Front' for front terminals, 'Rear' for rear terminals
                'HVWiresPolarization': 'Reverse', # 'Reverse' for reverse bias (V in [0, 800]) 'Forward' for forward bias (V in [-800, 0])
@@ -13,6 +12,12 @@ config_dict = {'DebugMode': True,
                'HasHVSwitch': True,
                'HasRHSensor': False,
                'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt']
+               'HasLocalDB': True,
+               'DBHostname': 'cmsmac04.phys.cmu.edu',
+               'DBDatabase': 'hgcdb',
+               'DBUsername': 'teststand_user',
+               'DBPassword': 'hgcal'
+
                }
 
 with open('configuration.yaml','w') as yconf:
