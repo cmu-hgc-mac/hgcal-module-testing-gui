@@ -518,8 +518,7 @@ while True:
 
         # add RH, T to state dict now
         # values also modified at the start of an IV curve
-        if configuration['HasRHSensor']:
-            RH, Temp = add_RH_T(current_state)
+        RH, Temp = add_RH_T(current_state)
 
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
