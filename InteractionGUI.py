@@ -555,7 +555,7 @@ def run_pedestals(state, BV):
         hexpath = state['pc'].make_hexmaps(BV=BV)
         if configuration['HasLocalDB']:
             try:
-                plots_upload(state['-Module-Serial-'], hexpath) # uploads pedestal plots to database
+                plots_upload(state) # uploads pedestal plots to database
             except Exception as e:
                 print('  ---Plots upload exception:', e)
                 ### XYZ save as csv?
@@ -593,7 +593,8 @@ def trim_pedestals(state, BV):
         state['pc'].pedestal_scan()
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
-
+        state['-Pedestals-Trimmed-'] = True
+        
     trimming.close()
 
 def run_other_script(script, state, BV):
@@ -665,28 +666,7 @@ def take_IV_curve(state, step=20):
     """
      
     connect_HV(state) # will do nothing if already connected
-
-    if not configuration['HasRHSensor']:
-        RH = None
-        Temp = None
-
-        layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
-        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
-    
-        while True:
-            event, values = window.read()
-            if event == 'Enter' or event == sg.WIN_CLOSED:
-                RH = values['-RH-'].rstrip()
-                Temp = values['-Temp-'].rstrip()
-                if RH is None or Temp is None:
-                    continue
-                else:
-                    break
-
-        window.close()
-
-    else:
-        RH, Temp = add_RH_T(state)
+    RH, Temp = add_RH_T(state) # also adds RH,T to state dict
         
     curvew = waiting_window(f'Taking IV curve...')
 
@@ -802,21 +782,41 @@ def add_RH_T(state):
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
     general to all MACs.
     """
-    from AirControl import AirControl
-    
     RH = None
-    T = None
-    for i in range(10):
-        controller = AirControl()
-        try:
-            RH = controller.get_humidity()
-            T = controller.get_temperature()
-            break
-        except Exception as e:
-            print('  ---RH/T exception:', e)
-            print(f'  ---Trying again (attempt {i})')
+    Temp = None
+    if not configuration['HasRHSensor']:
 
-    state['-Box-RH-'] = RH
-    state['-Box-T-'] = T
+	layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
+        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
+
+        while True:
+            event, values = window.read()
+            if event == 'Enter' or event == sg.WIN_CLOSED:
+                RH = values['-RH-'].rstrip()
+                Temp = values['-Temp-'].rstrip()
+                if RH is None or Temp is None:
+                    continue
+                else:
+                    break
+
+        window.close()
+
+    else:
+
+        from AirControl import AirControl
+        for i in range(10):
+            controller = AirControl()
+            try:
+                RH = controller.get_humidity()
+                T = controller.get_temperature()
+                break
+            except Exception as e:
+                print('  -- RH/T exception:', e)
+                print(f'  -- Trying again (attempt {i})')
+
+        print('  >> RH/T: measured RH={}%; T={}ºC')
+
+    state['-Box-RH-'] = int(RH)
+    state['-Box-T-'] = int(T)
 
     return RH, T

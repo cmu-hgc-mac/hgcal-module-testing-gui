@@ -518,7 +518,6 @@ while True:
 
         # add RH, T to state dict now
         # values also modified at the start of an IV curve
-        
         if configuration['HasRHSensor']:
             RH, Temp = add_RH_T(current_state)
 
@@ -678,7 +677,8 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
-    # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it.
+    # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
+    # or press the 'Close GUI' button.
     if event == sg.WIN_CLOSED:
         exit()
 

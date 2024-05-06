@@ -9,11 +9,16 @@ with open('configuration.yaml', 'r') as file:
 
 
 def get_query(table_name):
+    """
+    General function for db get queries. Defines which columns and what order of columns are used by the db tools functions to 
+    upload. Returns formatted query string.
+    """
+
     if table_name == 'module_pedestal_test':
-        pre_query = f""" 
-        INSERT INTO {table_name}  
-        (module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, count_dead_chan, list_dead_pad, date_test, time_test, inspector, comment) 
-        VALUES   """  ### maintain space
+        #pre_query = f""" 
+        #INSERT INTO {table_name}  
+        #(module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, count_dead_chan, list_dead_pad, date_test, time_test, inspector, comment) 
+        #VALUES   """  ### maintain space
         pre_query = f""" 
         INSERT INTO {table_name}  
         (module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, count_dead_chan, date_test, time_test, inspector, comment) 
@@ -39,6 +44,11 @@ def get_query(table_name):
     return query
 
 async def upload_PostgreSQL(table_name, db_upload_data):
+    """
+    General upload function. Instantiates the connection to the database, formats the query, and uploads the data.
+    """
+    
+    # create db connection
     conn = await asyncpg.connect(
         host = configuration['DBHostname'],
         database = configuration['DBDatabase'],
@@ -46,8 +56,9 @@ async def upload_PostgreSQL(table_name, db_upload_data):
         password = configuration['DBPassword']
     )
     
-    print('Connection successful.')
+    print(f'  >> Postgres Tools: Connection successful.')
 
+    # define query to check if table exists
     schema_name = 'public'
     table_exists_query = """
     SELECT EXISTS (
@@ -57,18 +68,25 @@ async def upload_PostgreSQL(table_name, db_upload_data):
         AND table_name = $2
     );
     """
+
+    # check table exists and upload
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
     if table_exists:
         query = get_query(table_name)
-        print(f'Executing query: {query}')
+        print(f'  >> PostgresTools: Executing query: {query}')
         await conn.execute(query, *db_upload_data)
-        print(f'Data is successfully uploaded to the {table_name}!')
+        print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
     else:
-        print(f'Table {table_name} does not exist in the database.')
+        print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')
     await conn.close()
 
 def get_query_read(table_name, part_name = None):
+    """
+    General function for db read queries. Takes in table name and returns query string. Does not return all columns as don't want to 
+    print everything (i.e. don't want to dump all bytes from image)
+    """
 
+    # define queries
     if table_name == 'module_pedestal_test':
         query = f"""SELECT module_name, rel_hum, temp_c, bias_vol, date_test, time_test, inspector, comment
             FROM {table_name}
@@ -98,40 +116,21 @@ def get_query_read(table_name, part_name = None):
     return query
 
 async def fetch_PostgreSQL(table_name, part_name = None):
+    """
+    General read function. Instantiates the connection to the database and reads the data. Returns the raw data.
+    """
+
+    # instantiate db connection
     conn = await asyncpg.connect(
         host = configuration['DBHostname'],
         database = configuration['DBDatabase'],
         user = configuration['DBUsername'],
 	password = configuration['DBPassword']
     )
+
+    # fetch and return
     value = await conn.fetch(get_query_read(table_name, part_name))
     await conn.close()
     return value
 
 
-### examples
-#result = await fetch_PostgreSQL('module_pedestal_test')
-#for r in result: print(r)
-#
-#
-#table_name, part_name = 'module_pedestal_plots', None
-#im = asyncio.run(fetch_PostgreSQL(table_name, part_name))
-#if im != []:
-#    image = Image.open(BytesIO(im[0]['adc_mean_hexmap']))
-#    image.show() ### to show
-#    image.save("new_image.png") ### to save
-
-
-# from datetime import datetime
-# date_inspect = datetime.strptime(date, '%Y-%m-%d')
-# time_inspect = datetime.strptime(time, '%H:%M:%S.%f')
-
-# from postgres_tools import upload_PostgreSQL
-# db_upload_ped = [module_name, rel_hum, temp_c, bias_vol, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, date_inspect, time_inspect, inspector, comment]
-# await upload_PostgreSQL(table_name = 'module_pedestal_test', db_upload_data = db_upload_ped)
-
-# db_upload_iv = [module_name, rel_hum, temp_c, prog_v, meas_v, meas_i, meas_r, date_inspect, time_inspect, inspector, comment]
-# await upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
-
-# db_upload_hxped = [hxb_name, rel_hum, temp_c, chip, channel, channeltype, adc_median, adc_iqr, tot_median, tot_iqr, toa_median, toa_iqr, adc_mean, adc_stdd, tot_mean, tot_stdd, toa_mean, toa_stdd, tot_efficiency, tot_efficiency_error, toa_efficiency, toa_efficiency_error, pad, x, y, date_inspect, time_inspect, inspector, comment]
-# await upload_PostgreSQL(table_name = 'hxb_pedestal_test', db_upload_data = db_upload_hxped)

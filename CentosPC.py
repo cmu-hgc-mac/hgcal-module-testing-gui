@@ -40,7 +40,7 @@ class CentosPC:
 
         self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
         self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
-
+        
         density = modulename.split('-')[1][1]
         shape = modulename.split('-')[2][0]
         
@@ -65,7 +65,7 @@ class CentosPC:
                         'vrefinv_scan': 'vrefinv.yaml', 'vrefnoinv_scan': 'vrefnoinv.yaml',
                         'toa_vref_scan_noinj': 'toa_vref.yaml', 'toa_vref_scan': 'toa_vref.yaml',
                         'toa_trim_scan': 'trimmed_toa.yaml'}
-                
+        
     def restart_daq(self):
         """
         Restarts DAQ client service by running a bash command, then checks the status and returns it.
@@ -150,7 +150,6 @@ class CentosPC:
         dirname = self._run_script('pedestal_run')
         
         if BV is not None:
-            #mv /home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run//home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run/run_20240503_140227 /home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run//home/hgcal/data//320-ML-F2CX-CM-0004/pedestal_run/run_20240503_140227_BV400
             print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
             try:
                 os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
@@ -158,7 +157,8 @@ class CentosPC:
             except:
                 print(' -- CentosPC: outdict renaming failed; continuing')
                 return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-        
+
+    # these functions are mostly irrelevant as _run_script() can be called from outside
     def pedestal_scan(self):
         self._run_script('pedestal_scan')
 
@@ -212,7 +212,7 @@ def static_make_hexmaps(modulename, ind=-1):
     label = f'{modulename}_run{labelind}' if BV is None else f'{modulename}_run{labelind}_BV{BV}'
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)
-    print(f' >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{modulename}')
+    print(f'  >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{modulename}')
 
 
 def recursive_update(conf, mod):
