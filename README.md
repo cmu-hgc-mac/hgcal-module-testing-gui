@@ -34,6 +34,7 @@ The power supply's make and model should be printed if you have found the correc
 Lastly, create a configuration file with `writeconfig.py`. Open the python script in a text editor and change the values in the dictionary:
 * `DebugMode`: initial value of the GUI's Debug Mode; keep this true for now!
 * `DefaultFontSize`: font of the GUI; matters depending on the resolution of your monitor: if the monitor is 1920x1080, 15 is good
+* `TestingPCOpSys`: operating system of the testing PC: 'Centos7' or 'Alma9'
 * `TrenzHostname`: list of the hostnames of your Trenz FPGAs
 * `MACSerial`: two-letter code for modules made by the MAC
 * `DataLoc`: path to where you want test results to be stored
