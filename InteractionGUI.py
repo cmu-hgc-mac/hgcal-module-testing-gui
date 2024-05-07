@@ -779,8 +779,8 @@ def plot_IV_curves(state):
         ax.set_xlim(0, 800)
         ax.legend()
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
-        plt.savefig(f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
-        plt.close(fig)
         RHstr = 'RH'+('_RH'.join(RHs))
+        plt.savefig(f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}_{RHstr}.png')
+        plt.close(fig)
         os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}_{RHstr}.png')
 
