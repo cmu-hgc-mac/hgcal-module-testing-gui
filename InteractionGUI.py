@@ -765,9 +765,11 @@ def plot_IV_curves(state):
         plt.rcParams.update({'font.size': 10})
 
         fig, ax = plt.subplots(figsize=(8, 5))
+        RHs = []
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}% RH; {datadict['Temp']} deg C")
+            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']} deg C")
+            RHs.append(str(datadict['RH']))
 
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
@@ -779,6 +781,6 @@ def plot_IV_curves(state):
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
         plt.savefig(f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
         plt.close(fig)
-
-        os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
+        RHstr = 'RH'+('_RH'.join(RHs))
+        os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}_{RHstr}.png')
 

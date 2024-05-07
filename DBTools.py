@@ -154,8 +154,10 @@ def iv_upload(datadict, state):
     
     #### XYZ what should be commented?
     #### XYZ status? etc.
-    #### XYZ IV ratio?
-    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., [0., 0.], data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
+    #### IV ratio at 600V, 800V
+    #db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., [0., 0.], data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
+    #                datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
+    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
                     datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
 
     # upload

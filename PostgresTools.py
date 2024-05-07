@@ -25,9 +25,13 @@ def get_query(table_name):
         VALUES   """  ### maintain space
 
     elif table_name == 'module_iv_test':
+        #pre_query = f""" 
+        #INSERT INTO {table_name} 
+        #(module_name, rel_hum, temp_c, status, status_desc, grade, ratio_i_at_vs, ratio_at_vs, prog_v, meas_v, meas_i, meas_r, date_test, time_test, inspector, comment)  
+        #VALUES  """  ### maintain space
         pre_query = f""" 
         INSERT INTO {table_name} 
-        (module_name, rel_hum, temp_c, status, status_desc, grade, ratio_i_at_vs, ratio_at_vs, prog_v, meas_v, meas_i, meas_r, date_test, time_test, inspector, comment)  
+        (module_name, rel_hum, temp_c, status, status_desc, grade, ratio_iv, prog_v, meas_v, meas_i, meas_r, date_test, time_test, inspector, comment)  
         VALUES  """  ### maintain space
     elif table_name == 'hxb_pedestal_test':
         pre_query = f""" 

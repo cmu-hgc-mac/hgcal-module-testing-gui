@@ -485,7 +485,7 @@ class Keithley2410:
         print('>> Loop finished')
         
         # Make output dictionary and return
-        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time}
+        datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}
         self.IVdata.append(datadict)
         print('>> Disabling output')
         self.setVoltage(0.)

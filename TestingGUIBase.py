@@ -625,6 +625,8 @@ while True:
 
             if values['-DryIV-Wait-Time-'] == '':
                 time_to_wait = 15. if not DEBUG_MODE else 0.5
+            elif values['-DryIV-Wait-Time-'] == '0':
+                time_to_wait = 0.01
             else:
                 time_to_wait = float(values['-DryIV-Wait-Time-'])
             final_dry_time = 60*(time_to_wait)
