@@ -116,8 +116,8 @@ def pedestal_upload(state, ind=-1):
 
     # if live module, add the bias voltage to the row list
     if 'BV' in runs[ind] and '320-M' in modulename:
-        BV = runs.split('BV').rstrip('\n ')
-        db_upload_ped.insert(3, BV)
+        BV = int(runs[ind].split('BV')[1].rstrip('\n '))
+        db_upload_ped.insert(3, int(BV))
     elif '320-M' in modulename:
         BV = -1
         db_upload_ped.insert(3, BV)
@@ -180,6 +180,12 @@ def plots_upload(state, ind=-1):
     hexinds.sort()
     thisind = hexinds[ind]
     hexpath = f'{configuration["DataLoc"]}/{modulename}/{modulename}_run{thisind}'
+    
+    # if live, must modify with bias voltage
+    fixpath = glob.glob(f'{hexpath}*.png')
+    if 'BV' in fixpath[0]:
+        thisBV = int(fixpath[0].split('/')[-1].split('_')[2].split('V')[1])
+        hexpath = hexpath + f'_BV{thisBV}'
 
     print(f" >> DBTools: Uploading pedestal plots of module {modulename} into database")
 
