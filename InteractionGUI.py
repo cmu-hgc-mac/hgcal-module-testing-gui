@@ -761,9 +761,9 @@ def plot_IV_curves(state):
         pass
     else:
 
-        plt.rcParams.update({'font.size': 10})
+        #plt.rcParams.update({'font.size': 10})
 
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(16, 12))
         RHs = []
         for datadict in state['ps'].IVdata:
             data = datadict['data']
