@@ -2,7 +2,7 @@ import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
-from time import sleep
+import time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
@@ -274,7 +274,7 @@ def show_string(string, field='Left'):
     basewindow[f'-Display-Str-{field}-'].update(string)
     basewindow[f'-Display-Str-{field}-'].update(visible=True)
     basewindow.refresh()
-    sleep(2)
+    time.sleep(2)
     basewindow[f'-Display-Str-{field}-'].update(visible=False)
     basewindow.refresh()
 
@@ -638,7 +638,7 @@ while True:
                 ac = AirControl()
                 ac.set_air_on()
                 
-            sleep(1)
+            time.sleep(1)
                 
             drytime = time.time()
             dry_date = datetime.now()
@@ -681,7 +681,7 @@ while True:
 
         from InteractionGUI import waiting_window
         wait = waiting_window(f'Plots located in {configuration["DataLoc"]}/{moduleserial}')
-        sleep(2)
+        time.sleep(2)
         wait.close()
         
     # Restart the services and check to ensure success

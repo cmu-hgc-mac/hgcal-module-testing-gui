@@ -13,11 +13,13 @@ class AirControl:
         """Turns the air relay on
         """
         self.nano.write(b'air on\n')
+        print('  >> AirControl: air on')
 
     def set_air_off(self):
         """Turns the air relay off
         """
         self.nano.write(b'air off\n')
+        print('  >> AirControl: air off')
 
     def get_humidity(self):
         """Returns the current humidity as an integer percentage

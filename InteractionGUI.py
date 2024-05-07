@@ -1,10 +1,12 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
 from time import sleep
 import os
+import traceback
 
 import yaml
 configuration = {}
@@ -547,8 +549,8 @@ def run_pedestals(state, BV):
         if configuration['HasLocalDB']:
             try:
                 pedestal_upload(state) # uploads pedestals to database
-            except Exception as e: 
-                print('  ---Pedestal upload exception:', e)
+            except Exception:
+                print('  -- Pedestal upload exception:', traceback.format_exc())
                 ### XYZ save as csv?
 
         #if state['-Live-Module-']:
@@ -559,8 +561,8 @@ def run_pedestals(state, BV):
         if configuration['HasLocalDB']:
             try:
                 plots_upload(state) # uploads pedestal plots to database
-            except Exception as e:
-                print('  ---Plots upload exception:', e)
+            except Exception:
+                print('  -- Plots upload exception:', traceback.format_exc())
                 ### XYZ save as csv?
         #except Exception as e:
         #    print('  ---', e)
@@ -690,8 +692,8 @@ def take_IV_curve(state, step=20):
         if configuration['HasLocalDB']:
             try:
                 iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
-            except Exception as e:
-                print('  ---IV upload exception:', e)
+            except Exception:
+                print('  -- IV upload exception:', traceback.format_exc())
         else:
             iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()

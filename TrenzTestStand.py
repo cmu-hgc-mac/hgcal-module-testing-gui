@@ -135,8 +135,11 @@ class TrenzTestStand:
 
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status daq-server.service')
         daq_initiated = False
-        if len(ssh_stderr.readlines()) != 0:
-            error_check = False 
+        errreadlines = ssh_stderr.readlines()
+        if len(errreadlines) != 0:
+            # catch something specific to Alma9 
+            if not (len(errreadlines) == 1 and 'uio_pdrv_genirq' in errreadlines[0] and configuration['TestingPCOpSys'] == 'Alma9'):
+                error_check = False 
 
         check1 = False
         check2 = False
@@ -155,8 +158,11 @@ class TrenzTestStand:
         
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status i2c-server.service')    
         board_discovered = False
-        if len(ssh_stderr.readlines()) != 0:
-            error_check = False
+        errreadlines = ssh_stderr.readlines()
+        if len(errreadlines) != 0:
+            # catch something specific to Alma9
+            if not (len(errreadlines) == 1 and 'uio_pdrv_genirq' in errreadlines[0] and configuration['TestingPCOpSys'] == 'Alma9'):
+                error_check = False
 
         check1 = False
         check2 = False
@@ -195,9 +201,13 @@ class TrenzTestStand:
         
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status daq-server.service')
         daq_running = False
-        if len(ssh_stderr.readlines()) != 0:
-            error_check = False
 
+        errreadlines = ssh_stderr.readlines()
+        if len(errreadlines) != 0:
+            # catch something specific to Alma9
+            if not (len(errreadlines) == 1 and 'uio_pdrv_genirq' in errreadlines[0] and configuration['TestingPCOpSys'] == 'Alma9'):
+                error_check = False
+        
         for line in ssh_stdout.readlines():
             print('   >> daq:', line.strip('\n'))
             if 'Active: active (running)' in line:
@@ -206,8 +216,12 @@ class TrenzTestStand:
             
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status i2c-server.service')
         i2c_running = False
-        if len(ssh_stderr.readlines()) != 0:
-            error_check = False
+        
+        errreadlines = ssh_stderr.readlines()
+        if len(errreadlines) != 0:
+            # catch something specific to Alma9
+            if not (len(errreadlines) == 1 and 'uio_pdrv_genirq' in errreadlines[0] and configuration['TestingPCOpSys'] == 'Alma9'):
+                error_check = False
 
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))

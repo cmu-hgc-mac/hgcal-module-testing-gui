@@ -38,26 +38,33 @@ class CentosPC:
         os.system('systemctl restart daq-client.service')
         print(' >> CentosPC: DAQ client started. PC ready to run tests.')
 
-        self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
-        self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+        # env script and other files are in different locations based on OS
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+            self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh' 
+            self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
         
         density = modulename.split('-')[1][1]
         shape = modulename.split('-')[2][0]
         
+        # different module density/geometry need different config files
         if density == 'L':
             if shape == 'F':
-                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-trophyV3-inctoa.yaml'
+                self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-inctoa.yaml'
             elif shape == 'L' or shape == 'R':
-                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initLD-semi.yaml'
+                self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
             else: # T B 5
                 raise NotImplementedError
         elif density == 'H':
             if shape == 'F':
-                self.config = '/opt/hexactrl/ROCv3/ctrl/etc/configs/initHD_trophyV3.yaml'
+                self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
             else: # L R T B 5
                 raise NotImplementedError
 
-
+        # copy to current directory to update it safely while trimming
         os.system(f'cp {self.config} current_config.yaml')
         self.config = 'current_config.yaml'
 

@@ -1,4 +1,5 @@
 import numpy as np
+import traceback
 import time
 import matplotlib.pyplot as plt
 import pickle
@@ -257,8 +258,8 @@ def add_RH_T(state):
                 RH = controller.get_humidity()
                 T = controller.get_temperature()
                 break
-            except Exception as e:
-                print('  -- RH/T exception:', e)
+            except Exception:
+                print('  -- RH/T exception:', traceback.format_exc())
                 print(f'  -- Trying again (attempt {i})')
 
         print(f'  >> RH/T: measured RH={RH}%; T={T}ºC')
