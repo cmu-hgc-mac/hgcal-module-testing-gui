@@ -768,7 +768,7 @@ def plot_IV_curves(state):
         RHs = []
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']} deg C")
+            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
             RHs.append(str(datadict['RH']))
 
         ax.set_yscale('log')
