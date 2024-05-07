@@ -45,7 +45,7 @@ def read_table(tablename, printall=False):
     result = loop.run_until_complete(coro)
 
     if not printall:
-        print(f' >> DBTools: Last upload to {tablename}: {result[-1]}')
+        print(f' >> DBTools: Last upload to {tablename}: {result[0]}')
     else:
         print(f' >> DBTools: Printing all rows in {tablename}:')
         for r in result:
@@ -236,20 +236,22 @@ def add_RH_T(state):
     Temp = None
     if not configuration['HasRHSensor']:
 
-        layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
-        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
+        if '-Box-RH-' not in state.keys(): # only add once per testing session
+        
+            layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
+            window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
 
-        while True:
-            event, values = window.read()
-            if event == 'Enter' or event == sg.WIN_CLOSED:
-                RH = values['-RH-'].rstrip()
-                Temp = values['-Temp-'].rstrip()
-            if RH is None or Temp is None:
-                continue
-            else:
-                break
+            while True:
+                event, values = window.read()
+                if event == 'Enter' or event == sg.WIN_CLOSED:
+                    RH = values['-RH-'].rstrip()
+                    Temp = values['-Temp-'].rstrip()
+                if RH is None or Temp is None:
+                    continue
+                else:
+                    break
                     
-        window.close()
+            window.close()
 
     else:
 
