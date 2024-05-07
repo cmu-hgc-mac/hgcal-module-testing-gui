@@ -13,11 +13,10 @@ config_dict = {'DebugMode': True,
                'HasRHSensor': False,
                'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt']
                'HasLocalDB': True,
-               'DBHostname': 'cmsmac04.phys.cmu.edu',
-               'DBDatabase': 'hgcdb',
-               'DBUsername': 'teststand_user',
-               'DBPassword': 'hgcal'
-
+               'DBHostname': '',
+               'DBDatabase': '',
+               'DBUsername': '',
+               'DBPassword': ''
                }
 
 with open('configuration.yaml','w') as yconf:
