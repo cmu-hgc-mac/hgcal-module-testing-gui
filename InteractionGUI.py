@@ -540,8 +540,9 @@ def run_pedestals(state, BV):
         hexpath = ''
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+            if not state['ps'].get_output():
+                state['ps'].outputOn()
+                update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
 
         state['pc'].pedestal_run(BV=BV)
@@ -556,7 +557,7 @@ def run_pedestals(state, BV):
         #if state['-Live-Module-']:
         #    state['ps'].outputOff()
         #    update_state(state, '-HV-Output-On-', False, 'black')
-        #try:
+
         hexpath = state['pc'].make_hexmaps(BV=BV)
         if configuration['HasLocalDB']:
             try:
@@ -564,9 +565,7 @@ def run_pedestals(state, BV):
             except Exception:
                 print('  -- Plots upload exception:', traceback.format_exc())
                 ### XYZ save as csv?
-        #except Exception as e:
-        #    print('  ---', e)
-        #    hexpath = ''
+
     pedestals.close()
     return hexpath
 
