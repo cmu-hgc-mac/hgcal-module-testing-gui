@@ -1,3 +1,4 @@
+import numpy as np
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
@@ -11,7 +12,9 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from dbtools import iv_save, pedestal_upload, iv_upload, plots_upload
+    from DBTools import iv_save, pedestal_upload, iv_upload, plots_upload
+
+from DBTools import add_RH_T
     
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -777,46 +780,3 @@ def plot_IV_curves(state):
 
         os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
 
-def add_RH_T(state):
-    """
-    Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
-    general to all MACs.
-    """
-    RH = None
-    Temp = None
-    if not configuration['HasRHSensor']:
-
-	layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
-        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
-
-        while True:
-            event, values = window.read()
-            if event == 'Enter' or event == sg.WIN_CLOSED:
-                RH = values['-RH-'].rstrip()
-                Temp = values['-Temp-'].rstrip()
-                if RH is None or Temp is None:
-                    continue
-                else:
-                    break
-
-        window.close()
-
-    else:
-
-        from AirControl import AirControl
-        for i in range(10):
-            controller = AirControl()
-            try:
-                RH = controller.get_humidity()
-                T = controller.get_temperature()
-                break
-            except Exception as e:
-                print('  -- RH/T exception:', e)
-                print(f'  -- Trying again (attempt {i})')
-
-        print('  >> RH/T: measured RH={}%; T={}ºC')
-
-    state['-Box-RH-'] = int(RH)
-    state['-Box-T-'] = int(T)
-
-    return RH, T

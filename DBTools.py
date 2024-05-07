@@ -6,14 +6,14 @@ from argparse import ArgumentParser
 from datetime import datetime 
 import os
 #import psycopg2
-from postgres_tools_testing import upload_PostgreSQL, fetch_PostgreSQL
+from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL
 import pandas as pd
 import glob
 import uproot3 as uproot
 import asyncio
 import asyncpg
 
-from InteractionGUI import add_RH_T
+#from InteractionGUI import add_RH_T
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 
@@ -223,3 +223,47 @@ def plots_upload(state, ind=-1):
     
     read_table('module_pedestal_plots')
 
+def add_RH_T(state):
+    """
+    Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
+    general to all MACs. 
+    """
+
+    RH = None
+    Temp = None
+    if not configuration['HasRHSensor']:
+
+        layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
+        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
+
+        while True:
+            event, values = window.read()
+            if event == 'Enter' or event == sg.WIN_CLOSED:
+                RH = values['-RH-'].rstrip()
+                Temp = values['-Temp-'].rstrip()
+            if RH is None or Temp is None:
+                continue
+            else:
+                break
+                    
+        window.close()
+
+    else:
+
+        from AirControl import AirControl
+        for i in range(10):
+            controller = AirControl()
+            try:
+                RH = controller.get_humidity()
+                T = controller.get_temperature()
+                break
+            except Exception as e:
+                print('  -- RH/T exception:', e)
+                print(f'  -- Trying again (attempt {i})')
+
+        print(f'  >> RH/T: measured RH={RH}%; T={T}ºC')
+
+    state['-Box-RH-'] = int(RH)
+    state['-Box-T-'] = int(T)
+
+    return RH, T

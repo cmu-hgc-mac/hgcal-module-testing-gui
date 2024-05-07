@@ -495,7 +495,7 @@ while True:
         if configuration['HasRHSensor']:
             from AirControl import AirControl
             ac = AirControl()
-	    ac.set_air_off()
+            ac.set_air_off()
         
     # Run the selected tests
     if event == 'Run Tests':
