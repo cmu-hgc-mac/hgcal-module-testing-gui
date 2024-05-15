@@ -315,7 +315,8 @@ class Keithley2410:
         elif mode == "current":
             self._sense_mode = mode
             self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANGe:AUTO ON")
+            #self._write(f"SENSe{self._channel}:CURRent:DC:RANGe:AUTO ON")
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         else:
             raise ValueError("Invalid sense mode")
 
@@ -340,6 +341,8 @@ class Keithley2410:
         if self._sense_mode != "current":
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
+        # reconfigure to disable auto-ranging
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         #measurement = self._query("READ?", 1.) ### fix 1s delay
         start = time()
         while True:
@@ -396,7 +399,7 @@ class Keithley2410:
         time = current_date.isoformat().split('T')[1].split('.')[0]
 
         steps = int(Vmax//step)
-        ivdata = self.voltage_sweep(0, Vmax, steps)
+        ivdata = self.voltage_sweep(0, Vmax, steps, delay_s=1.)
         
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
 

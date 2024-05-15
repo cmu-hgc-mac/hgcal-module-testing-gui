@@ -685,7 +685,7 @@ def take_IV_curve(state, step=20):
         maxV = 800 if configuration['HVWiresPolarization'] == 'Reverse' else -800
         if configuration['HVWiresPolarization'] == 'Forward':
             step = -step
-        curve = state['ps'].takeIVold(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
+        curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
         if configuration['HasLocalDB']:
