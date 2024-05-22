@@ -1,3 +1,4 @@
+import PySimpleGUI as sg
 import numpy as np
 import traceback
 import time
@@ -43,14 +44,14 @@ def add_RH_T(state, force=False):
     
     if '-Box-RH-' not in state.keys() or force: # only add once per testing session, except if you really need
 
-        layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
+        layout = [[sg.Text('Enter current humidity and temperature:', font=('Arial', 30))], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
         window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
         
         while True:
             event, values = window.read()
-	    if event == 'Enter' or event == sg.WIN_CLOSED:
+            if event == 'Enter' or event == sg.WIN_CLOSED:
                 RH = values['-RH-'].rstrip()
-	        Temp = values['-Temp-'].rstrip()
+                Temp = values['-Temp-'].rstrip()
             if RH is None or Temp is None:
                 continue
             else:
@@ -59,9 +60,9 @@ def add_RH_T(state, force=False):
         window.close()
 
         state['-Box-RH-'] = int(RH)
-        state['-Box-T-'] = int(T)
+        state['-Box-T-'] = int(Temp)
 
-        return RH, T
+        return RH, Temp
 
     else:
         return state['-Box-RH-'], state['-Box-T-']

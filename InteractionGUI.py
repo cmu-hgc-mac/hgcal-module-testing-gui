@@ -546,8 +546,10 @@ def run_pedestals(state, BV):
         #if state['-Live-Module-']:
         #    state['ps'].outputOff()
         #    update_state(state, '-HV-Output-On-', False, 'black')
-
-        hexpath = state['pc'].make_hexmaps(BV=BV)
+        try:
+            hexpath = state['pc'].make_hexmaps(BV=BV)
+        except:
+            hexpath = ''
 
     pedestals.close()
     return hexpath
