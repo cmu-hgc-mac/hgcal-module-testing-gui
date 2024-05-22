@@ -673,7 +673,7 @@ def take_IV_curve(state, step=20):
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
-        iv_save(curve, state) # saves IV curve as pickle object
+        iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
 
     curvew.close()
     return 'CONT'
