@@ -16,7 +16,7 @@ with open('configuration.yaml', 'r') as file:
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
-from DBTools import add_RH_T
+from DBTools import *
 
 """
 -------------------InteractionGUI.py-----------------
