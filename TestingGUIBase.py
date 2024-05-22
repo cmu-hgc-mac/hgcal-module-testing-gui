@@ -17,6 +17,8 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+from DBTools import add_RH_T
+    
 # Create theme
 lgfont = ('Arial', 40)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -499,11 +501,6 @@ while True:
         clear_setup()
         enable_module_setup()
 
-        if configuration['HasRHSensor']:
-            from AirControl import AirControl
-            ac = AirControl()
-            ac.set_air_off()
-        
     # Run the selected tests
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
@@ -639,14 +636,9 @@ while True:
             final_dry_time = 60*(time_to_wait)
 
             
-            if not configuration['HasRHSensor']:
-                from InteractionGUI import do_something_window
-                do_something_window('Open dry air valve', 'Open')
-            else:
-                from AirControl import AirControl
-                ac = AirControl()
-                ac.set_air_on()
-                
+            from InteractionGUI import do_something_window
+            do_something_window('Open dry air valve', 'Open')
+                            
             time.sleep(1)
                 
             drytime = time.time()

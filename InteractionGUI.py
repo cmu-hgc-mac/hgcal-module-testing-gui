@@ -13,14 +13,10 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
-if configuration['HasLocalDB']:
-    from DBTools import iv_save, pedestal_upload, iv_upload, plots_upload
-
-from DBTools import add_RH_T
-    
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
+from DBTools import add_RH_T
 
 """
 -------------------InteractionGUI.py-----------------
@@ -546,25 +542,12 @@ def run_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
 
         state['pc'].pedestal_run(BV=BV)
-        
-        if configuration['HasLocalDB']:
-            try:
-                pedestal_upload(state) # uploads pedestals to database
-            except Exception:
-                print('  -- Pedestal upload exception:', traceback.format_exc())
-                ### XYZ save as csv?
 
         #if state['-Live-Module-']:
         #    state['ps'].outputOff()
         #    update_state(state, '-HV-Output-On-', False, 'black')
 
         hexpath = state['pc'].make_hexmaps(BV=BV)
-        if configuration['HasLocalDB']:
-            try:
-                plots_upload(state) # uploads pedestal plots to database
-            except Exception:
-                print('  -- Plots upload exception:', traceback.format_exc())
-                ### XYZ save as csv?
 
     pedestals.close()
     return hexpath
@@ -670,7 +653,7 @@ def take_IV_curve(state, step=20):
     """
      
     connect_HV(state) # will do nothing if already connected
-    RH, Temp = add_RH_T(state) # also adds RH,T to state dict
+    RH, Temp = add_RH_T(state, force=True) # also adds RH,T to state dict
         
     curvew = waiting_window(f'Taking IV curve...')
 
@@ -688,13 +671,8 @@ def take_IV_curve(state, step=20):
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
-        if configuration['HasLocalDB']:
-            try:
-                iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
-            except Exception:
-                print('  -- IV upload exception:', traceback.format_exc())
-        else:
-            iv_save(curve, state) # saves IV curve as pickle object
+        iv_save(curve, state) # saves IV curve as pickle object
+
     curvew.close()
     return 'CONT'
         
