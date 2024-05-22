@@ -97,11 +97,6 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 other_scripts = ['delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
                  'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
-             
-             # old attempt at pedestal trimming
-             #[sg.Checkbox('Pedestal Scan', key='-Pedestal-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedScan-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedScan-')],
-             #[sg.Checkbox('Vref Inv and NoInv Scan', key='-Vref-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-Vref-Text-'), sg.Input(s=5, key='-Bias-Voltage-Vref-')],
-             
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
@@ -130,9 +125,7 @@ sbcol5 = sg.Frame('', [[sg.Text("DAQ Server: "), sg.Push(), LEDIndicator(key='-D
 
 statusbar = [[sbcol1, sbcol2, sbcol3, sbcol4, sbcol5]]
 
-# Title bars that only work with newer python versions that Centos 7 can't use =.=
-#titlebar = sg.Frame('', [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured, background_color=bkggray)],
-#                         [sg.Image('cmu-wordmark-horizontal-r.resized.png', background_color=bkggray)]], background_color=bkggray)
+# Title bar that only works with newer python versions that Centos 7 can't use =.=
 #titlebar = sg.Frame('', [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured)],
 #                         [sg.Image('cmu-wordmark-horizontal-r.resized.png')]])
 
@@ -152,8 +145,6 @@ basewindow = sg.Window("Module Test: Start", layout, margins=(200,80), finalize=
 basewindow['-EXPAND-'].expand(True, True, True) # expand space between menus and status bar
 event, values = basewindow.read(timeout=10)
 basewindow.maximize()
-
-
 
 # Set the initial colors and values of the status indicators
 ledlist = ['-Debug-Mode-', '-Live-Module-', '-HV-Connected-', '-Box-Closed-', '-HV-Output-On-', '-DCDC-Connected-', '-DCDC-Powered-', '-Trophy-Connected-',
@@ -180,11 +171,10 @@ def disable_module_setup():
 def toggle_ts_tests(enabled):
     keys = ['-Pedestal-Run-', '-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', 
             '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', 'Restart Services', '-Trim-Pedestals-', '-Bias-Voltage-PedTrim-', '-Other-Script-', 
-            '-Bias-Voltage-Other-']#'-Pedestal-Scan-', '-Bias-Voltage-PedScan-', '-Vref-Scan-', '-Bias-Voltage-Vref-', '-Full-Test-', '-Bias-Voltage-Full-']
+            '-Bias-Voltage-Other-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
-    #basewindow['-Bias-Voltage-PedScan-'].update(value='300')
-    #basewindow['-Bias-Voltage-Vref-'].update(value='300')
+
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
 
@@ -206,10 +196,10 @@ def disable_iv_tests():
 
 # Function to clear the values of the tests in the Select Tests section
 def clear_tests():
-    for key in ['-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']: #'-Vref-Scan-', '-Pedestal-Scan-'
+    for key in ['-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
         basewindow[key].update(False)
     for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
-6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']: #, '-Bias-Voltage-PedScan-', '-Bias-Voltage-Vref-']
+6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
@@ -316,10 +306,6 @@ while True:
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
     basewindow['-BV-Menu-'].update(visible=values['-IsLive-'])
-    #basewindow['-Bias-Voltage-PedScan-Text-'].update(visible=values['-IsLive-'])
-    #basewindow['-Bias-Voltage-PedScan-'].update(visible=values['-IsLive-'])
-    #basewindow['-Bias-Voltage-Vref-Text-'].update(visible=values['-IsLive-'])
-    #basewindow['-Bias-Voltage-Vref-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-Text-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-Other-Text-'].update(visible=values['-IsLive-'])
@@ -548,33 +534,6 @@ while True:
             else:
                 trim_pedestals(current_state, None)
 
-
-        ## For pedestal scan, check to make sure bias voltage is entered if needed and then run
-        #if values['-Pedestal-Scan-']:
-        #    psbv = values['-Bias-Voltage-PedScan-'].rstrip()
-        #    if (psbv == '' or not psbv.isnumeric()) and values['-IsLive-']:
-        #        basewindow['Run Tests'].update(disabled=False)
-        #        show_string("Invalid Instructions", field="Right")
-        #        continue
-        #
-        #    if values['-IsLive-']:
-        #        scan_pedestals(current_state, values['-Bias-Voltage-PedScan-'].rstrip())
-        #    else:
-        #        scan_pedestals(current_state, None)
-        #
-        ## For VrefInv and VRefNoInv scan, check to make sure bias voltage is entered if needed and then run
-        #if values['-Vref-Scan-']:
-        #    vsbv = values['-Bias-Voltage-Vref-'].rstrip()
-        #    if (vsbv == '' or not vsbv.isnumeric()) and values['-IsLive-']:
-        #        basewindow['Run Tests'].update(disabled=False)
-        #        show_string("Invalid Instructions", field="Right")
-        #        continue
-        #    
-        #    if values['-IsLive-']:
-        #        scan_vref(current_state, values['-Bias-Voltage-Vref-'].rstrip())
-        #    else:
-        #        scan_vref(current_state, None)
-
         # If pedestal run, read settings and then run        
         if values['-Pedestal-Run-']:
 
@@ -711,6 +670,7 @@ while True:
     if event == sg.WIN_CLOSED:
         exit()
 
+    # exit
     if event == 'Close GUI':
         exit()
         

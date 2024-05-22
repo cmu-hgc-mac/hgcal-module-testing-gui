@@ -45,8 +45,6 @@ Lastly, create a configuration file with `writeconfig.py`. Open the python scrip
 * `HasHVSwitch`: true if you have a switch on the dark box which can automatically detect if the box is closed; false otherwise
 * `HasRHSensor`: true if you have the ability to automatically read the relative humidity in the box; false otherwise
 * `Inspectors`: list CERN usernames of people who may use the GUI
-* `HasLocalDB`: boolean if MAC uses a local database
-* `DBHostname`, `DBDatabase`, `DBUsername`. `DBPassword`: Fields for local database connection (only needed if `HasLocalDB = True`)
 
 Once finished, run `python3 writeconfig.py` to create the configuration file. The file will not be overwritten when you update the repository (i.e. with `git pull`).
 
@@ -83,7 +81,7 @@ The class `Keithley2400.py` wraps the Keithley 2410 power supply used to bias th
 
 The markdown file `configuration.yaml` stores MAC-specific values that are used by the other scripts. This includes the location on the testing PC where data is stored, the default value for the debug mode flag, the resource name for the power supply, the MAC-specific code to use in live module serial numbers, the location on the PC of the private ssh key used to connect to the test stand, and a list of test stand hostnames. These should be edited manually by each MAC.
 
-The `DBTools.py` and `PostgresTools.py` scripts contain functions used to upload testing results to the local MAC database. If the configuration file sets `HasLocalDB = False` then these will be entirely ignored.
+`DBTools.py` contains functions to add RH and Temp values to the state dictionary and to save the IV data from a curve as a .pkl file. In the future it will contain functions to read and write to the local database.
 
 The `AirControl.py` class is used to control the dry air valve and automatically read the relative humidity and temperature inside the dark box. This setup is likely quite specific to CMU. If the configuration file sets `HasRHSensor = False` this will be ignored. Feel free to re-implement this class partially or entirely if you have these capabilities but must use them in a different way. Note however that changes to this class will be overwritten by gitlab.
 

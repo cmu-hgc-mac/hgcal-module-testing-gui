@@ -11,7 +11,6 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
-#sys.path.insert(1, configuration['HexmapPath'])
 sys.path.insert(1, './hexmap')
 from plot_summary import make_hexmap_plots_from_file
 import plot_summary
@@ -223,7 +222,10 @@ def static_make_hexmaps(modulename, ind=-1):
 
 
 def recursive_update(conf, mod):
-
+    """
+    Recursively updates a nested dictionary conf with a new dictionary mod
+    """
+    
     newconf = conf
     for key in mod.keys():
 
@@ -241,7 +243,10 @@ def recursive_update(conf, mod):
     return newconf
 
 def updateconf(conffile, updfile):
-
+    """
+    Add or modify values of test output yaml file to original configuration. Used for pedestal trimming.
+    """
+    
     conf = {}
     with open(conffile, 'r') as fileconf:
         conf = yaml.safe_load(fileconf)

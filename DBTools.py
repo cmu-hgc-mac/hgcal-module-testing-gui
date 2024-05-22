@@ -37,7 +37,7 @@ def iv_save(datadict, modulename):
 def add_RH_T(state, force=False):
     """
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
-    general to all MACs. Automatic sensing is disabled by HasRHSensor: false in the configuration file.
+    general to all MACs. Automatic sensing is disabled by "HasRHSensor: false" in the configuration file.
     """
     
     RH = None

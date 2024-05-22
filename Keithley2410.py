@@ -439,7 +439,7 @@ class Keithley2410:
             print('>> Found error: {}'.format(err_string))
             raise ValueError(err_string)
 
-    # Take IV curve
+    # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
     def takeIVold(self, maxV, stepV, RH, Temp, errcheck_step=5):
 
