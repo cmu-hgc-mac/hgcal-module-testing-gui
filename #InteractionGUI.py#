@@ -694,7 +694,7 @@ def take_IV_curve(state, step=20):
             except Exception:
                 print('  -- IV upload exception:', traceback.format_exc())
         else:
-            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+            iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()
     return 'CONT'
         
