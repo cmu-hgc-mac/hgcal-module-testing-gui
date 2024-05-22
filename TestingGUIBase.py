@@ -404,7 +404,10 @@ while True:
         if values['-IsHB-'] and vendorid == '':
             show_string("Invalid Setup")
             continue
-
+        if moduleserial == '':
+            show_string("Invalid Setup")
+            continue
+            
         # Catch non-implemented denisities and geometries
         if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
@@ -447,7 +450,7 @@ while True:
 
     # Only perform tests that involve the power supply and do not use the Trenz
     if event == 'Only IV Test':
-
+        
         # If module serial isn't defined well, skip
         if values['-IsHB-']:
             show_string("Invalid Setup")
@@ -455,6 +458,10 @@ while True:
         if moduleindex == '':
             show_string("Invalid Setup")
             continue
+        if moduleserial == '':
+            show_string("Invalid Setup")
+            continue
+
 
         # Catch non-implemented denisities and geometries
         if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
@@ -660,8 +667,8 @@ while True:
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                 current_state['ps'].outputOff()
                 update_state(current_state, '-HV-Output-On-', False, 'black')
-            #    current_state['ps'].outputOn()
-            #    current_state['ps'].setVoltage(600)
+                #current_state['ps'].outputOn()
+                #current_state['ps'].setVoltage(800)
 
             time.sleep(time_to_wait)
             wait.close()
