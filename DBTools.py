@@ -1,3 +1,4 @@
+import PySimpleGUI as sg
 import numpy as np
 import traceback
 import time
@@ -232,21 +233,24 @@ def plots_upload(state, ind=-1):
     
     read_table('module_pedestal_plots')
 
-def add_RH_T(state):
+def add_RH_T(state, force=False):
     """
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
-    general to all MACs. 
+    general to all MACs. Automatic sensing is disabled by "HasRHSensor: false" in the configuration file.
     """
 
     RH = None
     Temp = None
-    if not configuration['HasRHSensor']:
+    
+    if '-Box-RH-' not in state.keys() or force: # only add once per testing session, except if you really need
 
-        if '-Box-RH-' not in state.keys(): # only add once per testing session
-        
-            layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
+        # if no automatic RH sensor, enter manually
+        if not configuration['HasRHSensor']: 
+
+            layout = [[sg.Text('Enter current humidity and temperature:', font=('Arial', 30))],
+                      [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
             window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
-
+        
             while True:
                 event, values = window.read()
                 if event == 'Enter' or event == sg.WIN_CLOSED:
@@ -256,25 +260,29 @@ def add_RH_T(state):
                     continue
                 else:
                     break
-                    
+
             window.close()
 
+        # if automatic RH sensor, query for RH and T
+        else:
+            from AirControl import AirControl
+            for i in range(10):
+                controller = AirControl()
+                try:
+                    RH = controller.get_humidity()
+                    Temp = controller.get_temperature()
+                    break
+                except Exception:
+                    print('  -- RH/T exception:', traceback.format_exc())
+                    print(f'  -- Trying again (attempt {i})')
+
+            print(f'  >> RH/T: measured RH={RH}%; T={Temp}ºC')
+
+        state['-Box-RH-'] = int(RH)
+        state['-Box-T-'] = int(Temp)
+    
+        return RH, Temp
+
+    # if no update, return state values
     else:
-
-        from AirControl import AirControl
-        for i in range(10):
-            controller = AirControl()
-            try:
-                RH = controller.get_humidity()
-                T = controller.get_temperature()
-                break
-            except Exception:
-                print('  -- RH/T exception:', traceback.format_exc())
-                print(f'  -- Trying again (attempt {i})')
-
-        print(f'  >> RH/T: measured RH={RH}%; T={T}ºC')
-
-    state['-Box-RH-'] = int(RH)
-    state['-Box-T-'] = int(T)
-
-    return RH, T
+        return state['-Box-RH-'], state['-Box-T-']
