@@ -6,6 +6,8 @@ class AirControl:
     def __init__(self):
         self.nano = serial.Serial('/dev/ttyUSB1', 115200, timeout=2) #Change port if needed, default /dev/ttyUSB1
 
+    # nice comment
+        
     def __del__(self):
         self.nano.close()
 
