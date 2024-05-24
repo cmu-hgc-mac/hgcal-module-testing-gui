@@ -136,15 +136,18 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
     df_data = df # create clone to avoid conflict
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
-    viridis = mpl.cm.get_cmap('viridis', 400)
-    newcolors = viridis(np.linspace(0, 1, 400))
-    pink = np.array([248/256, 24/256, 148/256, 1])
+    cmap = mpl.colormaps['viridis']
+    #cmap = mpl.cm.get_cmap('viridis', 400)
+    #newcolors = viridis(np.linspace(0, 1, 400))
+    #pink = np.array([248/256, 24/256, 148/256, 1])
     red = np.array([[1., 0., 0., 1.]])
-    black = np.array([[0.35, 0.35, 0.35, 1.]])
-    newcolors[0] = black
-    newcolors[-1] = red
-    cmap = mpl.colors.ListedColormap(newcolors)
-    
+    gray = np.array([[0.35, 0.35, 0.35, 1.]])
+    #newcolors[0] = black
+    #newcolors[-1] = red
+    #cmap = mpl.colors.ListedColormap(newcolors)
+    cmap.set_under(gray)
+    cmap.set_over(red)
+
     # create the masks
     norm_mask = df_data["channeltype"] == 0
     norm_mask &= df_data["pad"] > 0 
@@ -182,7 +185,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         patch_col.set_array(colors)
 
         upplim = 400 if column == 'adc_mean' or column == 'adc_median' else 8
-        patch_col.set_clim([0, upplim])
+        patch_col.set_clim([0.001, upplim])
 
         # for live module if actual channels have same noise as disconnected channels, label
         med_nc = df_data[column][nc_mask].median()
@@ -229,13 +232,25 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.text(5, 6.5, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask]), 2))+'$')
         ax.text(5, 6, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')            
         if (column == 'adc_stdd'):
-            ax.text(-6.8, -5.8, r'Channels:')
+            ax.text(-6.8, -5.8, 'Channels:')
             ax.text(-6.8, -6.3, f'{np.sum((zeros) & (df_data["pad"] > 0))} Dead')
             #ax.text(-6.8, -6.8, f'{np.sum(uncon & (df_data["pad"] > 0) & ~(calib_mask))} Unbonded')
             ax.text(-6.8, -6.8, f'{np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
         
-        plt.colorbar(patch_col, label = column.replace('_',' '))
+        cb = plt.colorbar(patch_col, label = column.replace('_',' '))#, extend='both', extendrect=True)
 
+        trixy = np.array([[0, 1], [1, 1], [0.5, 1.04]])
+        pt = mpl.patches.Polygon(trixy, transform=cb.ax.transAxes, 
+                             clip_on=False, edgecolor='k', linewidth=0.7, 
+                             facecolor=red, zorder=4, snap=True)
+        cb.ax.add_patch(pt)
+        recty = np.array([[0, 0], [1, 0], [1, -0.04], [0, -0.04]])
+        pr = mpl.patches.Polygon(recty, transform=cb.ax.transAxes, 
+                             clip_on=False, edgecolor='k', linewidth=0.7, 
+                             facecolor=gray, zorder=4, snap=True)
+        cb.ax.add_patch(pr)
+        cb.ax.text(1.35, -0.18, r'$0$', ha='center', va='center')
+        
         # annotate chip positions on plot
         ad_chip_geo(ax, hb_type = hb_type)
 
