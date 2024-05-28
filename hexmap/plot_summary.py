@@ -126,6 +126,25 @@ def add_channel_legend(axes, hb_type = "LF"):
                                             square: HandlerSquare(), circle: HandlerCircle()})
     axes.add_artist(patch_legend)
 
+def create_masks(df_data):
+
+    # create the masks
+    norm_mask = df_data["channeltype"] == 0
+    norm_mask &= df_data["pad"] > 0
+
+    calib_mask = df_data["channeltype"] == 1
+
+    cm0_mask = df_data["channeltype"] == 100
+    cm0_mask &= df_data["channel"] % 2 == 0
+
+    cm1_mask = df_data["channeltype"] == 100
+    cm1_mask &= df_data["channel"] % 2 == 1
+
+    nc_mask = df_data["channeltype"] == 0
+    nc_mask &= df_data["pad"] < 0
+
+    return norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask
+    
 # To plot the ADC graphs from a pandas dataFrame containing the data
 # # df: pandas DataFrame with the data
 # figdir: the output directory for the plots
@@ -142,21 +161,8 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
     cmap.set_under(gray)
     cmap.set_over(red)
 
-    # create the masks
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0 
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100 
-    cm1_mask &= df_data["channel"] % 2 == 1 
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
+    
     masks = [norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask]
     data_types = ['norm', 'calib', 'cm0', 'cm1', 'nc']
 
@@ -266,21 +272,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
     print(" >> Plotting channels in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
-    # create the masks                                                                                                                                                    
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100
-    cm1_mask &= df_data["channel"] % 2 == 1
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
     cm_mask = cm0_mask | cm1_mask
 
     masks = [norm_mask, calib_mask, cm_mask, nc_mask]
@@ -345,21 +337,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
     print(" >> Plotting pads in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
-    # create the masks                                                                                                                                                    
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100
-    cm1_mask &= df_data["channel"] % 2 == 1
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
     cm_mask = cm0_mask | cm1_mask
 
     masks = [norm_mask, calib_mask, cm_mask, nc_mask]
