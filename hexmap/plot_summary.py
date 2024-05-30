@@ -4,12 +4,14 @@ import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
 import uproot3 as uproot
+import math
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon, Rectangle
 from matplotlib.collections import PatchCollection
 from matplotlib.legend_handler import HandlerPatch
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 try:
     from hexaboard_geometries import *
@@ -305,7 +307,9 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             ax[i].set_ylabel(ylab, fontsize=20)
             ax[i].set_ylim([0., upplim])
             ax[i].text(3, upplim*0.8, f'Chip {i}')
-
+            ax[i].set_xticks(np.linspace(0, 70, 15))
+            ax[i].grid(True)
+            
             # print summary info to plot                                                                                                                                                    
             ax[i].text(60, upplim*0.8, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask][df_data.chip == i]), 2))+'$')
             ax[i].text(60, upplim*0.7, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask][df_data.chip == i]), 2))+'$')
@@ -329,7 +333,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
         ax[0].set_title(label.replace('_', ' '), y=1.25)
 
         # save the figure                                                                                                                                                               
-        figname = figdir + str(label) + "_" + column + "_channels.png"
+        figname = figdir + str(label) + "_" + column + "_channels.pdf"
         plt.savefig(figname)
     return 1
 
@@ -359,13 +363,17 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.set_xlim([np.min(df_data['pad']), np.max(df_data['pad'])])
         ax.set_ylim([0., upplim])
 
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(5))
+        ax.grid(which='both')
+            
         # print summary info to plot                                                                                                                                                    
         xloc = (np.max(df_data['pad']) - np.min(df_data['pad']))*0.02 + np.min(df_data['pad'])
         ax.text(xloc, upplim*0.95, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask]), 2))+'$')
         ax.text(xloc, upplim*0.9, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')
 
         for mask, type, color in zip(masks, data_types, colors):
-            ax.scatter(df_data['pad'][mask], df_data[column][mask], color=color, label=type)
+            ax.scatter(df_data['pad'][mask], df_data[column][mask], color=color, label=type, s=10)
 
             above_plot = df_data[(df_data[column] > upplim) & mask]
             ax.scatter(above_plot['pad'], np.full_like(above_plot.channel, upplim*0.99, dtype=float), color=color, marker=r'$\uparrow$', s=160)
@@ -376,7 +384,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.set_title(label.replace('_', ' '))
 
         # save the figure                                                                                                                                                               
-        figname = figdir + str(label) + "_" + column + "_pads.png"
+        figname = figdir + str(label) + "_" + column + "_pads.pdf"
         plt.savefig(figname)
     return 1
 
