@@ -2,10 +2,10 @@ import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
-from time import sleep
+import time
 from InteractionGUI import *
 import yaml
-
+from datetime import datetime, timedelta
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
 then creates the GUI layout and then the GUI window. Once done, the script runs a loop which tracks and responds to the user's
@@ -17,6 +17,8 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+from DBTools import add_RH_T
+    
 # Create theme
 lgfont = ('Arial', 40)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -92,11 +94,14 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
            sg.Input(s=5, key='-Bias-Voltage-Pedestal5-'), sg.Input(s=5, key='-Bias-Voltage-Pedestal6-')]]
 
 # Select Tests section
+other_scripts = ['delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
+                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
-             [sg.Checkbox('Pedestal Scan', key='-Pedestal-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedScan-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedScan-')],
-             [sg.Checkbox('Vref Inv and NoInv Scan', key='-Vref-Scan-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-Vref-Text-'), sg.Input(s=5, key='-Bias-Voltage-Vref-')],
+             [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
+             [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
+              sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -120,9 +125,7 @@ sbcol5 = sg.Frame('', [[sg.Text("DAQ Server: "), sg.Push(), LEDIndicator(key='-D
 
 statusbar = [[sbcol1, sbcol2, sbcol3, sbcol4, sbcol5]]
 
-# Title bars that only work with newer python versions that Centos 7 can't use =.=
-#titlebar = sg.Frame('', [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured, background_color=bkggray)],
-#                         [sg.Image('cmu-wordmark-horizontal-r.resized.png', background_color=bkggray)]], background_color=bkggray)
+# Title bar that only works with newer python versions that Centos 7 can't use =.=
 #titlebar = sg.Frame('', [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured)],
 #                         [sg.Image('cmu-wordmark-horizontal-r.resized.png')]])
 
@@ -142,8 +145,6 @@ basewindow = sg.Window("Module Test: Start", layout, margins=(200,80), finalize=
 basewindow['-EXPAND-'].expand(True, True, True) # expand space between menus and status bar
 event, values = basewindow.read(timeout=10)
 basewindow.maximize()
-
-
 
 # Set the initial colors and values of the status indicators
 ledlist = ['-Debug-Mode-', '-Live-Module-', '-HV-Connected-', '-Box-Closed-', '-HV-Output-On-', '-DCDC-Connected-', '-DCDC-Powered-', '-Trophy-Connected-',
@@ -168,12 +169,14 @@ def disable_module_setup():
 
 # Functions for enabling/disabling select tests fields
 def toggle_ts_tests(enabled):
-    keys = ['-Pedestal-Run-', '-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', '-Pedestal-Scan-', '-Bias-Voltage-PedScan-', '-Vref-Scan-', '-Bias-Voltage-Vref-', 'Restart Services']
-    #'-Full-Test-', '-Bias-Voltage-Full-',
+    keys = ['-Pedestal-Run-', '-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', 
+            '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', 'Restart Services', '-Trim-Pedestals-', '-Bias-Voltage-PedTrim-', '-Other-Script-', 
+            '-Bias-Voltage-Other-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
-    basewindow['-Bias-Voltage-PedScan-'].update(value='300')
-    basewindow['-Bias-Voltage-Vref-'].update(value='300')
+
+    basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
+    basewindow['-Bias-Voltage-Other-'].update(value='300')
 
 def enable_ts_tests():
     toggle_ts_tests(True)
@@ -193,12 +196,14 @@ def disable_iv_tests():
 
 # Function to clear the values of the tests in the Select Tests section
 def clear_tests():
-    for key in ['-Pedestal-Run-','-Pedestal-Scan-', '-Vref-Scan-', '-Ambient-IV-', '-Dry-IV-']:
+    for key in ['-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
         basewindow[key].update(False)
     for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
-6-', '-Bias-Voltage-PedScan-', '-Bias-Voltage-Vref-', '-Bias-Voltage-PedScan-', '-Bias-Voltage-Vref-']:
+6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
         basewindow[key].update('')
-
+    basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
+    basewindow['-Bias-Voltage-Other-'].update(value='300')
+        
 # Variables that will be set by the user and then used to create the module serial number
 trenzhostname = ''
 livemodule = None
@@ -251,8 +256,8 @@ def init_state():
     current_state['-Inspector-'] = inspector
     
 # Update the value of a field in the state dict and update LED color if exists
-def update_state(field, val, color=None):
-    current_state[field] = val
+def update_state(state, field, val, color=None):
+    state[field] = val
     if field[0] == '-':
         assert color is not None
         SetLED(basewindow, field, color)
@@ -261,7 +266,7 @@ def show_string(string, field='Left'):
     basewindow[f'-Display-Str-{field}-'].update(string)
     basewindow[f'-Display-Str-{field}-'].update(visible=True)
     basewindow.refresh()
-    sleep(2)
+    time.sleep(2)
     basewindow[f'-Display-Str-{field}-'].update(visible=False)
     basewindow.refresh()
 
@@ -301,10 +306,10 @@ while True:
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
     basewindow['-BV-Menu-'].update(visible=values['-IsLive-'])
-    basewindow['-Bias-Voltage-PedScan-Text-'].update(visible=values['-IsLive-'])
-    basewindow['-Bias-Voltage-PedScan-'].update(visible=values['-IsLive-'])
-    basewindow['-Bias-Voltage-Vref-Text-'].update(visible=values['-IsLive-'])
-    basewindow['-Bias-Voltage-Vref-'].update(visible=values['-IsLive-'])
+    basewindow['-Bias-Voltage-PedTrim-Text-'].update(visible=values['-IsLive-'])
+    basewindow['-Bias-Voltage-PedTrim-'].update(visible=values['-IsLive-'])
+    basewindow['-Bias-Voltage-Other-Text-'].update(visible=values['-IsLive-'])
+    basewindow['-Bias-Voltage-Other-'].update(visible=values['-IsLive-'])
 
     basewindow['Only IV Test'].update(disabled=(values['-IsHB-'] or basewindow['Configure Test Stand'].Widget['state'] == 'disabled'))
     basewindow['Close GUI'].update(disabled=(basewindow['Configure Test Stand'].Widget['state'] == 'disabled'))
@@ -387,7 +392,10 @@ while True:
         if values['-IsHB-'] and vendorid == '':
             show_string("Invalid Setup")
             continue
-
+        if moduleserial == '':
+            show_string("Invalid Setup")
+            continue
+            
         # Catch non-implemented denisities and geometries
         if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
@@ -430,7 +438,7 @@ while True:
 
     # Only perform tests that involve the power supply and do not use the Trenz
     if event == 'Only IV Test':
-
+        
         # If module serial isn't defined well, skip
         if values['-IsHB-']:
             show_string("Invalid Setup")
@@ -438,6 +446,10 @@ while True:
         if moduleindex == '':
             show_string("Invalid Setup")
             continue
+        if moduleserial == '':
+            show_string("Invalid Setup")
+            continue
+
 
         # Catch non-implemented denisities and geometries
         if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
@@ -475,6 +487,12 @@ while True:
         clear_setup()
         enable_module_setup()
 
+        # if controlling box air automatically, turn off
+        if configuration['HasRHSensor']:
+            from AirControl import AirControl
+            ac = AirControl()
+            ac.set_air_off()
+        
     # Run the selected tests
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
@@ -492,37 +510,29 @@ while True:
                 continue
 
         # If running an electrical test, re-check just to make sure
-        if values['-Pedestal-Scan-'] or values['-Vref-Scan-'] or values['-Pedestal-Run-']:
+        #if values['-Pedestal-Scan-'] or values['-Vref-Scan-'] or values['-Pedestal-Run-']:
+        if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
                 basewindow['Run Tests'].update(disabled=False)
                 show_string("Error in Statuses", field="Right")
                 continue
 
-        # For pedestal scan, check to make sure bias voltage is entered if needed and then run
-        if values['-Pedestal-Scan-']:
-            psbv = values['-Bias-Voltage-PedScan-'].rstrip()
-            if (psbv == '' or not psbv.isnumeric()) and values['-IsLive-']:
+        # add RH, T to state dict now
+        # values also modified at the start of an IV curve
+        RH, Temp = add_RH_T(current_state)
+
+        # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
+        if values['-Trim-Pedestals-']:
+            tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
+            if (tpbv == '' or not tpbv.isnumeric()) and values['-IsLive-']:
                 basewindow['Run Tests'].update(disabled=False)
                 show_string("Invalid Instructions", field="Right")
                 continue
 
             if values['-IsLive-']:
-                scan_pedestals(current_state, values['-Bias-Voltage-PedScan-'].rstrip())
+                trim_pedestals(current_state, tpbv)
             else:
-                scan_pedestals(current_state, None)
-
-        # For VrefInv and VRefNoInv scan, check to make sure bias voltage is entered if needed and then run
-        if values['-Vref-Scan-']:
-            vsbv = values['-Bias-Voltage-Vref-'].rstrip()
-            if (vsbv == '' or not vsbv.isnumeric()) and values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
-                show_string("Invalid Instructions", field="Right")
-                continue
-            
-            if values['-IsLive-']:
-                scan_vref(current_state, values['-Bias-Voltage-Vref-'].rstrip())
-            else:
-                scan_vref(current_state, None)
+                trim_pedestals(current_state, None)
 
         # If pedestal run, read settings and then run        
         if values['-Pedestal-Run-']:
@@ -559,6 +569,20 @@ while True:
             # Run
             multi_run_pedestals(current_state, BVs)
             
+        # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
+        if values['-Other-Script-']:
+            osbv = values['-Bias-Voltage-Other-'].rstrip()
+            if (osbv == '' or not osbv.isnumeric()) and values['-IsLive-']:
+                basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid Instructions", field="Right")
+                continue
+            
+            script = values['-Other-Which-Script-']
+            if values['-IsLive-']:
+                run_other_script(script, current_state, osbv)
+            else:
+                run_other_script(script, current_state, None)
+
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
@@ -570,16 +594,26 @@ while True:
 
             if values['-DryIV-Wait-Time-'] == '':
                 time_to_wait = 15. if not DEBUG_MODE else 0.5
+            elif values['-DryIV-Wait-Time-'] == '0':
+                time_to_wait = 0.01
             else:
                 time_to_wait = float(values['-DryIV-Wait-Time-'])
             final_dry_time = 60*(time_to_wait)
-            
-            from InteractionGUI import do_something_window
-            do_something_window('Open dry air valve', 'Open')
 
+            # open dry air valve manually or automatically
+            if not configuration['HasRHSensor']:
+                from InteractionGUI import do_something_window
+                do_something_window('Open dry air valve', 'Open')
+            else:
+                from AirControl import AirControl
+                ac = AirControl()
+                ac.set_air_on()
+                            
+            time.sleep(1)
+                
             drytime = time.time()
-            dry_date = datetime.datetime.now()
-            finalIV_date = dry_date + datetime.timedelta(seconds=final_dry_time)
+            dry_date = datetime.now()
+            finalIV_date = dry_date + timedelta(seconds=final_dry_time)
             finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
 
         # Could run tests here
@@ -590,8 +624,19 @@ while True:
             time_to_wait = final_dry_time - (time.time() - drytime)
             from InteractionGUI import waiting_window
             wait = waiting_window(f'Waiting until {finalIV_time} to perform final IV')
+
+            # Turn off HV output if live module before the long wait
+            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+                current_state['ps'].outputOff()
+                update_state(current_state, '-HV-Output-On-', False, 'black')
+                #current_state['ps'].outputOn()
+                #current_state['ps'].setVoltage(800)
+
             time.sleep(time_to_wait)
             wait.close()
+
+            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+                current_state['ps'].setVoltage(0)
             
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
@@ -602,12 +647,17 @@ while True:
 
         # Reset test values
         clear_tests()
+
+        # Turn of HV output if live module
+        if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+            current_state['ps'].outputOff()
+            update_state(current_state, '-HV-Output-On-', False, 'black')
             
         basewindow['Run Tests'].update(disabled=False)
 
         from InteractionGUI import waiting_window
         wait = waiting_window(f'Plots located in {configuration["DataLoc"]}/{moduleserial}')
-        sleep(2)
+        time.sleep(2)
         wait.close()
         
     # Restart the services and check to ensure success
@@ -615,10 +665,12 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
-    # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it.
+    # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
+    # or press the 'Close GUI' button.
     if event == sg.WIN_CLOSED:
         exit()
 
+    # exit
     if event == 'Close GUI':
         exit()
         

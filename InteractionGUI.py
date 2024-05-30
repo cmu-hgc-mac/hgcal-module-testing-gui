@@ -1,10 +1,12 @@
+import numpy as np
+import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
 from time import sleep
-from dbtools import *
 import os
+import traceback
 
 import yaml
 configuration = {}
@@ -14,6 +16,7 @@ with open('configuration.yaml', 'r') as file:
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
+from DBTools import *
 
 """
 -------------------InteractionGUI.py-----------------
@@ -533,17 +536,18 @@ def run_pedestals(state, BV):
         hexpath = ''
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+            if not state['ps'].get_output():
+                state['ps'].outputOn()
+                update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
+
         state['pc'].pedestal_run(BV=BV)
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
+
         try:
             hexpath = state['pc'].make_hexmaps(BV=BV)
         except:
             hexpath = ''
+
     pedestals.close()
     return hexpath
 
@@ -555,10 +559,45 @@ def multi_run_pedestals(state, BV_list):
     hexpath = ''
     for BV in BV_list:
         hexpath = run_pedestals(state, BV)
-
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
         os.system(f'xdg-open {hexpath}_adc_mean.png')
         os.system(f'xdg-open {hexpath}_adc_stdd.png')
+
+def trim_pedestals(state, BV):
+    """
+    """
+    trimming = waiting_window(f"Trimming Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
+    
+    if state['-Debug-Mode-']:
+        sleep(5)
+    else:
+        if state['-Live-Module-'] and BV is not None:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(float(BV))
+        state['pc'].pedestal_run()
+        state['pc'].pedestal_scan()
+        state['pc'].vrefnoinv_scan()
+        state['pc'].vrefinv_scan()
+        state['-Pedestals-Trimmed-'] = True
+        
+    trimming.close()
+
+def run_other_script(script, state, BV):
+    """
+    """
+    running = waiting_window(f"Running {script}.py (BV={BV})...", description=f'python3 {script}.py [options...]')
+
+    if state['-Debug-Mode-']:
+        sleep(5)
+    else:
+        if state['-Live-Module-'] and BV is not None:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
+            state['ps'].setVoltage(float(BV))
+        state['pc']._run_script(script)
+
+    running.close()
 
 def scan_pedestals(state, BV):
     """
@@ -577,9 +616,6 @@ def scan_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
     pedestals.close()
     
 def scan_vref(state, BV):
@@ -599,9 +635,6 @@ def scan_vref(state, BV):
             state['ps'].setVoltage(float(BV))
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
-        if state['-Live-Module-']:
-            state['ps'].outputOff()
-            update_state(state, '-HV-Output-On-', False, 'black')
     vref.close()
 
 def take_IV_curve(state, step=20):
@@ -613,29 +646,8 @@ def take_IV_curve(state, step=20):
     """
      
     connect_HV(state) # will do nothing if already connected
-
-    if not configuration['HasRHSensor']:
-        RH = None
-        Temp = None
-
-        layout = [[sg.Text('Enter current humidity and temperature:', font=lgfont)], [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
-        window = sg.Window(f"Module Test: Enter RH and Temp", layout, margins=(200,100))
-    
-        while True:
-            event, values = window.read()
-            if event == 'Enter' or event == sg.WIN_CLOSED:
-                RH = values['-RH-'].rstrip()
-                Temp = values['-Temp-'].rstrip()
-                if RH is None or Temp is None:
-                    continue
-                else:
-                    break
-
-        window.close()
-
-    else:
-        pass # Not implemented - automatically query RH and Temp from sensor
-    
+    RH, Temp = add_RH_T(state, force=True) # also adds RH,T to state dict
+        
     curvew = waiting_window(f'Taking IV curve...')
 
     if state['-Debug-Mode-']:
@@ -651,8 +663,9 @@ def take_IV_curve(state, step=20):
             step = -step
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
-        inspector = state['-Inspector-']
-        save_and_upload(curve, state['-Module-Serial-'], '', RH, Temp, inspector) # saves IV curve as pickle object
+
+        iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+
     curvew.close()
     return 'CONT'
         
@@ -719,13 +732,11 @@ def plot_IV_curves(state):
         pass
     else:
 
-        plt.rcParams.update({'font.size': 10})
-
-        fig, ax = plt.subplots(figsize=(8, 5))
+        fig, ax = plt.subplots(figsize=(16, 12))
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=datadict['RH']+'% RH; '+datadict['Temp']+' deg C')
-
+            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
+        
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
         ax.set_xlabel('Bias Voltage [V]')
@@ -734,10 +745,16 @@ def plot_IV_curves(state):
         ax.set_xlim(0, 800)
         ax.legend()
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
-        plt.savefig(f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
-        plt.close(fig)
 
-        os.system(f'xdg-open {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}.png')
+        # dynamically name file to avoid overwriting plots
+        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}{}.png'
+        end = '_0'
+        while os.path.isfile(filepath.format(end)):
+            thisend = int(end[1])
+            end = '_{}'.format(thisend += 1)
 
-
+        plt.savefig(filepath.format(end))
         
+        plt.close(fig)
+        os.system(f'xdg-open {filepath.format(end)}')
+
