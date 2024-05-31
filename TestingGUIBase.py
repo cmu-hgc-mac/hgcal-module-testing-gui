@@ -629,8 +629,6 @@ while True:
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                 current_state['ps'].outputOff()
                 update_state(current_state, '-HV-Output-On-', False, 'black')
-                #current_state['ps'].outputOn()
-                #current_state['ps'].setVoltage(800)
 
             time.sleep(time_to_wait)
             wait.close()

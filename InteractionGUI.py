@@ -611,8 +611,9 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+            if not state['ps'].get_output():
+                state['ps'].outputOn()
+                update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
@@ -747,12 +748,14 @@ def plot_IV_curves(state):
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
 
         # dynamically name file to avoid overwriting plots
-        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}{}.png'
+        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
+        filepath += '{}.png'
         end = '_0'
+        thisend = int(end[1])
         while os.path.isfile(filepath.format(end)):
-            thisend = int(end[1])
             end = '_{}'.format(thisend += 1)
-
+            thisend += 1
+            
         plt.savefig(filepath.format(end))
         
         plt.close(fig)
