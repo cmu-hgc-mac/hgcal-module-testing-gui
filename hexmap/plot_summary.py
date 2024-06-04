@@ -157,11 +157,20 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
     df_data = df # create clone to avoid conflict
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
-    cmap = mpl.colormaps['viridis']
-    red = np.array([[1., 0., 0., 1.]])
-    gray = np.array([[0.35, 0.35, 0.35, 1.]])
-    cmap.set_under(gray)
-    cmap.set_over(red)
+    try:
+        cmap = mpl.colormaps['viridis']
+    except AttributeError:
+        cmap = mpl.cm.get_cmap('viridis', 400)
+    try:
+        red = np.array([[1., 0., 0., 1.]])
+        gray = np.array([[0.35, 0.35, 0.35, 1.]])
+        cmap.set_under(gray)
+        cmap.set_over(red)
+    except ValueError:
+        red = np.array([1., 0., 0., 1.])
+        gray = np.array([0.35, 0.35, 0.35, 1.])
+        cmap.set_under(gray)
+        cmap.set_over(red)
 
     norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
     
@@ -326,7 +335,11 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             if i != nchips - 1:
                 ax[i].tick_params(labelbottom=False)
 
-        ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncols=4, columnspacing=0.3, handletextpad=0.1)
+        try:
+            ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncols=4, columnspacing=0.3, handletextpad=0.1)
+        except TypeError:
+            ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncol=4, columnspacing=0.3, handletextpad=0.1)
+            
         ax[-1].set_xlabel('Channel Number')
 
         # add the title                                                                                                                                                                                     
