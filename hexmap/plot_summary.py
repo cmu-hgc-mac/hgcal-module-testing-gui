@@ -4,12 +4,14 @@ import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
 import uproot3 as uproot
+import math
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon, Rectangle
 from matplotlib.collections import PatchCollection
 from matplotlib.legend_handler import HandlerPatch
+from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 
 try:
     from hexaboard_geometries import *
@@ -126,6 +128,25 @@ def add_channel_legend(axes, hb_type = "LF"):
                                             square: HandlerSquare(), circle: HandlerCircle()})
     axes.add_artist(patch_legend)
 
+def create_masks(df_data):
+
+    # create the masks
+    norm_mask = df_data["channeltype"] == 0
+    norm_mask &= df_data["pad"] > 0
+
+    calib_mask = df_data["channeltype"] == 1
+
+    cm0_mask = df_data["channeltype"] == 100
+    cm0_mask &= df_data["channel"] % 2 == 0
+
+    cm1_mask = df_data["channeltype"] == 100
+    cm1_mask &= df_data["channel"] % 2 == 1
+
+    nc_mask = df_data["channeltype"] == 0
+    nc_mask &= df_data["pad"] < 0
+
+    return norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask
+    
 # To plot the ADC graphs from a pandas dataFrame containing the data
 # # df: pandas DataFrame with the data
 # figdir: the output directory for the plots
@@ -136,27 +157,23 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
     df_data = df # create clone to avoid conflict
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
-    cmap = mpl.colormaps['viridis']
-    red = np.array([[1., 0., 0., 1.]])
-    gray = np.array([[0.35, 0.35, 0.35, 1.]])
-    cmap.set_under(gray)
-    cmap.set_over(red)
+    try:
+        cmap = mpl.colormaps['viridis']
+    except AttributeError:
+        cmap = mpl.cm.get_cmap('viridis', 400)
+    try:
+        red = np.array([[1., 0., 0., 1.]])
+        gray = np.array([[0.35, 0.35, 0.35, 1.]])
+        cmap.set_under(gray)
+        cmap.set_over(red)
+    except ValueError:
+        red = np.array([1., 0., 0., 1.])
+        gray = np.array([0.35, 0.35, 0.35, 1.])
+        cmap.set_under(gray)
+        cmap.set_over(red)
 
-    # create the masks
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0 
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100 
-    cm1_mask &= df_data["channel"] % 2 == 1 
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
+    
     masks = [norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask]
     data_types = ['norm', 'calib', 'cm0', 'cm1', 'nc']
 
@@ -266,21 +283,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
     print(" >> Plotting channels in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
-    # create the masks                                                                                                                                                    
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100
-    cm1_mask &= df_data["channel"] % 2 == 1
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
     cm_mask = cm0_mask | cm1_mask
 
     masks = [norm_mask, calib_mask, cm_mask, nc_mask]
@@ -313,7 +316,9 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             ax[i].set_ylabel(ylab, fontsize=20)
             ax[i].set_ylim([0., upplim])
             ax[i].text(3, upplim*0.8, f'Chip {i}')
-
+            ax[i].set_xticks(np.linspace(0, 70, 15))
+            ax[i].grid(True)
+            
             # print summary info to plot                                                                                                                                                    
             ax[i].text(60, upplim*0.8, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask][df_data.chip == i]), 2))+'$')
             ax[i].text(60, upplim*0.7, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask][df_data.chip == i]), 2))+'$')
@@ -330,14 +335,18 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             if i != nchips - 1:
                 ax[i].tick_params(labelbottom=False)
 
-        ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncols=4, columnspacing=0.3, handletextpad=0.1)
+        try:
+            ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncols=4, columnspacing=0.3, handletextpad=0.1)
+        except TypeError:
+            ax[0].legend(loc=(0.16, 1.01), fontsize=20, ncol=4, columnspacing=0.3, handletextpad=0.1)
+            
         ax[-1].set_xlabel('Channel Number')
 
         # add the title                                                                                                                                                                                     
         ax[0].set_title(label.replace('_', ' '), y=1.25)
 
         # save the figure                                                                                                                                                               
-        figname = figdir + str(label) + "_" + column + "_channels.png"
+        figname = figdir + str(label) + "_" + column + "_channels.pdf"
         plt.savefig(figname)
     return 1
 
@@ -345,21 +354,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
     print(" >> Plotting pads in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
-    # create the masks                                                                                                                                                    
-    norm_mask = df_data["channeltype"] == 0
-    norm_mask &= df_data["pad"] > 0
-
-    calib_mask = df_data["channeltype"] == 1
-
-    cm0_mask = df_data["channeltype"] == 100
-    cm0_mask &= df_data["channel"] % 2 == 0
-
-    cm1_mask = df_data["channeltype"] == 100
-    cm1_mask &= df_data["channel"] % 2 == 1
-
-    nc_mask = df_data["channeltype"] == 0
-    nc_mask &= df_data["pad"] < 0
-
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
     cm_mask = cm0_mask | cm1_mask
 
     masks = [norm_mask, calib_mask, cm_mask, nc_mask]
@@ -381,13 +376,17 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.set_xlim([np.min(df_data['pad']), np.max(df_data['pad'])])
         ax.set_ylim([0., upplim])
 
+        ax.xaxis.set_major_locator(MultipleLocator(50))
+        ax.xaxis.set_minor_locator(MultipleLocator(5))
+        ax.grid(which='both')
+            
         # print summary info to plot                                                                                                                                                    
         xloc = (np.max(df_data['pad']) - np.min(df_data['pad']))*0.02 + np.min(df_data['pad'])
         ax.text(xloc, upplim*0.95, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask]), 2))+'$')
         ax.text(xloc, upplim*0.9, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')
 
         for mask, type, color in zip(masks, data_types, colors):
-            ax.scatter(df_data['pad'][mask], df_data[column][mask], color=color, label=type)
+            ax.scatter(df_data['pad'][mask], df_data[column][mask], color=color, label=type, s=10)
 
             above_plot = df_data[(df_data[column] > upplim) & mask]
             ax.scatter(above_plot['pad'], np.full_like(above_plot.channel, upplim*0.99, dtype=float), color=color, marker=r'$\uparrow$', s=160)
@@ -398,7 +397,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
         ax.set_title(label.replace('_', ' '))
 
         # save the figure                                                                                                                                                               
-        figname = figdir + str(label) + "_" + column + "_pads.png"
+        figname = figdir + str(label) + "_" + column + "_pads.pdf"
         plt.savefig(figname)
     return 1
 
