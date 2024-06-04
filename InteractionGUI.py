@@ -770,11 +770,14 @@ def plot_IV_curves(state):
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
 
         # dynamically name file to avoid overwriting plots
-        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}{}.png'
+        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
+        filepath+='{}.png'
         end = '_0'
+        thisend = int(end[1])
         while os.path.isfile(filepath.format(end)):
-            thisend = int(end[1])
-            end = '_{}'.format(thisend += 1)
+            end = '_{}'.format(thisend)
+            thisend += 1
+            print(end)
 
         plt.savefig(filepath.format(end))
         
