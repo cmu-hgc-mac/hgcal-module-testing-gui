@@ -753,7 +753,7 @@ def plot_IV_curves(state):
         end = '_0'
         thisend = int(end[1])
         while os.path.isfile(filepath.format(end)):
-            end = '_{}'.format(thisend += 1)
+            end = '_{}'.format(thisend)
             thisend += 1
             
         plt.savefig(filepath.format(end))
