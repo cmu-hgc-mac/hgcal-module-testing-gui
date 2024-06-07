@@ -629,8 +629,9 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+            if not state['-HV-Output-On-']:
+                state['ps'].outputOn()
+                update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()

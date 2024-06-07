@@ -263,7 +263,10 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
                              clip_on=False, edgecolor='k', linewidth=0.7, 
                              facecolor=gray, zorder=4, snap=True)
         cb.ax.add_patch(pr)
-        cb.ax.text(1.35, -0.18/8.*upplim, r'$0$', ha='center', va='center')
+        #cb.ax.text(1.35, -0.18/8.*upplim, r'$0$', ha='center', va='center')
+        cb.ax.text(11./8.*upplim, -0.18/8.*upplim, r'$0$', ha='center', va='center')
+        #for i in range(100):
+        #    cb.ax.text(0. + 10.*i, -0.18/8.*upplim, r'$0$', ha='center', va='center')
         
         # annotate chip positions on plot
         ad_chip_geo(ax, hb_type = hb_type)
