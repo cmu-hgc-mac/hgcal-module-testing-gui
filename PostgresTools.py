@@ -8,7 +8,7 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 
-def get_query(table_name):
+def get_query_old(table_name):
     """
     General function for db get queries. Defines which columns and what order of columns are used by the db tools functions to 
     upload. Returns formatted query string.
@@ -47,6 +47,15 @@ def get_query(table_name):
     query = f"""{pre_query} {'({})'.format(data_placeholder)}"""
     return query
 
+def get_query(table_name, column_names):
+    """
+    General function for db get queries. Returns formatted query string.
+    """
+    pre_query = f""" INSERT INTO {table_name} ({', '.join(column_names)}) VALUES  """ 
+    data_placeholder = ', '.join(['${}'.format(i) for i in range(1, len(column_names)+1)])
+    query = f"""{pre_query} {'({})'.format(data_placeholder)}"""
+    return query
+
 async def upload_PostgreSQL(table_name, db_upload_data):
     """
     General upload function. Instantiates the connection to the database, formats the query, and uploads the data.
@@ -76,9 +85,15 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     # check table exists and upload
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
     if table_exists:
-        query = get_query(table_name)
+        #query = get_query(table_name)
+        #print(f'  >> PostgresTools: Executing query: {query}')
+        #await conn.execute(query, *db_upload_data)
+
+        # new db uploading scheme
+        query = get_query(table_name, db_upload_data.keys())
         print(f'  >> PostgresTools: Executing query: {query}')
-        await conn.execute(query, *db_upload_data)
+        await conn.execute(query, *db_upload_data.values())
+
         print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
     else:
         print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')

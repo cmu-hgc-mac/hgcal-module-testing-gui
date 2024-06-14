@@ -105,23 +105,29 @@ def pedestal_upload(state, ind=-1):
             comment += " pedestals trimmed"
     
     # build upload row list
-    db_upload_ped = [modulename, RH, T, df_data['chip'].tolist(), df_data['channel'].tolist(), 
-                     df_data['channeltype'].tolist(), df_data['adc_median'].tolist(), df_data['adc_iqr'].tolist(), 
-                     df_data['tot_median'].tolist(), df_data['tot_iqr'].tolist(), df_data['toa_median'].tolist(), 
-                     df_data['toa_iqr'].tolist(), df_data['adc_mean'].tolist(), df_data['adc_stdd'].tolist(), 
-                     df_data['tot_mean'].tolist(), df_data['tot_stdd'].tolist(), df_data['toa_mean'].tolist(), 
-                     df_data['toa_stdd'].tolist(), df_data['tot_efficiency'].tolist(), df_data['tot_efficiency_error'].tolist(), 
-                     df_data['toa_efficiency'].tolist(), df_data['toa_efficiency_error'].tolist(), df_data['pad'].tolist(), 
-                     #df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, list_dead_pad, now.date(), now.time(), state['-Inspector-'], comment]
-                     df_data['x'].tolist(), df_data['y'].tolist(), count_dead_chan, now.date(), now.time(), state['-Inspector-'], comment]
+    db_upload_ped = {'module_name': modulename,
+                     'rel_hum': RH,
+                     'temp_c': T,
+                     'count_dead_chan': count_dead_chan,
+                     'date_test': now.date(),
+                     'time_test': now.time(),
+                     'inspector': state['-Inspector-'],
+                     'comment': comment
+                     }
 
+    dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
+              'adc_mean', 'adc_stdd', 'tot_mean', 'tot_stdd', 'toa_mean', 'toa_stdd', 'tot_efficiency', 'tot_efficiency_error',
+              'toa_efficiency', 'toa_efficiency_error', 'pad', 'x', 'y']
+    for key in dfkeys:
+        db_upload_ped[key] = df_data[key].tolist()
+    
     # if live module, add the bias voltage to the row list
     if 'BV' in runs[ind] and '320-M' in modulename:
         BV = int(runs[ind].split('BV')[1].rstrip('\n '))
-        db_upload_ped.insert(3, int(BV))
+        db_upload_ped['bias_vol'] = BV
     elif '320-M' in modulename:
         BV = -1
-        db_upload_ped.insert(3, BV)
+        db_upload_ped['bias_vol'] = BV
     else:
         pass
 
@@ -156,11 +162,24 @@ def iv_upload(datadict, state):
     #### XYZ what should be commented?
     #### XYZ status? etc.
     #### IV ratio at 600V, 800V
-    #db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., [0., 0.], data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
-    #                datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
-    db_upload_iv = [modulename, str(RH), str(Temp), 0, '', '', 0., data[:,0].tolist(), data[:,1].tolist(), data[:,2].tolist(), data[:,3].tolist(),
-                    datadict['datetime'].date(), datadict['datetime'].time(), state['-Inspector-'], '']
 
+    db_upload_iv = {'module_name': modulename,
+                    'rel_hum': str(RH),
+                    'temp_c': str(Temp),
+                    'status': '',
+                    'status_desc': '',
+                    'grade': '',
+                    'ratio_iv': 0.,
+                    'prog_v': data[:,0].tolist(),
+                    'meas_v': data[:,1].tolist(),
+                    'meas_i': data[:,2].tolist(),
+                    'meas_r': data[:,3].tolist(),
+                    'date_test': datadict['datetime'].date(),
+                    'time_test': datadict['datetime'].time(),
+                    'inspector': state['-Inspector-'],
+                    'comment': '' 
+                    }
+    
     # upload
     coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
     loop = asyncio.get_event_loop()
@@ -224,7 +243,16 @@ def plots_upload(state, ind=-1):
     comment = f'run{thisind}'
 
     # upload the plots
-    db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
+    #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
+    db_upload_plots = {'module_name': modulename,
+                       'adc_mean_hexmap': hexmean,
+                       'adc_stdd_hexmap': hexstdd,
+                       'noise_channel_chip': noise,
+                       'pedestal_channel_chip': pedestal,
+                       'total_noise_chip': totnoise,
+                       'inspector': state['-Inspector-'],
+                       'comment_plot_test': comment
+                       }
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
