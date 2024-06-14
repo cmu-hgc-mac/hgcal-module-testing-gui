@@ -85,9 +85,6 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     # check table exists and upload
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
     if table_exists:
-        #query = get_query(table_name)
-        #print(f'  >> PostgresTools: Executing query: {query}')
-        #await conn.execute(query, *db_upload_data)
 
         # new db uploading scheme
         query = get_query(table_name, db_upload_data.keys())

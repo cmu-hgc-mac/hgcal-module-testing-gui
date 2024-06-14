@@ -105,19 +105,23 @@ def pedestal_upload(state, ind=-1):
             comment += " pedestals trimmed"
     
     # build upload row list
-    db_upload_ped = {'module_name': modulename,
+    namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
+    db_upload_ped = {namekey: modulename,
                      'rel_hum': RH,
                      'temp_c': T,
-                     'count_dead_chan': count_dead_chan,
+                     'count_bad_chan': 0, ### XYZ fix
+                     'list_dead_cells': [], ### XYZ fix 
+                     'list_noisy_cells': [], ### XYZ fix 
                      'date_test': now.date(),
                      'time_test': now.time(),
                      'inspector': state['-Inspector-'],
-                     'comment': comment
+                     'comment': comment,
+                     'cell': df_data['pad'].tolist() # rename pad -> cell
                      }
 
     dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
               'adc_mean', 'adc_stdd', 'tot_mean', 'tot_stdd', 'toa_mean', 'toa_stdd', 'tot_efficiency', 'tot_efficiency_error',
-              'toa_efficiency', 'toa_efficiency_error', 'pad', 'x', 'y']
+              'toa_efficiency', 'toa_efficiency_error', 'x', 'y']
     for key in dfkeys:
         db_upload_ped[key] = df_data[key].tolist()
     
@@ -125,9 +129,11 @@ def pedestal_upload(state, ind=-1):
     if 'BV' in runs[ind] and '320-M' in modulename:
         BV = int(runs[ind].split('BV')[1].rstrip('\n '))
         db_upload_ped['bias_vol'] = BV
+        db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
     elif '320-M' in modulename:
         BV = -1
         db_upload_ped['bias_vol'] = BV
+        db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
     else:
         pass
 
@@ -161,16 +167,20 @@ def iv_upload(datadict, state):
     
     #### XYZ what should be commented?
     #### XYZ status? etc.
-    #### IV ratio at 600V, 800V
 
+    v1 = 600
+    v2 = 800
+    ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
+    
     db_upload_iv = {'module_name': modulename,
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
                     'status': '',
                     'status_desc': '',
                     'grade': '',
-                    'ratio_iv': 0.,
-                    'prog_v': data[:,0].tolist(),
+                    'ratio_i_at_vs': ratio,
+                    'ratio_at_vs': [float(v1), float(v2)],
+                    'program_v': data[:,0].tolist(),
                     'meas_v': data[:,1].tolist(),
                     'meas_i': data[:,2].tolist(),
                     'meas_r': data[:,3].tolist(),
