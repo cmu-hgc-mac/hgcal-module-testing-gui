@@ -13,10 +13,13 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+if configuration['HasLocalDB']:
+    from DBTools import pedestal_upload, iv_upload, plots_upload
+
+from DBTools import add_RH_T, iv_save
+
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
-
-from DBTools import *
 
 """
 -------------------InteractionGUI.py-----------------
@@ -361,7 +364,12 @@ def connect_HV(state):
             ps = 1
             update_state(state, 'ps', ps)
         else:
-            ps = Keithley2410()
+            try:
+                ps = Keithley2410()
+            except ValueError:
+                # try again if the Keithley has some stored errors
+                # if the errors are still there, don't try again
+                ps = Keithley2410()
             update_state(state, 'ps', ps)
         keith.close()
     
@@ -560,8 +568,8 @@ def multi_run_pedestals(state, BV_list):
     for BV in BV_list:
         hexpath = run_pedestals(state, BV)
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
-        os.system(f'xdg-open {hexpath}_adc_mean.png')
-        os.system(f'xdg-open {hexpath}_adc_stdd.png')
+        os.system(f'gio open {hexpath}_adc_mean.png')
+        os.system(f'gio open {hexpath}_adc_stdd.png')
 
 def trim_pedestals(state, BV):
     """
@@ -611,7 +619,11 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
+<<<<<<< HEAD
             if not state['ps'].get_output():
+=======
+            if not state['-HV-Output-On-']:
+>>>>>>> db
                 state['ps'].outputOn()
                 update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
@@ -665,8 +677,18 @@ def take_IV_curve(state, step=20):
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
+<<<<<<< HEAD
         iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
 
+=======
+        if configuration['HasLocalDB']:
+            try:
+                iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
+            except Exception:
+                print('  -- IV upload exception:', traceback.format_exc())
+        else:
+            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+>>>>>>> db
     curvew.close()
     return 'CONT'
         
@@ -755,9 +777,17 @@ def plot_IV_curves(state):
         while os.path.isfile(filepath.format(end)):
             end = '_{}'.format(thisend)
             thisend += 1
+<<<<<<< HEAD
             
         plt.savefig(filepath.format(end))
         
         plt.close(fig)
         os.system(f'xdg-open {filepath.format(end)}')
+=======
+
+        plt.savefig(filepath.format(end))
+        
+        plt.close(fig)
+        os.system(f'gio open {filepath.format(end)}')
+>>>>>>> db
 

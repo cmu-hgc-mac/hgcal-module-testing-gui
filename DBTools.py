@@ -17,6 +17,7 @@ import asyncpg
 #from InteractionGUI import add_RH_T
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
+from hexmap.plot_summary import create_masks
 
 import yaml
 configuration = {}
@@ -32,8 +33,263 @@ def iv_save(datadict, modulename):
     with open(f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl'
+    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
+def read_table(tablename, printall=False):
+    """
+    Reads the table in the local database of the given name. If printall is true, prints all rows in the db table. If printall
+    is false, prints only the most recently uploaded row.
+    """
+    
+    coro = fetch_PostgreSQL(tablename)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    if not printall:
+        print(f' >> DBTools: Last upload to {tablename}: {result[0]}')
+    else:
+        print(f' >> DBTools: Printing all rows in {tablename}:')
+        for r in result:
+            print(r)
+   
+
+def pedestal_upload(state, ind=-1):
+    """
+    Uploads the resultant data of a pedestal_run to the local database. The module serial and other information is read from the state dict. Unless
+    otherwise specified, uploads the most recent run. Includes the RH and T from the pedestal run which are read from the state dict. 
+    """
+    
+    modulename = state['-Module-Serial-']
+    
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+    runs.sort()
+    fname = runs[ind]+'/pedestal_run0.root'
+
+    print(runs[ind])
+
+    print(f" >> DBTools: Uploading pedestal run of {modulename} board from summary file {fname} into database")
+
+    # Open the hex data ".root" file and turn the contents into a pandas DataFrame.
+    f = uproot.open(fname)
+    try:
+        tree = f["runsummary"]["summary"]
+        df_data = tree.pandas.df()
+    except:
+        print(" -- DBTools: No tree found in pedestal file!")
+        return 0
+
+    density = modulename.split('-')[1][1]
+    shape = modulename.split('-')[2][0]
+    hb_type = density+shape
+
+    df_data = add_mapping(df_data, hb_type = hb_type)
+
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df_data)
+
+
+    # count dead/noisy channels
+    column = 'adc_stdd'
+    zeros = df_data[column] == 0
+    med_norm = df_data[column][norm_mask].median()
+    mean_norm = df_data[column][norm_mask].mean()
+    std_norm = df_data[column][norm_mask].std()
+    noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+    highval = (df_data[column] - med_norm) > noisy_limit
+    # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+
+    count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
+    list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
+    list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
+
+    print(count_bad_cells, list_dead_cells, list_noisy_cells)
+
+    if configuration['HasRHSensor']:
+        if '-Box-RH-' not in state.keys(): # should already exist
+            add_RH_T(state)
+        RH = str(state['-Box-RH-'])
+        T = str(state['-Box-T-'])
+    else:
+        RH = 'N/A'
+        T = 'N/A'
+
+    now = datetime.now()
+
+    comment = runs[-1].split('/')[-1] # for now, comment is dir name of raw test results
+
+    if '-Pedestals-Trimmed-' in state.keys():
+        if state['-Pedestals-Trimmed-']:
+            comment += " pedestals trimmed"
+    
+    # build upload row list
+    namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
+    db_upload_ped = {namekey: modulename,
+                     'rel_hum': RH,
+                     'temp_c': T,
+                     'count_bad_cells': count_bad_cells,
+                     'list_dead_cells': list_dead_cells,
+                     'list_noisy_cells':list_noisy_cells,
+                     'date_test': now.date(),
+                     'time_test': now.time(),
+                     'inspector': state['-Inspector-'],
+                     'comment': comment,
+                     'cell': df_data['pad'].tolist() # rename pad -> cell
+                     }
+
+    dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
+              'adc_mean', 'adc_stdd', 'tot_mean', 'tot_stdd', 'toa_mean', 'toa_stdd', 'tot_efficiency', 'tot_efficiency_error',
+              'toa_efficiency', 'toa_efficiency_error', 'x', 'y']
+    for key in dfkeys:
+        db_upload_ped[key] = df_data[key].tolist()
+    
+    # if live module, add the bias voltage to the row list
+    if 'BV' in runs[ind] and '320-M' in modulename:
+        BV = int(runs[ind].split('BV')[1].rstrip('\n '))
+        db_upload_ped['bias_vol'] = BV
+        db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
+    elif '320-M' in modulename:
+        BV = -1
+        db_upload_ped['bias_vol'] = BV
+        db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
+    else:
+        pass
+
+    table = 'module_pedestal_test' if ('320-M' in modulename) else 'hxb_pedestal_test'
+
+    # upload
+    coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded pedestal run of {modulename}!")
+    
+    read_table(table)
+
+
+def iv_upload(datadict, state):
+    """
+    Uploads the resultant data from an IV curve. Information including the module serial is read from the state dict, but the
+    IV data itself is read from the output datadict.
+    """
+    
+    modulename = state['-Module-Serial-']
+    data = datadict['data']
+    RH = datadict['RH']
+    Temp = datadict['Temp'] 
+
+    print(f" >> DBTools: Uploading (and saving) iv curve of {modulename}")
+    
+    # save iv as pkl file
+    iv_save(datadict, modulename)
+    
+    #### XYZ what should be commented?
+    #### XYZ status? etc.
+
+    v1 = 600
+    v2 = 800
+    ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
+    
+    db_upload_iv = {'module_name': modulename,
+                    'rel_hum': str(RH),
+                    'temp_c': str(Temp),
+                    'status': 0,
+                    'status_desc': '',
+                    'grade': '',
+                    'ratio_i_at_vs': ratio,
+                    'ratio_at_vs': [float(v1), float(v2)],
+                    'program_v': data[:,0].tolist(),
+                    'meas_v': data[:,1].tolist(),
+                    'meas_i': data[:,2].tolist(),
+                    'meas_r': data[:,3].tolist(),
+                    'date_test': datadict['datetime'].date(),
+                    'time_test': datadict['datetime'].time(),
+                    'inspector': state['-Inspector-'],
+                    'comment': '' 
+                    }
+    
+    # upload
+    coro = upload_PostgreSQL(table_name = 'module_iv_test', db_upload_data = db_upload_iv)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded iv curve of {modulename}")
+    read_table('module_iv_test')
+        
+def plots_upload(state, ind=-1):
+    """
+    Uploads pedestal run plots to db for later viewing.
+    """
+    
+    # define the path to the hexmap plots
+    modulename = state['-Module-Serial-']
+    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{modulename}_run*_adc_mean.png')
+    hexinds = [ int(hexpaths[i].split('/')[-1].split('_')[1].split('n')[1]) for i in range(len(hexpaths)) ]
+    hexinds.sort()
+    thisind = hexinds[ind]
+    hexpath = f'{configuration["DataLoc"]}/{modulename}/{modulename}_run{thisind}'
+    
+    # if live, must modify with bias voltage
+    fixpath = glob.glob(f'{hexpath}*.png')
+    if 'BV' in fixpath[0]:
+        thisBV = int(fixpath[0].split('/')[-1].split('_')[2].split('V')[1])
+        hexpath = hexpath + f'_BV{thisBV}'
+
+    print(f" >> DBTools: Uploading pedestal plots of module {modulename} into database")
+
+    # open hexmaps
+    with open(f'{hexpath}_adc_mean.png', 'rb') as f:
+        hexmean = f.read()
+    with open(f'{hexpath}_adc_stdd.png', 'rb') as f:
+        hexstdd = f.read()
+
+    # find pedestal run dir
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+    runs.sort()
+    dname = runs[ind] # should always be the same run
+
+
+    # open plots from pedestal run dir
+    noiseplots = glob.glob(dname+'/noise_vs_channel_chip*.png')
+    noise = []
+    for chip in noiseplots:
+        with open(chip, 'rb') as f:
+            noise.append(f.read())
+
+    pedestalplots = glob.glob(dname+'/pedestal_vs_channel_chip*.png')
+    pedestal = []
+    for chip in pedestalplots:
+        with open(chip, 'rb') as f:
+            pedestal.append(f.read())
+            
+    totnoiseplots = glob.glob(dname+'/total_noise_chip*.png')
+    totnoise = []
+    for chip in totnoiseplots:
+        with open(chip, 'rb') as f:
+            totnoise.append(f.read())
+                
+    comment = f'run{thisind}'
+
+    # upload the plots
+    #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
+    db_upload_plots = {'module_name': modulename,
+                       'adc_mean_hexmap': hexmean,
+                       'adc_std_hexmap': hexstdd,
+                       'noise_channel_chip': noise,
+                       'pedestal_channel_chip': pedestal,
+                       'total_noise_chip': totnoise,
+                       'inspector': state['-Inspector-'],
+                       'comment_plot_test': comment
+                       }
+
+    print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
+
+    coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded pedestal plots of {modulename}")
+    
+    read_table('module_pedestal_plots')
+
 def add_RH_T(state, force=False):
     """
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not

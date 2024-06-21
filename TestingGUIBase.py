@@ -632,9 +632,6 @@ while True:
 
             time.sleep(time_to_wait)
             wait.close()
-
-            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-                current_state['ps'].setVoltage(0)
             
             take_IV_curve(current_state)
             plot_IV_curves(current_state)

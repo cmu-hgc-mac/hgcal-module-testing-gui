@@ -172,7 +172,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         cmap.set_under(gray)
         cmap.set_over(red)
 
-    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df_data)
     
     masks = [norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask]
     data_types = ['norm', 'calib', 'cm0', 'cm1', 'nc']
