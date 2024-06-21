@@ -18,6 +18,7 @@ import asyncpg
 #from InteractionGUI import add_RH_T
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
+from hexmap.plot_summary import create_masks
 
 import yaml
 configuration = {}
@@ -33,7 +34,7 @@ def iv_save(datadict, modulename):
     with open(f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl'
+    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -84,9 +85,25 @@ def pedestal_upload(state, ind=-1):
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
-    count_dead_chan = 0
-    list_dead_pad = []
-    ##### XYZ fix dead chan/pad
+    norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df_data)
+
+
+    # count dead/noisy channels
+    column = 'adc_stdd'
+    zeros = df_data[column] == 0
+    med_norm = df_data[column][norm_mask].median()
+    mean_norm = df_data[column][norm_mask].mean()
+    std_norm = df_data[column][norm_mask].std()
+    noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+    highval = (df_data[column] - med_norm) > noisy_limit
+    # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+
+    count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
+    list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
+    list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
+
+    print(count_bad_cells, list_dead_cells, list_noisy_cells)
+
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
             add_RH_T(state)
@@ -109,9 +126,9 @@ def pedestal_upload(state, ind=-1):
     db_upload_ped = {namekey: modulename,
                      'rel_hum': RH,
                      'temp_c': T,
-                     'count_bad_chan': 0, ### XYZ fix
-                     'list_dead_cells': [], ### XYZ fix 
-                     'list_noisy_cells': [], ### XYZ fix 
+                     'count_bad_cells': count_bad_cells,
+                     'list_dead_cells': list_dead_cells,
+                     'list_noisy_cells':list_noisy_cells,
                      'date_test': now.date(),
                      'time_test': now.time(),
                      'inspector': state['-Inspector-'],
@@ -175,7 +192,7 @@ def iv_upload(datadict, state):
     db_upload_iv = {'module_name': modulename,
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
-                    'status': '',
+                    'status': 0,
                     'status_desc': '',
                     'grade': '',
                     'ratio_i_at_vs': ratio,
@@ -256,13 +273,16 @@ def plots_upload(state, ind=-1):
     #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
     db_upload_plots = {'module_name': modulename,
                        'adc_mean_hexmap': hexmean,
-                       'adc_stdd_hexmap': hexstdd,
+                       'adc_std_hexmap': hexstdd,
                        'noise_channel_chip': noise,
                        'pedestal_channel_chip': pedestal,
                        'total_noise_chip': totnoise,
                        'inspector': state['-Inspector-'],
                        'comment_plot_test': comment
                        }
+
+    print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
+
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)

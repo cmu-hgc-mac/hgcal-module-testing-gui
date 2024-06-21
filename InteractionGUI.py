@@ -14,9 +14,9 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from DBTools import iv_save, pedestal_upload, iv_upload, plots_upload
+    from DBTools import pedestal_upload, iv_upload, plots_upload
 
-from DBTools import add_RH_T
+from DBTools import add_RH_T, iv_save
     
 lgfont = ('Arial', 30)
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -365,7 +365,12 @@ def connect_HV(state):
             ps = 1
             update_state(state, 'ps', ps)
         else:
-            ps = Keithley2410()
+            try:
+                ps = Keithley2410()
+            except ValueError:
+                # try again if the Keithley has some stored errors
+                # if the errors are still there, don't try again
+                ps = Keithley2410()
             update_state(state, 'ps', ps)
         keith.close()
     
@@ -578,8 +583,8 @@ def multi_run_pedestals(state, BV_list):
     for BV in BV_list:
         hexpath = run_pedestals(state, BV)
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
-        os.system(f'xdg-open {hexpath}_adc_mean.png')
-        os.system(f'xdg-open {hexpath}_adc_stdd.png')
+        os.system(f'gio open {hexpath}_adc_mean.png')
+        os.system(f'gio open {hexpath}_adc_stdd.png')
 
 def trim_pedestals(state, BV):
     """
@@ -778,10 +783,9 @@ def plot_IV_curves(state):
         while os.path.isfile(filepath.format(end)):
             end = '_{}'.format(thisend)
             thisend += 1
-            print(end)
 
         plt.savefig(filepath.format(end))
         
         plt.close(fig)
-        os.system(f'xdg-open {filepath.format(end)}')
+        os.system(f'gio open {filepath.format(end)}')
 

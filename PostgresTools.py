@@ -114,7 +114,7 @@ def get_query_read(table_name, part_name = None):
             WHERE inspector = 'acrobert'
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_iv_test':
-        query = f"""SELECT module_name, rel_hum, prog_v, meas_v, meas_i, meas_r, date_test, time_test, inspector, comment
+        query = f"""SELECT module_name, rel_hum, temp_c, program_v, meas_v, meas_i, meas_r, date_test, time_test, inspector, comment
             FROM {table_name}
             WHERE inspector = 'acrobert'
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
