@@ -8,7 +8,6 @@ from argparse import ArgumentParser
 from datetime import datetime 
 import os
 #import psycopg2
-from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL
 import pandas as pd
 import glob
 import uproot3 as uproot

@@ -551,10 +551,18 @@ def run_pedestals(state, BV):
 
         state['pc'].pedestal_run(BV=BV)
 
-        try:
-            hexpath = state['pc'].make_hexmaps(BV=BV)
-        except:
-            hexpath = ''
+        if configuration['HasLocalDB']:
+            try:
+                pedestal_upload(state) # uploads pedestals to database
+            except Exception:
+                print('  -- Pedestal upload exception:', traceback.format_exc())
+
+        hexpath = state['pc'].make_hexmaps(BV=BV)
+        if configuration['HasLocalDB']:
+            try:
+                plots_upload(state) # uploads pedestal plots to database
+            except Exception:
+                print('  -- Plots upload exception:', traceback.format_exc())
 
     pedestals.close()
     return hexpath
