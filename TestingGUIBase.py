@@ -627,32 +627,11 @@ while True:
 
             # Turn off HV output if live module before the long wait
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-                #current_state['ps'].outputOff()
-                #update_state(current_state, '-HV-Output-On-', False, 'black')
-                current_state['ps'].outputOn()
-                current_state['ps'].setVoltage(500)
-                update_state(current_state, '-HV-Output-On-', True, 'green')
+                current_state['ps'].outputOff()
+                update_state(current_state, '-HV-Output-On-', False, 'black')
 
-            #time.sleep(time_to_wait)
-            setvltg = 500.
-
-            while True:
-                if not current_state['-Debug-Mode-']:
-                    current_state['ps'].setVoltage(setvltg)
-                    
-                if current_state['-Live-Module-'] and current_state['-Hexactrl-Accessed-'] and not current_state['-Debug-Mode-']:
-                    scan_pedestals(current_state, setvltg)
-
-                if not current_state['-Debug-Mode-']:
-                    _, curr, _ = current_state['ps'].measureCurrent()
-                    volt, _, _ = current_state['ps'].measureVoltage()
-                    print(' >> Current:', curr, 'Voltage:', volt)
-                    if curr < (50. * 10**(-6)) and setvltg < 800:
-                        setvltg += 100.
-
-                if (time.time() - drytime) > final_dry_time:
-                    break
-
+            time.sleep(time_to_wait)
+            
             wait.close()                    
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                 current_state['ps'].setVoltage(0)
