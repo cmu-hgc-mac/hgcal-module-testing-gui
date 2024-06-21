@@ -777,7 +777,7 @@ def plot_IV_curves(state):
 
         # dynamically name file to avoid overwriting plots
         filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
-        filepath+='{}.png'
+        filepath += '{}.png'
         end = '_0'
         thisend = int(end[1])
         while os.path.isfile(filepath.format(end)):

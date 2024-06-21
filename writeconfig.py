@@ -12,7 +12,7 @@ config_dict = {'DebugMode': True,
                'PCKeyLoc': '/home/hgcal/.ssh/id_rsa', # private key location
                'HasHVSwitch': True,
                'HasRHSensor': False,
-               'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt'] # CERN usernames
+               'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt'], # CERN usernames
                'HasLocalDB': True,
                'DBHostname': '', # these four only if you have a local database
                'DBDatabase': '',
