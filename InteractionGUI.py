@@ -619,11 +619,7 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
-<<<<<<< HEAD
             if not state['ps'].get_output():
-=======
-            if not state['-HV-Output-On-']:
->>>>>>> db
                 state['ps'].outputOn()
                 update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
@@ -677,10 +673,6 @@ def take_IV_curve(state, step=20):
         curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
-<<<<<<< HEAD
-        iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
-
-=======
         if configuration['HasLocalDB']:
             try:
                 iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
@@ -688,7 +680,6 @@ def take_IV_curve(state, step=20):
                 print('  -- IV upload exception:', traceback.format_exc())
         else:
             iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
->>>>>>> db
     curvew.close()
     return 'CONT'
         
@@ -777,17 +768,9 @@ def plot_IV_curves(state):
         while os.path.isfile(filepath.format(end)):
             end = '_{}'.format(thisend)
             thisend += 1
-<<<<<<< HEAD
-            
-        plt.savefig(filepath.format(end))
-        
-        plt.close(fig)
-        os.system(f'xdg-open {filepath.format(end)}')
-=======
 
         plt.savefig(filepath.format(end))
         
         plt.close(fig)
         os.system(f'gio open {filepath.format(end)}')
->>>>>>> db
 
