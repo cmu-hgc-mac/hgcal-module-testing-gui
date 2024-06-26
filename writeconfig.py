@@ -14,10 +14,11 @@ config_dict = {'DebugMode': True,
                'HasRHSensor': False,
                'Inspectors': ['acrobert', 'simurthy', 'jestein', 'ekloiber', 'ppalit', 'akallilt'], # CERN usernames
                'HasLocalDB': True,
-               'DBHostname': '', # these four only if you have a local database
-               'DBDatabase': '',
-               'DBUsername': '',
-               'DBPassword': ''
+               # these four only if you have a local database
+               'DBHostname': '', # fill out
+               'DBDatabase': 'hgcdb',
+               'DBUsername': 'teststand_user',
+               'DBPassword': ''  # fill out
                }
 
 with open('configuration.yaml','w') as yconf:
