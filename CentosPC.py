@@ -52,7 +52,8 @@ class CentosPC:
         # different module density/geometry need different config files
         if density == 'L':
             if shape == 'F':
-                self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-inctoa.yaml'
+                #self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-inctoa.yaml'
+                self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
             elif shape == 'L' or shape == 'R':
                 self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
             else: # T B 5
