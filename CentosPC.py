@@ -52,7 +52,6 @@ class CentosPC:
         # different module density/geometry need different config files
         if density == 'L':
             if shape == 'F':
-                #self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-inctoa.yaml'
                 self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
             elif shape == 'L' or shape == 'R':
                 self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
@@ -107,7 +106,7 @@ class CentosPC:
                 print(' >> CentosPC: DAQ client running')
                 client = True
                 
-        if not client:
+1        if not client:
             print(' -- CentosPC: Error in DAQ client')
         return client
 
@@ -156,15 +155,18 @@ class CentosPC:
         
         dirname = self._run_script('pedestal_run')
         
-        if BV is not None:
-            print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-            try:
-                os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-                return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
-            except:
-                print(' -- CentosPC: outdict renaming failed; continuing')
-                return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-
+        # renaming moved to InteractionGUI.py
+        #if BV is not None:
+        #    print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
+        #    try:
+        #        os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
+        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
+        #    except:
+        #        print(' -- CentosPC: outdict renaming failed; continuing')
+        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
+        
+        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
+        
     # these functions are mostly irrelevant as _run_script() can be called from outside
     def pedestal_scan(self):
         self._run_script('pedestal_scan')
@@ -181,7 +183,7 @@ class CentosPC:
     def sampling_scan(self):
         self._run_script('sampling_scan')
                 
-    def make_hexmaps(self, ind=-1, BV=None):
+    def make_hexmaps(self, ind=-1, tag=None):
         """
         Makes fancy hexmap plots. By default, it will take the most recent pedestal run by default, though this can be 
         controlled manually with the ind argument. If the BV isn't None, it renames the title of the plot and the filename
@@ -193,16 +195,16 @@ class CentosPC:
 
         # use the last run by default but allow any                                             
         labelind = ind if ind != -1 else len(runs)-1
-        if BV is None and 'BV' in runs[labelind]:
-            BV = runs.split('BV').rstrip('\n ')    
-        label = f'{self.modulename}_run{labelind}' if BV is None else f'{self.modulename}_run{labelind}_BV{BV}'
+        #if BV is None and 'BV' in runs[labelind]:
+        #    BV = runs.split('BV').rstrip('\n ')    
+        label = f'{self.modulename}_run{labelind}' if tag is None else f'{self.modulename}_run{labelind}_{tag}'
 
         make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}', label=label)
-        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename} as run{labelind}')
+        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename} as {label}')
 
         return f'{configuration["DataLoc"]}/{self.modulename}/{label}'
             
-def static_make_hexmaps(modulename, ind=-1):
+def static_make_hexmaps(modulename, ind=-1, tag=None):
     """
     Make hexmaps but outside of the class.
     """
@@ -212,11 +214,11 @@ def static_make_hexmaps(modulename, ind=-1):
 
     # use the last run by default but allow any                                             
     labelind = ind if ind != -1 else len(runs)-1
-    if 'BV' in runs[labelind]:
-        BV = runs.split('BV').rstrip('\n ')
-    else:
-        BV = None
-    label = f'{modulename}_run{labelind}' if BV is None else f'{modulename}_run{labelind}_BV{BV}'
+    #if 'BV' in runs[labelind]:
+    #    BV = runs.split('BV').rstrip('\n ')
+    #else:
+    #    BV = None
+    label = f'{modulename}_run{labelind}' if tag is None else f'{modulename}_run{labelind}_{tag}'
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)
     print(f'  >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{modulename}')

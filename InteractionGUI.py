@@ -549,7 +549,21 @@ def run_pedestals(state, BV):
                 update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
 
-        state['pc'].pedestal_run(BV=BV)
+        pedestalpath = state['pc'].pedestal_run(BV=BV)
+
+        # rename output directory with conditions of test
+        trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else 
+                  ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
+        if BV is not None:
+            testtag = f'BV{BV}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
+        else:
+            testtag = trimmed
+        
+        # rename, but prevent crash if it fails
+        try:
+            os.system(f'mv {pedestalpath} {pedestalpath}_{testtag}')
+        except:
+            print(' -- InteractionGUI: pedestal run renaming failed')
 
         if configuration['HasLocalDB']:
             try:
@@ -557,7 +571,7 @@ def run_pedestals(state, BV):
             except Exception:
                 print('  -- Pedestal upload exception:', traceback.format_exc())
 
-        hexpath = state['pc'].make_hexmaps(BV=BV)
+        hexpath = state['pc'].make_hexmaps(tag=testtag)
         if configuration['HasLocalDB']:
             try:
                 plots_upload(state) # uploads pedestal plots to database
@@ -595,8 +609,12 @@ def trim_pedestals(state, BV):
         state['pc'].pedestal_scan()
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
-        state['-Pedestals-Trimmed-'] = True
-        
+
+        if BV is None:
+            state['-Pedestals-Trimmed-'] = True
+        else:
+            state['-Pedestals-Trimmed-'] = BV
+
     trimming.close()
 
 def run_other_script(script, state, BV):
