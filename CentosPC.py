@@ -106,7 +106,7 @@ class CentosPC:
                 print(' >> CentosPC: DAQ client running')
                 client = True
                 
-1        if not client:
+        if not client:
             print(' -- CentosPC: Error in DAQ client')
         return client
 
