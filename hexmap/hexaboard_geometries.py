@@ -40,12 +40,14 @@ def add_mapping(df, hb_type = "LF"):
     lf_board_geo = s + "geometries/hex_positions_HPK_198ch_8inch_edge_ring_testcap.txt" # full 
     lr_board_geo = s + "geometries/hex_positions_HPK_LR_8inch_edge_ring_testcap.txt" # right   
     ll_board_geo = s + "geometries/hex_positions_HPK_LL_8inch_edge_ring_testcap.txt" # left  
+    l5_board_geo = s + "geometries/hex_positions_HPK_L5_8inch_edge_ring_testcap.txt" # five  
     hd_board_geo = s + "geometries/hex_positions_HPK_432ch_8inch_edge_ring_testcap.txt"
 
     # pad - channel mapping files' paths 
     lf_board_chan = s + "channel_maps/ld_pad_to_channel_mapping_V3.csv" # full  
     lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping.csv" # right 
     ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping.csv" # left 
+    l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping.csv" # five 
     hd_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"
 
     #import mapping files to pandas dataFrames and transform to python dicts
@@ -61,6 +63,9 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "LL":
         chan_map_fname = ll_board_chan
         geo_fname = ll_board_geo
+    elif hb_type == "L5":
+        chan_map_fname = l5_board_chan
+        geo_fname = l5_board_geo
 
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
