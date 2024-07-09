@@ -552,8 +552,7 @@ def run_pedestals(state, BV):
         pedestalpath = state['pc'].pedestal_run(BV=BV)
 
         # rename output directory with conditions of test
-        trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else 
-                  ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
+        trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
             testtag = f'BV{BV}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
         else:
