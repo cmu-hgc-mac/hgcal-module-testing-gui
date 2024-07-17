@@ -625,14 +625,20 @@ while True:
             from InteractionGUI import waiting_window
             wait = waiting_window(f'Waiting until {finalIV_time} to perform final IV')
 
-            # Turn off HV output if live module before the long wait
+            # module conditioning
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-                current_state['ps'].outputOff()
-                update_state(current_state, '-HV-Output-On-', False, 'black')
+                #current_state['ps'].outputOff()
+                #update_state(current_state, '-HV-Output-On-', False, 'black')
+                current_state['ps'].outputOn()
+                update_state(current_state, '-HV-Output-On-', True, 'Green')
+                current_state['ps'].setVoltage(800.)
 
             time.sleep(time_to_wait)
             wait.close()
-            
+
+            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+                current_state['ps'].setVoltage(0.)
+
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
 

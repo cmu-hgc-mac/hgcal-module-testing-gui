@@ -118,9 +118,13 @@ def pedestal_upload(state, ind=-1):
     comment = runs[-1].split('/')[-1] # for now, comment is dir name of raw test results
 
     if '-Pedestals-Trimmed-' in state.keys():
-        if state['-Pedestals-Trimmed-']:
+        if state['-Pedestals-Trimmed-'] == True:
             comment += " pedestals trimmed"
+        else:
+            comment += f" pedestals trimmed at {state['-Pedestals-Trimmed-']}V"
     
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+
     # build upload row list
     namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
     db_upload_ped = {namekey: modulename,
@@ -133,6 +137,7 @@ def pedestal_upload(state, ind=-1):
                      'time_test': now.time(),
                      'inspector': state['-Inspector-'],
                      'comment': comment,
+                     'trim_bias_voltage': trimval
                      'cell': df_data['pad'].tolist() # rename pad -> cell
                      }
 
@@ -268,6 +273,8 @@ def plots_upload(state, ind=-1):
                 
     comment = f'run{thisind}'
 
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+
     # upload the plots
     #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
     db_upload_plots = {'module_name': modulename,
@@ -276,6 +283,7 @@ def plots_upload(state, ind=-1):
                        'noise_channel_chip': noise,
                        'pedestal_channel_chip': pedestal,
                        'total_noise_chip': totnoise,
+                       'trim_bias_voltage': trimval,
                        'inspector': state['-Inspector-'],
                        'comment_plot_test': comment
                        }
