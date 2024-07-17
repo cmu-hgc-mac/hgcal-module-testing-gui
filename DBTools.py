@@ -219,7 +219,47 @@ def iv_upload(datadict, state):
 
     print(f" >> DBTools: Uploaded iv curve of {modulename}")
     read_table('module_iv_test')
-        
+
+def other_test_upload(state, test_name, BV, ind=-1):
+
+    modulename = state['-Module-Serial-']
+    RH = datadict['RH']
+    Temp = datadict['Temp']
+
+    now = datetime.now()
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{test_name}/run_*')
+    runs.sort()
+    thisrun = runs[ind] # most recent run by default
+
+    os.system(f'tar -czf tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz {thisrun}')
+    with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
+        tarfile = f.read()
+    
+    db_upload_other = {'module_name': modulename,
+                       'rel_hum': str(RH),
+                       'temp_c': str(Temp),
+                       'bias_vol': BV,
+                       'trim_bias_vol': trimval,
+                       'date_test': now.date(),
+                       'time_test': now.time(),
+                       'inspector': state['-Inspector-'],
+                       'comment': '',
+                       'other_test_name': test_name,
+                       'other_test_output': tarfile 
+                   }
+    
+    # upload
+    coro = upload_PostgreSQL(table_name = 'mod_hxb_other_test', db_upload_data = db_upload_other)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    os.system(f'rm tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz')
+
+    print(f" >> DBTools: Uploaded iv curve of {modulename}")
+    read_table('module_iv_test')
+
 def plots_upload(state, ind=-1):
     """
     Uploads pedestal run plots to db for later viewing.

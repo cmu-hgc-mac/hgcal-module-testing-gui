@@ -629,6 +629,13 @@ def run_other_script(script, state, BV):
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
         state['pc']._run_script(script)
+        
+        if configuration['HasLocalDB']:
+            try:
+                other_test_upload(state, script, BV)            
+            except Exception:
+                print('  -- Other test upload exception:', traceback.format_exc())
+
 
     running.close()
 
