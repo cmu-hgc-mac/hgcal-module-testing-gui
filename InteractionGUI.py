@@ -14,7 +14,7 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from DBTools import pedestal_upload, iv_upload, plots_upload
+    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload
 
 from DBTools import add_RH_T, iv_save
 

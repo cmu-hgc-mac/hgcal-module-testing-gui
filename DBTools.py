@@ -137,7 +137,7 @@ def pedestal_upload(state, ind=-1):
                      'time_test': now.time(),
                      'inspector': state['-Inspector-'],
                      'comment': comment,
-                     'trim_bias_voltage': trimval
+                     'trim_bias_voltage': trimval,
                      'cell': df_data['pad'].tolist() # rename pad -> cell
                      }
 
@@ -223,8 +223,8 @@ def iv_upload(datadict, state):
 def other_test_upload(state, test_name, BV, ind=-1):
 
     modulename = state['-Module-Serial-']
-    RH = datadict['RH']
-    Temp = datadict['Temp']
+    RH = state['-Box-RH-']
+    Temp = state['-Box-T-']
 
     now = datetime.now()
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
@@ -282,10 +282,14 @@ def plots_upload(state, ind=-1):
     print(f" >> DBTools: Uploading pedestal plots of module {modulename} into database")
 
     # open hexmaps
-    with open(f'{hexpath}_adc_mean.png', 'rb') as f:
-        hexmean = f.read()
-    with open(f'{hexpath}_adc_stdd.png', 'rb') as f:
-        hexstdd = f.read()
+    hexpaths = glob.glob(f'{hexpath}_*.png')
+    for path in hexpaths:
+        if 'mean' in path:
+            with open(path, 'rb') as f:
+                hexmean = f.read()
+        elif 'stdd' in path:
+            with open(path, 'rb') as f:
+                hexstdd = f.read()
 
     # find pedestal run dir
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
