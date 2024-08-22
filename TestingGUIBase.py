@@ -85,6 +85,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['TrenzHostname'], default_value=configuration['TrenzHostname'][0], key="-TrenzHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
+               [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
                [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
 
 # Select Tests fields only shown if able to bias the module
@@ -218,6 +219,10 @@ moduleindex = ''
 vendorserial = ''
 moduleserial = ''
 inspector = ''
+modulestatus = ''
+
+hxb_statuses = ['Untaped', 'Taped']
+mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated']
 
 # Function to clear the values entered into the Module Setup section
 def clear_setup():
@@ -247,13 +252,15 @@ def init_state():
         else:
             current_state[led] = False
             SetLED(basewindow, led, 'black')
-        
+
+    current_state.pop('-Pedestals-Trimmed-', None)
     current_state['ts'] = None
     current_state['pc'] = None
     current_state['ps'] = None
     current_state['basewindow'] = basewindow
     current_state['-Module-Serial-'] = moduleserial
     current_state['-Inspector-'] = inspector
+    current_state['-Module-Status-'] = modulestatus
     
 # Update the value of a field in the state dict and update LED color if exists
 def update_state(state, field, val, color=None):
@@ -305,12 +312,14 @@ while True:
     # Change visibility of sections based on if live module or not
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
+    basewindow['-Mod-Status-Text-'].update('Module Status:' if values['-IsLive-'] else 'Hexaboard Status:')
+    basewindow['-Module-Status-'].update(values=mod_statuses if values['-IsLive-'] else hxb_statuses)
     basewindow['-BV-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-Text-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-Other-Text-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-Other-'].update(visible=values['-IsLive-'])
-
+    
     basewindow['Only IV Test'].update(disabled=(values['-IsHB-'] or basewindow['Configure Test Stand'].Widget['state'] == 'disabled'))
     basewindow['Close GUI'].update(disabled=(basewindow['Configure Test Stand'].Widget['state'] == 'disabled'))
 
@@ -403,7 +412,8 @@ while True:
         # HD Full implemented but not tested, so let's disable it for now
         
         trenzhostname = values['-TrenzHostname-'].rstrip()
-
+        modulestatus = values['-Module-Status-']
+        
         # Initialize test stand state dictionary
         init_state()
         # Disable the module setup section
@@ -456,6 +466,8 @@ while True:
             show_string("Not Implemented")
             continue
         
+        modulestatus = values['-Module-Status-']
+
         # Initialize state dictionary
         init_state()
         # Disable module setup section

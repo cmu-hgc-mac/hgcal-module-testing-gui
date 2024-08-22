@@ -154,8 +154,6 @@ def end_session(state):
 
     # Open the box (function handles if it's already open)
     open_box(state)
-    # Mark pedestals as un-trimmed
-    state.pop('-Pedestals-Trimmed-', None)
 
     # Lastly, disconnect the HV cable
     if state['-HV-Connected-']:

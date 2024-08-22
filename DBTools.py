@@ -25,6 +25,8 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7}
+    
 def iv_save(datadict, modulename):
     """
     Takes the IV curve output dict and saves it to a pkl file. Returns the path to the pkl file.
@@ -128,6 +130,8 @@ def pedestal_upload(state, ind=-1):
     # build upload row list
     namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
     db_upload_ped = {namekey: modulename,
+                     'status': statusdict[state['-Module-Status-']],
+                     'status_desc': state['-Module-Status-'],
                      'rel_hum': RH,
                      'temp_c': T,
                      'count_bad_cells': count_bad_cells,
@@ -197,8 +201,8 @@ def iv_upload(datadict, state):
     db_upload_iv = {'module_name': modulename,
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
-                    'status': 0,
-                    'status_desc': '',
+                    'status': statusdict[state['-Module-Status-']],
+                    'status_desc': state['-Module-Status-'],
                     'grade': '',
                     'ratio_i_at_vs': ratio,
                     'ratio_at_vs': [float(v1), float(v2)],
@@ -238,6 +242,8 @@ def other_test_upload(state, test_name, BV, ind=-1):
         tarfile = f.read()
     
     db_upload_other = {'module_name': modulename,
+                       'status': statusdict[state['-Module-Status-']],
+                       'status_desc': state['-Module-Status-'],
                        'rel_hum': str(RH),
                        'temp_c': str(Temp),
                        'bias_vol': BV,
@@ -322,6 +328,8 @@ def plots_upload(state, ind=-1):
     # upload the plots
     #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
     db_upload_plots = {'module_name': modulename,
+                       'status': statusdict[state['-Module-Status-']],
+                       'status_desc': state['-Module-Status-'],
                        'adc_mean_hexmap': hexmean,
                        'adc_std_hexmap': hexstdd,
                        'noise_channel_chip': noise,
