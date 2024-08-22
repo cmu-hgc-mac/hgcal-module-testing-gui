@@ -359,7 +359,7 @@ def add_RH_T(state, force=False):
     RH = None
     Temp = None
     
-    if '-Box-RH-' not in state.keys() or force: # only add once per testing session, except if you really need
+    if ('-Box-RH-' not in state.keys() or '-Box-T-' not in state.keys()) or force: # only add once per testing session, except if you really need
 
         # if no automatic RH sensor, enter manually
         if not configuration['HasRHSensor']: 
@@ -395,9 +395,12 @@ def add_RH_T(state, force=False):
 
             print(f'  >> RH/T: measured RH={RH}%; T={Temp}ºC')
 
-        state['-Box-RH-'] = int(RH)
-        state['-Box-T-'] = int(Temp)
-    
+        try:
+            state['-Box-RH-'] = int(RH)
+            state['-Box-T-'] = int(Temp)
+        except ValueError:
+            add_RH_T(state, force)
+        
         return RH, Temp
 
     # if no update, return state values

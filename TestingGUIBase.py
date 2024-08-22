@@ -159,7 +159,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
             '-PCB-', '-CF-', '-CuW-', '-Preseries-', '-V3-', '-Prod-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
-            'Only IV Test', '-Inspector-', 'Close GUI']
+            'Only IV Test', '-Inspector-', '-Module-Status-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
 
@@ -229,6 +229,8 @@ def clear_setup():
     event, values = basewindow.read(timeout=10)
     moduleindex = ''
     basewindow['-Module-Index-'].update('')
+    basewindow['-Inspector-'].update('')
+    basewindow['-Module-Status-'].update('')
 
     if values['-IsLive-']:
         moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{macserial}-{moduleindex}'
@@ -313,7 +315,9 @@ while True:
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
     basewindow['-Mod-Status-Text-'].update('Module Status:' if values['-IsLive-'] else 'Hexaboard Status:')
-    basewindow['-Module-Status-'].update(values=mod_statuses if values['-IsLive-'] else hxb_statuses)
+    thesestatuses = mod_statuses if values['-IsLive-'] else hxb_statuses
+    if basewindow['-Module-Status-'].Values != thesestatuses:
+        basewindow['-Module-Status-'].update(values=mod_statuses if values['-IsLive-'] else hxb_statuses)
     basewindow['-BV-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-Text-'].update(visible=values['-IsLive-'])
     basewindow['-Bias-Voltage-PedTrim-'].update(visible=values['-IsLive-'])
@@ -384,7 +388,8 @@ while True:
     basewindow['-Module-Serial-'].update(value=moduleserial)
     if values['-Inspector-'] != '':
         inspector = values['-Inspector-']
-
+    modulestatus = values['-Module-Status-']
+        
     # Now, check for button presses
     # Configure test stand starts the Trenz assembly and startup process
     if event == "Configure Test Stand":
@@ -412,7 +417,6 @@ while True:
         # HD Full implemented but not tested, so let's disable it for now
         
         trenzhostname = values['-TrenzHostname-'].rstrip()
-        modulestatus = values['-Module-Status-']
         
         # Initialize test stand state dictionary
         init_state()
@@ -466,8 +470,6 @@ while True:
             show_string("Not Implemented")
             continue
         
-        modulestatus = values['-Module-Status-']
-
         # Initialize state dictionary
         init_state()
         # Disable module setup section
