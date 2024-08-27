@@ -82,6 +82,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.pin(sg.Column(livemoduleonly, key='-LM-Menu-', visible=False))],
                [sg.pin(sg.Column(hexaboardonly, key='-HB-Menu-', visible=False))],
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
+               [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['TrenzHostname'], default_value=configuration['TrenzHostname'][0], key="-TrenzHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
@@ -300,7 +301,102 @@ while True:
 
     SetLED(basewindow, '-Debug-Mode-', 'green' if values['-DEBUG-MODE-'] else 'red')
     DEBUG_MODE = values['-DEBUG-MODE-']        
-    
+
+    # Set and show module serial number via QR code scanner
+    if values['-Scanned-QR-Code-'] != '':
+        scannedcode = values['-Scanned-QR-Code-'].rstrip()
+        if '-' not in scannedcode:
+            moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:9]+'-'+scannedcode[9:11]+'-'+scannedcode[11:]
+        else:
+            moduleserial = scannedcode
+
+    if event == 'Clear':
+        basewindow['-Scanned-QR-Code-'].update(value='')
+
+    if values['-Scanned-QR-Code-'] != '':
+
+        # ensure scanner is done typing  
+        serialsections = moduleserial.split('-')
+        if len(moduleserial) < 18:
+            continue
+        if len(serialsections[-1]) < 4:
+            continue
+        elif len(serialsections[-1]) == 4:
+            if serialsections[1][0] != 'M':
+                continue
+
+        # Populate scanned values 
+        if serialsections[1][0] == 'M':
+            basewindow['-IsLive-'].update(value=True)
+            values['-IsLive-'] = True
+            values['-IsHB-'] = False
+        elif serialsections[1][0] == 'X':
+            basewindow['-IsHB-'].update(value=True)
+            values['-IsLive-'] = False
+            values['-IsHB-'] = True
+
+        if serialsections[1][1] == 'L':
+            basewindow['-LD-'].update(value=True)
+        elif serialsections[1][1] == 'H':
+            basewindow['-HD-'].update(value=True)
+
+        basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
+
+        if serialsections[2][0] == 'F': basewindow['-Full-'].update(value=True)
+        elif serialsections[2][0] == 'T': basewindow['-Top-'].update(value=True)
+        elif serialsections[2][0] == 'B': basewindow['-Bottom-'].update(value=True)
+        elif serialsections[2][0] == 'L': basewindow['-Left-'].update(value=True)
+        elif serialsections[2][0] == 'R': basewindow['-Right-'].update(value=True)
+        elif serialsections[2][0] == '5': basewindow['-Five-'].update(value=True)
+
+        if values['-IsLive-']:
+            if serialsections[2][1] == '1': basewindow['-120-'].update(value=True)
+            elif serialsections[2][1] == '2': basewindow['-200-'].update(value=True)
+            elif serialsections[2][1] == '3': basewindow['-300-'].update(value=True)
+
+            if serialsections[2][2] == 'P': basewindow['-PCB-'].update(value=True)
+            elif serialsections[2][2] == 'C': basewindow['-CF-'].update(value=True)
+            elif serialsections[2][2] == 'W': basewindow['-CuW-'].update(value=True)
+
+            if len(serialsections[2]) == 4:
+                if serialsections[2][3] == 'X':
+                    basewindow['-Preseries-'].update(value=True)
+                else:
+                    basewindow['-Preseries-'].update(value=False)
+            else:
+                basewindow['-Preseries-'].update(value=False)
+
+            if not values['-IsLive-']:
+                basewindow.write_event_value('-IsLive-', True)
+        elif values['-IsHB-']:
+            if serialsections[2][1:3] == '03':
+                basewindow['-V3-'].update(value=True)
+            elif serialsections[2][1:3] == '10':
+                basewindow['-Prod-'].update(value=True)
+
+            basewindow['-HB-Manufacturer-'].update(value=serialsections[3])
+
+            if not values['-IsHB-']:
+                basewindow.write_event_value('-IsHB-', True)
+
+    # Ensure clicking on Live or HB overrides scanned QR code
+    if event == '-IsLive-':
+        if values['-IsHB-']:
+            basewindow['-IsLive-'].update(value=True)
+            basewindow['-IsHB-'].update(value=False)
+            values['-IsLive-'] = True
+            values['-IsHB-'] = False
+            basewindow['-Scanned-QR-Code-'].update(value='')
+            values['-Scanned-QR-Code-'] = ''            
+    if event == '-IsHB-':
+        if values['-IsLive-']:
+            basewindow['-IsLive-'].update(value=False)
+            basewindow['-IsHB-'].update(value=True)
+            values['-IsLive-'] = False
+            values['-IsHB-'] = True
+            basewindow['-Scanned-QR-Code-'].update(value='')
+            values['-Scanned-QR-Code-'] = ''
+
     # Check if live module
     if values['-IsLive-']:
         majortype[0] = 'M'
@@ -380,10 +476,12 @@ while True:
         moduleindex = ''    
 
     # Set and show module serial number 
-    if values['-IsLive-']:
-        moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{macserial}-{moduleindex}'
-    elif values['-IsHB-']:
-        moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{vendorid}-{moduleindex}'
+    if values['-Scanned-QR-Code-'] == '':
+        if values['-IsLive-']:
+            moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{macserial}-{moduleindex}'
+        elif values['-IsHB-']:
+            moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{vendorid}-{moduleindex}'
+
         
     basewindow['-Module-Serial-'].update(value=moduleserial)
     if values['-Inspector-'] != '':
