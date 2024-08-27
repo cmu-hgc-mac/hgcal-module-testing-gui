@@ -641,12 +641,9 @@ while True:
 
             # module conditioning
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-'] and time_to_wait > 10:
-                #current_state['ps'].outputOff()
-                #update_state(current_state, '-HV-Output-On-', False, 'black')
-                current_state['ps'].outputOn()
-                update_state(current_state, '-HV-Output-On-', True, 'Green')
-                current_state['ps'].setVoltage(800.)
-
+                current_state['ps'].outputOff()
+                update_state(current_state, '-HV-Output-On-', False, 'black')
+                
             time.sleep(time_to_wait)
 
             if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
