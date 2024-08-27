@@ -125,7 +125,7 @@ def pedestal_upload(state, ind=-1):
         else:
             comment += f" pedestals trimmed at {state['-Pedestals-Trimmed-']}V"
     
-    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # build upload row list
     namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
@@ -231,7 +231,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
     Temp = state['-Box-T-']
 
     now = datetime.now()
-    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{test_name}/run_*')
     runs.sort()
@@ -263,8 +263,8 @@ def other_test_upload(state, test_name, BV, ind=-1):
 
     os.system(f'rm tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz')
 
-    print(f" >> DBTools: Uploaded iv curve of {modulename}")
-    read_table('module_iv_test')
+    print(f" >> DBTools: Uploaded other test of {modulename}")
+    read_table('mod_hxb_other_test')
 
 def plots_upload(state, ind=-1):
     """
@@ -323,7 +323,7 @@ def plots_upload(state, ind=-1):
                 
     comment = f'run{thisind}'
 
-    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else state['-Pedestals-Trimmed-'])
+    trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # upload the plots
     #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]

@@ -347,7 +347,7 @@ class Keithley2410:
         start = time()
         while True:
             measurement = self._query("READ?", 0.)
-            if time() - start >= 5.:
+            if time() - start >= 3.:
                 break
         measurement = self._query("READ?", 0.)
         return float(self._parse_data(measurement)[0]['current'])

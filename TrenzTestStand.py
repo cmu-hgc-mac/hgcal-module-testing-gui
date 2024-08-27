@@ -131,7 +131,7 @@ class TrenzTestStand:
         """
 
         ssh_stdout, ssh_stderr = self._runcmd('systemctl restart daq-server.service && systemctl restart i2c-server.service')
-        time.sleep(5)
+        time.sleep(3)
 
         error_check = True
 
