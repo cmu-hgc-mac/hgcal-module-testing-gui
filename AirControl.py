@@ -8,6 +8,7 @@ class AirControl:
             self.nano = serial.Serial('/dev/ttyUSB1', 115200, timeout=2) 
         except:
             self.nano = serial.Serial('/dev/ttyUSB2', 115200, timeout=2) 
+        # Change port if needed, default /dev/ttyUSB1 # port changed on 07/25/2024, #lsusb; dmesg | grep tty
         # As of 2024/8/26 trying both ports as they seem to change without warning
 
     def __del__(self):
