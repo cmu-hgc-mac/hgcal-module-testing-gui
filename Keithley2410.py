@@ -415,7 +415,7 @@ class Keithley2410:
         time = current_date.isoformat().split('T')[1].split('.')[0]
 
         steps = int(Vmax//step)
-        ivdata = self.voltage_sweep(0, Vmax, steps, delay_s=1.)
+        ivdata = self.voltage_sweep(0, Vmax, steps, delay_s=3.)
         
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
 
