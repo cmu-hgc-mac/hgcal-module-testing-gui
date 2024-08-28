@@ -380,22 +380,15 @@ while True:
                 basewindow.write_event_value('-IsHB-', True)
 
     # Ensure clicking on Live or HB overrides scanned QR code
-    if event == '-IsLive-':
-        if values['-IsHB-']:
-            basewindow['-IsLive-'].update(value=True)
-            basewindow['-IsHB-'].update(value=False)
-            values['-IsLive-'] = True
-            values['-IsHB-'] = False
-            basewindow['-Scanned-QR-Code-'].update(value='')
-            values['-Scanned-QR-Code-'] = ''            
-    if event == '-IsHB-':
-        if values['-IsLive-']:
-            basewindow['-IsLive-'].update(value=False)
-            basewindow['-IsHB-'].update(value=True)
-            values['-IsLive-'] = False
-            values['-IsHB-'] = True
-            basewindow['-Scanned-QR-Code-'].update(value='')
-            values['-Scanned-QR-Code-'] = ''
+    if (event == '-IsLive-' and values['-IsHB-']) or (event == '-IsHB-' and values['-IsLive-']):
+        toggleval = (event == '-IsLive-')
+        basewindow['-IsLive-'].update(value=toggleval)
+        basewindow['-IsHB-'].update(value=(not toggleval))
+        values['-IsLive-'] = toggleval
+        values['-IsHB-'] = not toggleval
+        basewindow['-Module-Index-'].update(value='')
+        basewindow['-Scanned-QR-Code-'].update(value='')
+        values['-Scanned-QR-Code-'] = ''            
 
     # Check if live module
     if values['-IsLive-']:
