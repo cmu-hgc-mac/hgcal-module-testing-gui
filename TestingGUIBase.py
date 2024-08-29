@@ -105,7 +105,9 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
-             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
+             #[sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
+             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
+             [sg.Text('Wait Periods (per run - minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
 
 # Status Bar version 2
@@ -186,7 +188,7 @@ def disable_ts_tests():
     toggle_ts_tests(False)
 
 def toggle_iv_tests(enabled):
-    keys = ['-Ambient-IV-', '-Dry-IV-', '-DryIV-Wait-Time-']
+    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-',]
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
         
@@ -695,59 +697,64 @@ while True:
             plot_IV_curves(current_state)
 
         # If taking IV curve at zero humidity, must wait some time for humidity to drop
+        # Now allowing multiple sequential dry curves
         if values['-Dry-IV-']:
 
-            if values['-DryIV-Wait-Time-'] == '':
-                time_to_wait = 15. if not DEBUG_MODE else 0.5
-            elif values['-DryIV-Wait-Time-'] == '0':
-                time_to_wait = 0.01
-            else:
-                time_to_wait = float(values['-DryIV-Wait-Time-'])
-            final_dry_time = 60*(time_to_wait)
+            for iV in range(int(values['-N-Dry-IV-'])):
 
-            # open dry air valve manually or automatically
-            if not configuration['HasRHSensor']:
-                from InteractionGUI import do_something_window
-                do_something_window('Open dry air valve', 'Open')
-            else:
-                from AirControl import AirControl
-                ac = AirControl()
-                ac.set_air_on()
+                thiswait = values[f'-DryIV-Wait-Time-{iV+1}-']
+
+                if thiswait == '':
+                    time_to_wait = 15. if not DEBUG_MODE else 0.5
+                elif thiswait == '0':
+                    time_to_wait = 0.01
+                else:
+                    time_to_wait = float(thiswait)
+                final_dry_time = 60*(time_to_wait)
+
+                # open dry air valve manually or automatically
+                if not configuration['HasRHSensor']:
+                    from InteractionGUI import do_something_window
+                    do_something_window('Open dry air valve', 'Open')
+                else:
+                    from AirControl import AirControl
+                    ac = AirControl()
+                    ac.set_air_on()
+                    ac.set_air_on()
                             
-            time.sleep(1)
+                time.sleep(1)
                 
-            drytime = time.time()
-            dry_date = datetime.now()
-            finalIV_date = dry_date + timedelta(seconds=final_dry_time)
-            finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                drytime = time.time()
+                dry_date = datetime.now()
+                finalIV_date = dry_date + timedelta(seconds=final_dry_time)
+                finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                
+                # Wait until time passed, then run dry IV curve
+                time_to_wait = final_dry_time - (time.time() - drytime)
+                from InteractionGUI import waiting_window
+                wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+                print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
-        # Could run tests here
-
-        # Wait until time passed, then run dry IV curve
-        if values['-Dry-IV-']:
-
-            time_to_wait = final_dry_time - (time.time() - drytime)
-            from InteractionGUI import waiting_window
-            wait = waiting_window(f'Waiting until {finalIV_time} to perform final IV')
-
-            # module conditioning
-            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-'] and time_to_wait > 10:
-                #current_state['ps'].outputOff()
-                #update_state(current_state, '-HV-Output-On-', False, 'black')
-                current_state['ps'].outputOn()
-                update_state(current_state, '-HV-Output-On-', True, 'Green')
-                current_state['ps'].setVoltage(800.)
+                # module conditioning
+                if current_state['-Live-Module-'] and not current_state['-Debug-Mode-'] and time_to_wait > 10:
+                    if values['-Dry-Wait-Bias-']:
+                        current_state['ps'].outputOn()
+                        update_state(current_state, '-HV-Output-On-', True, 'Green')
+                        current_state['ps'].setVoltage(800.)
+                    else:
+                        current_state['ps'].outputOff()
+                        update_state(current_state, '-HV-Output-On-', False, 'black')
                 
                 
-            time.sleep(time_to_wait)
+                time.sleep(time_to_wait)
 
-            if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-                current_state['ps'].setVoltage(0.)
+                if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+                    current_state['ps'].setVoltage(0.)
 
-            wait.close()
+                wait.close()
 
-            take_IV_curve(current_state)
-            plot_IV_curves(current_state)
+                take_IV_curve(current_state)
+                plot_IV_curves(current_state)
 
         # After tests run, check status of services
         if current_state['-Hexactrl-Accessed-']:
