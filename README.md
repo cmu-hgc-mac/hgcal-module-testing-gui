@@ -1,6 +1,8 @@
 # HGCal Module Testing GUI
 A GUI for HGCAL hexaboard and silicon module testing
 
+This repository is a copy of the repository at [https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui](https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui) and should (but may not) be up-to-date with that repository.
+
 ## Motivation
 We have been using detailed procedures for module testing, and though these do work, I found it was very easy for people new to the system to skip steps and make mistakes. Additionally, it seemed that a large portion of the test sequence can be automated. A GUI would greatly simplify training, force users to follow the correct steps in the correct order, and hide the parts of the sequence that require special skills (i.e. bash) behind automation. Also, this GUI is integrated with the database and may soon serve as the starting point for the multimodule testing GUI.
 
