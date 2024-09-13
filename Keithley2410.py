@@ -399,6 +399,8 @@ class Keithley2410:
             self.set_output(0)
             parsed_data = self._parse_data(sweep_data)
 
+            self._write(f"SOURce{self._channel}:DELay {0.}")
+
             self.display_string("Sweep complete.")        
             
             return parsed_data
@@ -415,7 +417,7 @@ class Keithley2410:
         time = current_date.isoformat().split('T')[1].split('.')[0]
 
         steps = int(Vmax//step)
-        ivdata = self.voltage_sweep(0, Vmax, steps, delay_s=3.)
+        ivdata = self.voltage_sweep(0, Vmax, steps, delay_s=5.)
         
         temparray = [[i*step, float(ivdata[i]['voltage']), float(ivdata[i]['current']), float(ivdata[i]['resistance'])] for i in range(len(ivdata))]
 

@@ -387,7 +387,7 @@ def check_leakage_current(state):
     leakage_current = {} #{0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
     # best to set the keys in the dict according to bias direction
     # and then use those keys
-    for vltg in [0, 1, 10, 100, 300, 600]:
+    for vltg in [0, 1, 10, 100, 300]: #, 600]:
         if configuration['HVWiresPolarization'] == 'Forward':
             leakage_current[-vltg] = None
         else:
