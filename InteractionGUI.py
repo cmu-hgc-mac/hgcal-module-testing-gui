@@ -222,36 +222,37 @@ def initial_module_checks(state):
     if density == 'H':
         if shape == 'F':
             thesepads = pads_HF
-            
-    layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
-    colleft = []
-    colright = []
-    idx = 2
-    for pad in thesepads:
-        colleft.append([sg.Text(f"{pad}: ")])
-        colright.append([sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
-        idx += 1
-    layout.append([sg.Column(colleft), sg.Column(colright)])
-    layout.append([sg.Button("Continue")])
-    
-    window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
 
-    while True:
-        event, values = window.read()
-        if event == "Continue":
-            noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
-            if not noshorts:
+    if not state['-Skip-Checks-']:
+        layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
+        colleft = []
+        colright = []
+        idx = 2
+        for pad in thesepads:
+            colleft.append([sg.Text(f"{pad}: ")])
+            colright.append([sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
+            idx += 1
+        layout.append([sg.Column(colleft), sg.Column(colright)])
+        layout.append([sg.Button("Continue")])
+    
+        window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
+
+        while True:
+            event, values = window.read()
+            if event == "Continue":
+                noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
+                if not noshorts:
+                    window.close()
+                    end_session(state)
+                    return 'END'
+                else:
+                    break
+            if event == sg.WIN_CLOSED:
                 window.close()
                 end_session(state)
                 return 'END'
-            else:
-                break
-        if event == sg.WIN_CLOSED:
-            window.close()
-            end_session(state)
-            return 'END'
 
-    window.close()
+        window.close()
 
     # If live module, check the bias voltage behavior
     if state['-Live-Module-']:
@@ -262,51 +263,57 @@ def initial_module_checks(state):
 
         open_box(state)
 
+    # otherwise connect HV
+    #elif state['-Live-Module-']:
+    #    connect_HV(state)
+        
     # Check the voltage on the pads to ensure correct power
     command = "Connect DCDC to hexaboard" if density+shape == 'LF' else "Connect low voltage wires"
     do_something_window(command, "Connected")
     update_state(state, '-DCDC-Connected-', True, 'green')
 
-    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
-    do_something_window(command, "Powered")
-    update_state(state, '-DCDC-Powered-', True, 'green')
-
-    layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")]]
-    colleft = []
-    colright = []
-    idx = 2
-    for pad in thesepads:
-        expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
-        colleft.append([sg.Text(f"{pad}:")])
-        colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
-        idx += 1
-    layout.append([sg.Column(colleft), sg.Column(colright)])
-    layout.append([sg.Button("Continue")])
-
-    window = sg.Window("Module Test: Probe power pads", layout, margins=(200,100))
-
-    while True:
-        event, values = window.read()
-        if event == "Continue":
-            allcorr = all([values[f"-{pad}-corr-"] for pad in thesepads])
-            if not allcorr:
+    if not state['-Skip-Checks-']:
+        command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
+        do_something_window(command, "Powered")
+        update_state(state, '-DCDC-Powered-', True, 'green')
+        
+        layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")]]
+        colleft = []
+        colright = []
+        idx = 2
+        for pad in thesepads:
+            expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
+            colleft.append([sg.Text(f"{pad}:")])
+            colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
+            idx += 1
+        layout.append([sg.Column(colleft), sg.Column(colright)])
+        layout.append([sg.Button("Continue")])
+        
+        window = sg.Window("Module Test: Probe power pads", layout, margins=(200,100))
+        
+        while True:
+            event, values = window.read()
+            if event == "Continue":
+                allcorr = all([values[f"-{pad}-corr-"] for pad in thesepads])
+                if not allcorr:
+                    window.close()
+                    end_session(state)
+                    return 'END'
+                else:
+                    break
+        
+                break
+            if event == sg.WIN_CLOSED or event == "Power incorrect":
                 window.close()
                 end_session(state)
                 return 'END'
-            else:
-                break
+                
+        window.close()
+        
+        command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
+        do_something_window(command, "Disconnected")
+        update_state(state, '-DCDC-Powered-', False, 'black')
 
-            break
-        if event == sg.WIN_CLOSED or event == "Power incorrect":
-            window.close()
-            end_session(state)
-            return 'END'
-            
-    window.close()
-
-    command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
-    do_something_window(command, "Disconnected")
-    update_state(state, '-DCDC-Powered-', False, 'black')
     return 'CONT'
 
 def open_close_box(state, close=True):
@@ -373,8 +380,8 @@ def connect_HV(state):
             update_state(state, 'ps', ps)
         keith.close()
     
-    close_box(state)
-            
+    #close_box(state)
+    
 def check_leakage_current(state):
     """
     Measures the leakage current of the module at a few select bias voltages to ensure there are
@@ -394,49 +401,51 @@ def check_leakage_current(state):
             leakage_current[vltg] = None
 
     connect_HV(state)
-
-    ivprobe = waiting_window('Verifying module IV behavior...')
-    nominal = True
-    if state['-Debug-Mode-']:
-        sleep(5)
-    else:
-        state['ps'].outputOn()
-        update_state(state, '-HV-Output-On-', True, 'green')
+    if not state['-Skip-Checks-']:
+        close_box(state)
         
-        for key in leakage_current.keys():
-
-            state['ps'].setVoltage(key)
-            _, current, _ = state['ps'].measureCurrent()
-            leakage_current[key] = current
-            print(' >> Checking leakage current:', key, current*1000000.)
-            if np.abs(current)*1000000. > 1. and abs(key) < 500:
-                nominal = False
-                break
-
-        state['ps'].outputOff()
-        update_state(state, '-HV-Output-On-', False, 'black')
-
-    ivprobe.close()
-    
-    readout = [[sg.Text(f"{key} V Bias: {round(1000000.*leakage_current[key],3)} μA") if leakage_current[key] is not None else sg.Text(f"{key} V Bias: {None} μA")] for key in leakage_current.keys()]
-
-    title = "Module leakage current good" if nominal else "Module leakage current not nominal. Continue?"
-    
-    layout = [[sg.Text(title, font=lgfont)],
-              [sg.Frame('Leakage Current', readout, key='-Leakage-Current-')],
-              [sg.Button("Continue"), sg.Button("End Test")]]
-    window = sg.Window(f"Module Test: Leakage Current Results", layout, margins=(200,100))
-
-    while True:
-        event, values = window.read()
-        if event == "Continue" or event == sg.WIN_CLOSED:
-            break
-        if event=="End Test":
-            window.close()
-            end_session(state)
-            return 'END'
+        ivprobe = waiting_window('Verifying module IV behavior...')
+        nominal = True
+        if state['-Debug-Mode-']:
+            sleep(5)
+        else:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
             
-    window.close()
+            for key in leakage_current.keys():
+        
+                state['ps'].setVoltage(key)
+                _, current, _ = state['ps'].measureCurrent()
+                leakage_current[key] = current
+                print(' >> Checking leakage current:', key, current*1000000.)
+                if np.abs(current)*1000000. > 1. and abs(key) < 500:
+                    nominal = False
+                    break
+        
+            state['ps'].outputOff()
+            update_state(state, '-HV-Output-On-', False, 'black')
+        
+        ivprobe.close()
+        
+        readout = [[sg.Text(f"{key} V Bias: {round(1000000.*leakage_current[key],3)} μA") if leakage_current[key] is not None else sg.Text(f"{key} V Bias: {None} μA")] for key in leakage_current.keys()]
+        
+        title = "Module leakage current good" if nominal else "Module leakage current not nominal. Continue?"
+        
+        layout = [[sg.Text(title, font=lgfont)],
+                  [sg.Frame('Leakage Current', readout, key='-Leakage-Current-')],
+                  [sg.Button("Continue"), sg.Button("End Test")]]
+        window = sg.Window(f"Module Test: Leakage Current Results", layout, margins=(200,100))
+        
+        while True:
+            event, values = window.read()
+            if event == "Continue" or event == sg.WIN_CLOSED:
+                break
+            if event=="End Test":
+                window.close()
+                end_session(state)
+                return 'END'
+                
+        window.close()
     return 'CONT'
 
 def configure_test_stand(state, trenzhostname):

@@ -134,7 +134,10 @@ statusbar = [[sbcol1, sbcol2, sbcol3, sbcol4, sbcol5]]
 #                         [sg.Image('cmu-wordmark-horizontal-r.resized.png')]])
 
 # Layout version 2
-leftcol = sg.Frame('', [[sg.Frame('Module Setup', modulesetup)], [sg.Checkbox('Debug Mode', key='-DEBUG-MODE-', enable_events=True, default=DEBUG_MODE), sg.Button("Close GUI")]])
+leftcol = sg.Frame('', [[sg.Frame('Module Setup', modulesetup)],
+                        [sg.Checkbox('Debug Mode', key='-DEBUG-MODE-', enable_events=True, default=DEBUG_MODE),
+                         sg.Checkbox('Skip Electrical Checks', key='-Skip-Checks-', enable_events=True, default=False),
+                         sg.Button("Close GUI")]])
 rightcol = sg.Frame('', [[sg.Frame('Select Tests', testsetup)], [sg.Button("End Session")]])
 
 layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)],
@@ -162,7 +165,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
             '-PCB-', '-CF-', '-CuW-', '-Preseries-', '-V3-', '-Prod-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
-            'Only IV Test', '-Inspector-', '-Module-Status-', 'Close GUI']
+            'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
 
@@ -513,6 +516,7 @@ while True:
         
         # Initialize test stand state dictionary
         init_state()
+        current_state['-Skip-Checks-'] = values['-Skip-Checks-']
         # Disable the module setup section
         disable_module_setup()
 
@@ -565,6 +569,7 @@ while True:
         
         # Initialize state dictionary
         init_state()
+        current_state['-Skip-Checks-'] = values['-Skip-Checks-']
         # Disable module setup section
         disable_module_setup()
 
@@ -572,9 +577,11 @@ while True:
         # This function also handles connecting the HV cable and instantiating
         # the power supply object, and handles errors as well.
         outcode = check_leakage_current(current_state)
+                    
         if outcode == 'CONT':
 
             # If there are no issues, enable the IV tests
+            close_box(current_state)
             enable_iv_tests()
             basewindow['Run Tests'].update(disabled=False)
             basewindow['End Session'].update(disabled=False)
