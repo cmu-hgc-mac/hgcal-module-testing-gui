@@ -53,7 +53,10 @@ class TrenzTestStand:
                 
         # create ssh client                                                                                                                                                                     
         self.ssh = paramiko.SSHClient()
-        k = paramiko.RSAKey.from_private_key_file(keyloc)
+        try:
+            k = paramiko.RSAKey.from_private_key_file(keyloc)
+        except paramiko.ssh_exception.SSHException:
+            k = paramiko.Ed25519Key.from_private_key_file(keyloc)
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username='root', pkey=k)
         # at this point, can consider to be "connected"
@@ -170,7 +173,8 @@ class TrenzTestStand:
         check2 = False
         i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
                            '[I2C] Board identification: V3 LD Semi or Half HB',
-                           '[I2C] Board identification: V3 HD Full HB']
+                           '[I2C] Board identification: V3 HD Full HB',
+                           'Identify a board with HGCROC Siv3']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
@@ -179,7 +183,7 @@ class TrenzTestStand:
             for il in i2cstatus_lines:
                 if il in line:
                     check2 = True
-                
+
         if check1 and check2:
             board_discovered = True
         if board_discovered:

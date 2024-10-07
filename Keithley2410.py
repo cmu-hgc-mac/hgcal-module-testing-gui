@@ -3,6 +3,7 @@ from time import sleep, time
 from datetime import datetime
 from math import copysign
 import numpy as np
+import subprocess
 
 import yaml
 configuration = {}
@@ -16,8 +17,27 @@ class Keithley2410:
         self._rm = pyvisa.ResourceManager('@py')
         self._resource_list = self._rm.list_resources()
         print(" >> Keithley2410:", self._resource_list)
-        #self._inst = self._rm.open_resource(self._resource_list[1])
-        self._inst = self._rm.open_resource(configuration['HVResource'])
+
+        # check discovery mode and default to manual
+        if 'HVDiscoveryMode' not in configuration.keys():
+            self._inst = self._rm.open_resource(configuration['HVResource'])
+
+        # by-id discovery
+        elif configuration['HVDiscoveryMode'] == 'by-id':
+            usblines = subprocess.getoutput("ls -l /dev/serial/by-id").split('\n')
+            thisboard = configuration['HVResource']
+
+            for line in usblines:
+                if thisboard in line:
+                    thisusb = line.split(' ')[-1].split('/')[-1]
+                    self.resource = 'ASRL/dev/'+thisusb+'::INSTR'
+                    print('  >> Keithley2410: using', self.resource)
+
+            self._inst = self._rm.open_resource(self.resource)
+
+        else: # mode == 'by-resource'
+            self._inst = self._rm.open_resource(configuration['HVResource'])
+
         self._inst.read_termination = "\r\n"
         self._inst.write_termination = "\r\n"
 

@@ -37,15 +37,25 @@ class CentosPC:
         os.system('systemctl restart daq-client.service')
         print(' >> CentosPC: DAQ client started. PC ready to run tests.')
 
-        # env script and other files are in different locations based on OS
+        # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts
+        # in feature-alma9 branch, use specific paths
         if configuration['TestingPCOpSys'] == 'Centos7':
-            self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+            self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh' 
             self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
 
-        elif configuration['TestingPCOpSys'] == 'Alma9':
-            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh' 
+        # for backwards compatibility before 'HexactrlSWBranch' was in configuration
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and ('HexactrlSWBranch' not in configuration.keys()):
+            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
             self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
-        
+
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'feature-alma9'):
+            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+            self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'ROCv3'):
+            self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+            self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+            
         density = modulename.split('-')[1][1]
         shape = modulename.split('-')[2][0]
         

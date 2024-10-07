@@ -3,7 +3,6 @@ import os, sys, glob
 import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
-import uproot3 as uproot
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt

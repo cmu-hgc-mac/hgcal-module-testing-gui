@@ -11,7 +11,6 @@ import os
 from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL
 import pandas as pd
 import glob
-import uproot3 as uproot
 import asyncio
 import asyncpg
 
@@ -25,6 +24,12 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+# different versions of uproot for each OS =.=
+if configuration['TestingPCOpSys'] == 'Centos7':
+    import uproot3 as uproot
+elif configuration['TestingPCOpSys'] == 'Alma9':
+    import uproot
+    
 statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7}
     
 def iv_save(datadict, modulename):
@@ -76,7 +81,13 @@ def pedestal_upload(state, ind=-1):
     f = uproot.open(fname)
     try:
         tree = f["runsummary"]["summary"]
-        df_data = tree.pandas.df()
+
+        # different uproot functions for different OS =.=
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            df_data = tree.pandas.df()
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            df_data = tree.arrays(library='pd')
+
     except:
         print(" -- DBTools: No tree found in pedestal file!")
         return 0
