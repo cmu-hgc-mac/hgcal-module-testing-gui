@@ -4,6 +4,7 @@ from datetime import datetime
 from math import copysign
 import numpy as np
 import subprocess
+from collections import deque
 
 import yaml
 configuration = {}
@@ -379,19 +380,38 @@ class Keithley2410:
 
     def measureCurrentLoop(self):
         # Measure current                                                                                                                                             
-        # NOTE: currently sleeping 3sec to stabilize measurement                                                                                         
         # Current stabilizes much faster when you ask for a measurement continually                                                                                              
         if self._sense_mode != "current":
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
-
+        # reconfigure to disable auto-ranging
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        
         start = time()
+        maxtime = 10.
+        q = deque(maxlen=5)
+
+        # repetetively query current measurement
         while True:
-            outdata = self.query("READ?")
-            if time() - start >= 3.:
+            measurement = self._query("READ?", 0.)
+
+            thiscurrent = float(self._parse_data(measurement)[0]['current'])
+            q.append(thiscurrent)
+
+            # check if current measurement has stabilized
+            print(len(q), np.max(np.array(q)), np.min(np.array(q)), np.mean(np.array(q)), (np.max(np.array(q)) - np.min(np.array(q))) / np.mean(np.array(q)))
+            #if len(q) >= 5 and (np.max(np.array(q)) - np.min(np.array(q))) / np.mean(np.array(q)) <= 0.05:
+            if len(q) >= 5 and ((np.max(np.array(q)) - np.min(np.array(q))) <= 0.5 * 10**(-6)):
                 break
-        measurement = self.query("READ?")
-        return float(self._parse_data(measurement)[0]['current'])
+
+            # if greater than time limit, break
+            if time() - start >= maxtime:
+                break
+            
+        measurement = self._query("READ?", 0.)
+        meascurr = float(self._parse_data(measurement)[0]['current'])
+        print('------It:', time() - start, meascurr)
+        return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
@@ -508,7 +528,7 @@ class Keithley2410:
             # Delay here doesn't work for some reason
             # maybe because the Keithley isn't in measure mode?
             #sleep(measdelay)
-            _, current, _ = self.measureCurrent()
+            _, current, _ = self.measureCurrentLoop()
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
 

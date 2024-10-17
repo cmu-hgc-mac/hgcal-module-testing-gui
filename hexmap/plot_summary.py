@@ -51,6 +51,7 @@ def get_pad_id(map_dict, chip, chan, chantype):
     else:
         return 0
 
+
 ##### Plotting functions
 
 # To plot the patches
@@ -456,7 +457,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         # different uproot functions for different OS =.=
         if configuration['TestingPCOpSys'] == 'Centos7':
             df_data = tree.pandas.df()
-	elif configuration['TestingPCOpSys'] == 'Alma9':
+        elif configuration['TestingPCOpSys'] == 'Alma9':
             df_data = tree.arrays(library='pd')
 
     except:

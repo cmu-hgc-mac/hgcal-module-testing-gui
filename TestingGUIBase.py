@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(1, '../')
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
@@ -6,11 +8,18 @@ import time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
+from pynput import keyboard
+
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
 then creates the GUI layout and then the GUI window. Once done, the script runs a loop which tracks and responds to the user's
 interaction with the layout.
 """
+
+sg.show_debugger_window(
+    location = (None, None),
+)
+
 
 # Load configuration file
 configuration = {}
@@ -100,7 +109,7 @@ other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 
                  'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
-             [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-')],
+             [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-', enable_events=True), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-', enable_events=True)],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
@@ -147,7 +156,7 @@ layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)],
           [sg.Frame('Status Bar', statusbar)]]
 
 # Create the window
-basewindow = sg.Window("Module Test: Start", layout, margins=(200,80), finalize=True, resizable=True)
+basewindow = sg.Window("Module Test: Start", layout, margins=(200,80), finalize=True, resizable=True, return_keyboard_events=True)
 # margins can be changed to suit the monitor; these are for a 1080p monitor
 basewindow['-EXPAND-'].expand(True, True, True) # expand space between menus and status bar
 event, values = basewindow.read(timeout=10)
@@ -295,6 +304,26 @@ basewindow['End Session'].update(disabled=True)
 clear_tests()
 clear_setup()
 
+def on_press(key):
+    try:
+        print('alphanumeric key {0} pressed'.format(
+            key.char))
+    except AttributeError:
+        print('special key {0} pressed'.format(
+            key))
+
+def on_release(key):
+    print('{0} released'.format(
+        key))
+    if key == keyboard.Key.esc:
+        # Stop listener
+        return False
+
+listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+listener.start()
+
 # Main window loop
 while True:
 
@@ -303,7 +332,12 @@ while True:
     
     event, values = basewindow.read()
     basewindow.maximize() # Fullscreen
+    print(event)
+    #for key in ['q', 'w', 'e', 'r', 't','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m']:
+    #    if keyboard.is_pressed(key):
+    #        print(key)
 
+    
     SetLED(basewindow, '-Debug-Mode-', 'green' if values['-DEBUG-MODE-'] else 'red')
     DEBUG_MODE = values['-DEBUG-MODE-']        
 
