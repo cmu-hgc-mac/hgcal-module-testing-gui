@@ -1,0 +1,10 @@
+paramiko
+pyyaml
+pandas
+matplotlib
+uproot
+pyvisa
+pyvisa-py
+asyncpg
+serial
+pyserial

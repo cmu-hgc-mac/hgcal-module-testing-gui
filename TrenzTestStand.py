@@ -174,7 +174,8 @@ class TrenzTestStand:
         i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
                            '[I2C] Board identification: V3 LD Semi or Half HB',
                            '[I2C] Board identification: V3 HD Full HB',
-                           'Identify a board with HGCROC Siv3']
+                           'Identify a board with HGCROC Siv3',
+                           'Identify a board with HGCROC Siv3b']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:

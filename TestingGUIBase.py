@@ -8,7 +8,7 @@ import time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
-from pynput import keyboard
+#from pynput import keyboard
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -16,9 +16,9 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
-sg.show_debugger_window(
-    location = (None, None),
-)
+#sg.show_debugger_window(
+#    location = (None, None),
+#)
 
 
 # Load configuration file
@@ -304,25 +304,25 @@ basewindow['End Session'].update(disabled=True)
 clear_tests()
 clear_setup()
 
-def on_press(key):
-    try:
-        print('alphanumeric key {0} pressed'.format(
-            key.char))
-    except AttributeError:
-        print('special key {0} pressed'.format(
-            key))
-
-def on_release(key):
-    print('{0} released'.format(
-        key))
-    if key == keyboard.Key.esc:
-        # Stop listener
-        return False
-
-listener = keyboard.Listener(
-    on_press=on_press,
-    on_release=on_release)
-listener.start()
+#def on_press(key):
+#    try:
+#        print('alphanumeric key {0} pressed'.format(
+#            key.char))
+#    except AttributeError:
+#        print('special key {0} pressed'.format(
+#            key))
+#
+#def on_release(key):
+#    print('{0} released'.format(
+#        key))
+#    if key == keyboard.Key.esc:
+#        # Stop listener
+#        return False
+#
+#listener = keyboard.Listener(
+#    on_press=on_press,
+#    on_release=on_release)
+#listener.start()
 
 # Main window loop
 while True:
@@ -333,6 +333,12 @@ while True:
     event, values = basewindow.read()
     basewindow.maximize() # Fullscreen
     print(event)
+    print(basewindow.TKroot.focus_get())
+    print('nped', basewindow['-N-Pedestals-'].widget.config())
+    print('modind', basewindow['-Module-Index-'].widget.config())
+    if event == '-Pedestal-Run-':
+        basewindow['-N-Pedestals-'].widget.focus_set()
+        basewindow['-N-Pedestals-'].widget.config(state='normal')
     #for key in ['q', 'w', 'e', 'r', 't','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m']:
     #    if keyboard.is_pressed(key):
     #        print(key)

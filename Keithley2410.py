@@ -53,7 +53,7 @@ class Keithley2410:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
         self._ilimit = 105e-6  # Current limit in A
-        self._vlimit = 821  # Voltage limit in V - 821 to configure sweep to 800 correctly
+        self._vlimit = 921  # Voltage limit in V - 921 to configure sweep to 900 correctly
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
 
@@ -399,9 +399,9 @@ class Keithley2410:
             q.append(thiscurrent)
 
             # check if current measurement has stabilized
-            print(len(q), np.max(np.array(q)), np.min(np.array(q)), np.mean(np.array(q)), (np.max(np.array(q)) - np.min(np.array(q))) / np.mean(np.array(q)))
+            #print(len(q), np.max(np.array(q)), np.min(np.array(q)), (np.max(np.array(q)) - np.min(np.array(q))))
             #if len(q) >= 5 and (np.max(np.array(q)) - np.min(np.array(q))) / np.mean(np.array(q)) <= 0.05:
-            if len(q) >= 5 and ((np.max(np.array(q)) - np.min(np.array(q))) <= 0.5 * 10**(-6)):
+            if len(q) >= 5 and ((np.max(np.array(q)) - np.min(np.array(q))) <= 0.2 * 10**(-6)):
                 break
 
             # if greater than time limit, break
@@ -410,7 +410,7 @@ class Keithley2410:
             
         measurement = self._query("READ?", 0.)
         meascurr = float(self._parse_data(measurement)[0]['current'])
-        print('------It:', time() - start, meascurr)
+        #print('------It:', time() - start, meascurr)
         return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1.):
@@ -534,13 +534,14 @@ class Keithley2410:
 
             data.append([vltg, voltage, np.abs(current), resistance])
 
-            print(f'   Set {vltg} V Act {round(voltage,2)} V Meas {round(np.abs(current)*1000000.,2)} muA')
-            if np.abs(current)*1000000. > 100.:
-                print(f'>> Hit compliance {np.abs(current)*1000000.}muA at step {i}')
-                compl_ctr += 1
-
-            if compl_ctr == 3:
-                break
+            #print(f'   Set {vltg} V Act {round(voltage,2)} V Meas {round(np.abs(current)*1000000.,2)} muA')
+            # disable early termination so we always get values for every voltage point
+            #if np.abs(current)*1000000. > 100.:
+            #    print(f'>> Hit compliance {np.abs(current)*1000000.}muA at step {i}')
+            #    compl_ctr += 1
+            #
+            #if compl_ctr == 3:
+            #    break
 
         self.display_string('Loop finished.')
         print('>> Loop finished')
