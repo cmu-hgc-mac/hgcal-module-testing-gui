@@ -384,12 +384,19 @@ while True:
             basewindow['-IsHB-'].update(value=True)
             values['-IsLive-'] = False
             values['-IsHB-'] = True
+        else:
+            basewindow['-Scanned-QR-Code-'].update(value='')
+            continue
 
+            
         if serialsections[1][1] == 'L':
             basewindow['-LD-'].update(value=True)
         elif serialsections[1][1] == 'H':
             basewindow['-HD-'].update(value=True)
-
+        else:
+            basewindow['-Scanned-QR-Code-'].update(value='')
+            continue
+            
         basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
 
         if serialsections[2][0] == 'F': basewindow['-Full-'].update(value=True)
@@ -398,16 +405,25 @@ while True:
         elif serialsections[2][0] == 'L': basewindow['-Left-'].update(value=True)
         elif serialsections[2][0] == 'R': basewindow['-Right-'].update(value=True)
         elif serialsections[2][0] == '5': basewindow['-Five-'].update(value=True)
-
+        else:
+            basewindow['-Scanned-QR-Code-'].update(value='')
+            continue
+        
         if values['-IsLive-']:
             if serialsections[2][1] == '1': basewindow['-120-'].update(value=True)
             elif serialsections[2][1] == '2': basewindow['-200-'].update(value=True)
             elif serialsections[2][1] == '3': basewindow['-300-'].update(value=True)
-
+            else:
+                basewindow['-Scanned-QR-Code-'].update(value='')
+                continue
+            
             if serialsections[2][2] == 'P': basewindow['-PCB-'].update(value=True)
             elif serialsections[2][2] == 'C': basewindow['-CF-'].update(value=True)
             elif serialsections[2][2] == 'W': basewindow['-CuW-'].update(value=True)
-
+            else:
+                basewindow['-Scanned-QR-Code-'].update(value='')
+                continue
+            
             if len(serialsections[2]) == 4:
                 if serialsections[2][3] == 'X':
                     basewindow['-Preseries-'].update(value=True)
@@ -423,7 +439,11 @@ while True:
                 basewindow['-V3-'].update(value=True)
             elif serialsections[2][1:3] == '10':
                 basewindow['-Prod-'].update(value=True)
+            else:
+                basewindow['-Scanned-QR-Code-'].update(value='')
+                continue
 
+                
             basewindow['-HB-Manufacturer-'].update(value=serialsections[3])
 
             if not values['-IsHB-']:
