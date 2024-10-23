@@ -5,6 +5,8 @@ import subprocess
 import sys
 import glob
 from time import sleep
+from datetime import datetime
+import traceback
 
 import yaml
 configuration = {}
@@ -21,7 +23,7 @@ class CentosPC:
     and runs the testing scripts.
     """    
     
-    def __init__(self, trenzhostname, modulename, live=True):
+    def __init__(self, trenzhostname, modulename, modulestatus, live=True):
         """
         Constructor. Needs the IP address of the test stand and the module name. Also needs to know if this is a
         live module or if is a hexaboard. Object created and destroyed during every test session, so it will never
@@ -32,6 +34,7 @@ class CentosPC:
         self.trenzhostname = trenzhostname
         self.modulename = modulename
         self.live = live
+        self.modulestatus = modulestatus.replace(' ', '_')
         self.initiated = False
         # start the DAQ client
         os.system('systemctl restart daq-client.service')
@@ -141,22 +144,30 @@ class CentosPC:
         script = self.scriptloc + scriptname + '.py'
 
         print(f' >> CentosPC: Running {scriptname}.py with config {config}...')
+
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
         if not self.initiated:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.modulename}/ -d {self.modulestatus}_{date} -I > /dev/null 2>&1')
         else:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} > /dev/null 2>&1')
-
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{scriptname}/*')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.modulename}/ -d {self.modulestatus}_{date} > /dev/null 2>&1')
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/{scriptname}/*')
+            
         runs.sort()
-        print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
-        self.initiated = True
-
+        try:
+            print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
+            self.initiated = True
+        except:
+            print(f' >> CentosPC: Did not find output of test. Maybe it crashed? Continuing')
+            return ''
+            
         if scriptname in self.outyaml.keys():
             print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
             updateconf(self.config, runs[-1]+'/'+self.outyaml[scriptname])
             
         thisrun = runs[-1].split('/')[-1]
-        return f'{scriptname}/{thisrun}'
+        #return f'{scriptname}/{thisrun}'
+        return runs[-1]
         
     def pedestal_run(self, BV=None):
         """
@@ -175,7 +186,8 @@ class CentosPC:
         #        print(' -- CentosPC: outdict renaming failed; continuing')
         #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
         
-        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
+        #return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
+        return dirname
         
     # these functions are mostly irrelevant as _run_script() can be called from outside
     def pedestal_scan(self):
@@ -199,21 +211,23 @@ class CentosPC:
         controlled manually with the ind argument. If the BV isn't None, it renames the title of the plot and the filename
         to include the BV.
         """
-        
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/pedestal_run/*')
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/pedestal_run/*')
         runs.sort() # needed because glob doesn't sort things in the order that `ls` does for some reason
 
         # use the last run by default but allow any                                             
+        #print(runs[ind])
         labelind = ind if ind != -1 else len(runs)-1
         #if BV is None and 'BV' in runs[labelind]:
         #    BV = runs.split('BV').rstrip('\n ')    
         label = f'{self.modulename}_run{labelind}' if tag is None else f'{self.modulename}_run{labelind}_{tag}'
 
-        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}', label=label)
-        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename} as {label}')
+        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/', label=label)
+        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename}/{self.modulestatus}_{date} as {label}')
 
-        return f'{configuration["DataLoc"]}/{self.modulename}/{label}'
-            
+        return f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/{label}'
+
 def static_make_hexmaps(modulename, ind=-1, tag=None):
     """
     Make hexmaps but outside of the class.
@@ -265,11 +279,15 @@ def updateconf(conffile, updfile):
         conf = yaml.safe_load(fileconf)
         
     mod = {}
-    with open(updfile, 'r') as fileupd:
-        mod = yaml.safe_load(fileupd)
+    if os.path.isfile(updfile):
+        with open(updfile, 'r') as fileupd:
+            mod = yaml.safe_load(fileupd)
         
-    conf = recursive_update(conf, mod)
+        conf = recursive_update(conf, mod)
+        
+        with open(conffile,'w') as filenew:
+            yaml_string=yaml.dump(conf, filenew)
+    else:
+        print(' >> CentosPC: did not find output yaml file {updfile}, maybe it crashed? Continuing')
 
-    with open(conffile,'w') as filenew:
-        yaml_string=yaml.dump(conf, filenew)
-
+            

@@ -388,7 +388,7 @@ class Keithley2410:
         self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         
         start = time()
-        maxtime = 10.
+        maxtime = 30.
         q = deque(maxlen=5)
 
         # repetetively query current measurement

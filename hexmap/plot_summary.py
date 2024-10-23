@@ -432,12 +432,13 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         label = label[:-5]
 
     if hb_type is None:
-        moduleserial = fname.split('/')[-4]
+        print(fname)
+        moduleserial = fname.split('/')[-5]
         density = moduleserial.split('-')[1][1]
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-        #print(moduleserial, hb_type)
+        print(moduleserial, hb_type)
     
     livemod = 'ML' in fname or 'MH' in fname
             

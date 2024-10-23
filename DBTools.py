@@ -13,7 +13,7 @@ import pandas as pd
 import glob
 import asyncio
 import asyncpg
-
+from datetime import datetime
 #from InteractionGUI import add_RH_T
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
@@ -32,16 +32,22 @@ elif configuration['TestingPCOpSys'] == 'Alma9':
     
 statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7}
     
-def iv_save(datadict, modulename):
+def iv_save(datadict, state):
     """
     Takes the IV curve output dict and saves it to a pkl file. Returns the path to the pkl file.
     """
+
+    modulename = state['-Module-Serial-']
+    current_date = datetime.now()
+    date = current_date.isoformat().split('T')[0]
+    status = state['-Module-Status-'].replace(' ', '_')
     
     os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}')
-    with open(f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+    os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}/{status}_{date}')
+    with open(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -68,12 +74,15 @@ def pedestal_upload(state, ind=-1):
     """
     
     modulename = state['-Module-Serial-']
+    status = state['-Module-Status-'].replace(' ', '_')
     
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+    current_date = datetime.now()
+    date = current_date.isoformat().split('T')[0]
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/pedestal_run/*')
     runs.sort()
     fname = runs[ind]+'/pedestal_run0.root'
 
-    print(runs[ind])
+    #print(runs[ind])
 
     print(f" >> DBTools: Uploading pedestal run of {modulename} board from summary file {fname} into database")
 
@@ -115,7 +124,7 @@ def pedestal_upload(state, ind=-1):
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
     list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
 
-    print(count_bad_cells, list_dead_cells, list_noisy_cells)
+    print(' >> DBTools: count bad cells', count_bad_cells, 'list dead', list_dead_cells, 'list noisy', list_noisy_cells)
 
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
@@ -244,7 +253,11 @@ def other_test_upload(state, test_name, BV, ind=-1):
     now = datetime.now()
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{test_name}/run_*')
+
+    current_date = datetime.now()
+    date = current_date.isoformat().split('T')[0]
+    status = state['-Module-Status-'].replace(' ', '_')
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{test_name}/run_*')
     runs.sort()
     thisrun = runs[ind] # most recent run by default
 
@@ -284,11 +297,15 @@ def plots_upload(state, ind=-1):
     
     # define the path to the hexmap plots
     modulename = state['-Module-Serial-']
-    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{modulename}_run*_adc_mean.png')
+    current_date = datetime.now()
+    date = current_date.isoformat().split('T')[0]
+    status = state['-Module-Status-'].replace(' ', '_')
+
+    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_run*_adc_mean.png')
     hexinds = [ int(hexpaths[i].split('/')[-1].split('_')[1].split('n')[1]) for i in range(len(hexpaths)) ]
     hexinds.sort()
     thisind = hexinds[ind]
-    hexpath = f'{configuration["DataLoc"]}/{modulename}/{modulename}_run{thisind}'
+    hexpath = f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_run{thisind}'
     
     # if live, must modify with bias voltage and conditions
     fixpath = glob.glob(f'{hexpath}*.png')
@@ -309,7 +326,7 @@ def plots_upload(state, ind=-1):
                 hexstdd = f.read()
 
     # find pedestal run dir
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/pedestal_run/*')
     runs.sort()
     dname = runs[ind] # should always be the same run
 
@@ -351,7 +368,7 @@ def plots_upload(state, ind=-1):
                        'comment_plot_test': comment
                        }
 
-    print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
+    #print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
 
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()

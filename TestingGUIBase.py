@@ -333,12 +333,17 @@ while True:
     event, values = basewindow.read()
     basewindow.maximize() # Fullscreen
     print(event)
-    print(basewindow.TKroot.focus_get())
-    print('nped', basewindow['-N-Pedestals-'].widget.config())
-    print('modind', basewindow['-Module-Index-'].widget.config())
+    #print(basewindow.TKroot.focus_get())
+    #print('nped', basewindow['-N-Pedestals-'].widget.config())
+    #print('modind', basewindow['-Module-Index-'].widget.config())
+    #print(basewindow.TKroot.config())
+    #print(basewindow.TKroot.keys())
+    #print(basewindow.TKroot.attributes())
+    #print(basewindow.TKroot.winfo_ismapped())
     if event == '-Pedestal-Run-':
         basewindow['-N-Pedestals-'].widget.focus_set()
         basewindow['-N-Pedestals-'].widget.config(state='normal')
+        basewindow.refresh()
     #for key in ['q', 'w', 'e', 'r', 't','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m']:
     #    if keyboard.is_pressed(key):
     #        print(key)
@@ -652,6 +657,11 @@ while True:
         basewindow['Run Tests'].update(disabled=True)
 
         os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}')
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+        status = values["-Module-Status-"].replace(' ', '_')
+        #print(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
+        os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
         
         # Start by checking test stand services
         if current_state['-Hexactrl-Accessed-']:
@@ -818,7 +828,10 @@ while True:
         basewindow['Run Tests'].update(disabled=False)
 
         from InteractionGUI import waiting_window
-        wait = waiting_window(f'Plots located in {configuration["DataLoc"]}/{moduleserial}')
+        current_date = datetime.now()
+	date = current_date.isoformat().split('T')[0]
+	status = values["-Module-Status-"].replace(' ', '_')
+        wait = waiting_window(f'Plots located in {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
         time.sleep(2)
         wait.close()
         

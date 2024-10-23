@@ -7,6 +7,7 @@ from Keithley2410 import Keithley2410
 from time import sleep
 import os
 import traceback
+from datetime import datetime
 
 import yaml
 configuration = {}
@@ -530,7 +531,7 @@ def configure_test_stand(state, trenzhostname):
         pc = None
         sleep(5)
     else:
-        pc = CentosPC(trenzhostname, state['-Module-Serial-'], state['-Live-Module-']) # automatically starts daq client
+        pc = CentosPC(trenzhostname, state['-Module-Serial-'], state['-Module-Status-'], state['-Live-Module-']) # automatically starts daq client
     daq.close()
     update_state(state, '-DAQ-Client-', True, 'green')
     update_state(state, 'pc', pc)
@@ -687,7 +688,7 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-def take_IV_curve(state, step=20):
+def take_IV_curve(state, step=10):
     """
     Takes an IV curve automatically using the power supply object. The range is assumed to be 0-900V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
@@ -720,7 +721,7 @@ def take_IV_curve(state, step=20):
             except Exception:
                 print('  -- IV upload exception:', traceback.format_exc())
         else:
-            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+            iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()
     return 'CONT'
         
@@ -790,19 +791,24 @@ def plot_IV_curves(state):
         fig, ax = plt.subplots(figsize=(16, 12))
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
+            plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
         
+        status = state['-Module-Status-'].replace(' ', '_')
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
         ax.set_xlabel('Bias Voltage [V]')
-        ax.set_ylabel(r'Leakage Current [$\mu$A]')
-        ax.set_ylim(0.01, 100)
+        ax.set_ylabel(r'Leakage Current [A]')
+        ax.set_ylim(1e-9, 1e-03)
         ax.set_xlim(0, 900)
         ax.legend()
         os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
+        os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{status}_{date}')
 
         # dynamically name file to avoid overwriting plots
-        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
+        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{status}_{date}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
         filepath += '{}.png'
         end = '_0'
         thisend = int(end[1])
