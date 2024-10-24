@@ -125,7 +125,7 @@ def get_query_read(table_name, part_name = None):
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
         query = None
-        print('Table not found. Check argument.')
+        print('  >> PostgresTools: Table not found. Check argument.')
     return query
 
 async def fetch_PostgreSQL(table_name, part_name = None):

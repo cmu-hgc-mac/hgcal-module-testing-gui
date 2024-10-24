@@ -5,7 +5,6 @@ import subprocess
 import sys
 import glob
 from time import sleep
-from datetime import datetime
 import traceback
 
 import yaml
@@ -23,18 +22,19 @@ class CentosPC:
     and runs the testing scripts.
     """    
     
-    def __init__(self, trenzhostname, modulename, modulestatus, live=True):
+    def __init__(self, trenzhostname, state):
         """
         Constructor. Needs the IP address of the test stand and the module name. Also needs to know if this is a
         live module or if is a hexaboard. Object created and destroyed during every test session, so it will never
         need to change the module name or type. Density and shape are read from the module name and used to choose
         the correct configuration file.
         """
-        
+
         self.trenzhostname = trenzhostname
-        self.modulename = modulename
-        self.live = live
-        self.modulestatus = modulestatus.replace(' ', '_')
+        self.modulename = state['-Module-Serial-']
+        self.live = state['-Live-Module-']
+        #self.outdir = state['-Output-Subdir-']
+        
         self.initiated = False
         # start the DAQ client
         os.system('systemctl restart daq-client.service')
@@ -59,8 +59,8 @@ class CentosPC:
             self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
             self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
             
-        density = modulename.split('-')[1][1]
-        shape = modulename.split('-')[2][0]
+        density = self.modulename.split('-')[1][1]
+        shape = self.modulename.split('-')[2][0]
         
         # different module density/geometry need different config files
         if density == 'L':
@@ -84,6 +84,12 @@ class CentosPC:
                         'vrefinv_scan': 'vrefinv.yaml', 'vrefnoinv_scan': 'vrefnoinv.yaml',
                         'toa_vref_scan_noinj': 'toa_vref.yaml', 'toa_vref_scan': 'toa_vref.yaml',
                         'toa_trim_scan': 'trimmed_toa.yaml'}
+        
+    def init_outdir(self, outdir):
+        self.outdir = outdir
+        # a small hack to get test output to the right place
+        self.basedir = '/'.join(self.outdir.split('/')[0:-1])
+        self.dut = self.outdir.split('/')[-1]
         
     def restart_daq(self):
         """
@@ -145,13 +151,11 @@ class CentosPC:
 
         print(f' >> CentosPC: Running {scriptname}.py with config {config}...')
 
-        current_date = datetime.now()
-        date = current_date.isoformat().split('T')[0]
         if not self.initiated:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.modulename}/ -d {self.modulestatus}_{date} -I > /dev/null 2>&1')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1')
         else:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.modulename}/ -d {self.modulestatus}_{date} > /dev/null 2>&1')
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/{scriptname}/*')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1')
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.outdir}/{scriptname}/*')
             
         runs.sort()
         try:
@@ -211,9 +215,8 @@ class CentosPC:
         controlled manually with the ind argument. If the BV isn't None, it renames the title of the plot and the filename
         to include the BV.
         """
-        current_date = datetime.now()
-        date = current_date.isoformat().split('T')[0]
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/pedestal_run/*')
+
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.outdir}/pedestal_run/*')
         runs.sort() # needed because glob doesn't sort things in the order that `ls` does for some reason
 
         # use the last run by default but allow any                                             
@@ -223,10 +226,10 @@ class CentosPC:
         #    BV = runs.split('BV').rstrip('\n ')    
         label = f'{self.modulename}_run{labelind}' if tag is None else f'{self.modulename}_run{labelind}_{tag}'
 
-        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/', label=label)
-        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename}/{self.modulestatus}_{date} as {label}')
+        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.outdir}/', label=label)
+        print(f' >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{self.outdir} as {label}')
 
-        return f'{configuration["DataLoc"]}/{self.modulename}/{self.modulestatus}_{date}/{label}'
+        return f'{configuration["DataLoc"]}/{self.outdir}/{label}'
 
 def static_make_hexmaps(modulename, ind=-1, tag=None):
     """

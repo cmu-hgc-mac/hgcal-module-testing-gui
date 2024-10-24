@@ -531,7 +531,7 @@ def configure_test_stand(state, trenzhostname):
         pc = None
         sleep(5)
     else:
-        pc = CentosPC(trenzhostname, state['-Module-Serial-'], state['-Module-Status-'], state['-Live-Module-']) # automatically starts daq client
+        pc = CentosPC(trenzhostname, state) # automatically starts daq client
     daq.close()
     update_state(state, '-DAQ-Client-', True, 'green')
     update_state(state, 'pc', pc)
@@ -561,6 +561,10 @@ def run_pedestals(state, BV):
 
         pedestalpath = state['pc'].pedestal_run(BV=BV)
 
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrent()
+            state['-Leakage-Current-'] = current
+        
         # rename output directory with conditions of test
         trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
@@ -614,10 +618,15 @@ def trim_pedestals(state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
+            
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
+
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrent()
+            state['-Leakage-Current-'] = current
 
         if BV is None:
             state['-Pedestals-Trimmed-'] = True
@@ -639,6 +648,10 @@ def run_other_script(script, state, BV):
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
         state['pc']._run_script(script)
+
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrent()
+            state['-Leakage-Current-'] = current
         
         if configuration['HasLocalDB']:
             try:
@@ -793,9 +806,7 @@ def plot_IV_curves(state):
             data = datadict['data']
             plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
         
-        status = state['-Module-Status-'].replace(' ', '_')
-        current_date = datetime.now()
-        date = current_date.isoformat().split('T')[0]
+        outdir = state['-Output-Subdir-']
 
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
@@ -804,11 +815,9 @@ def plot_IV_curves(state):
         ax.set_ylim(1e-9, 1e-03)
         ax.set_xlim(0, 900)
         ax.legend()
-        os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
-        os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}/{status}_{date}')
 
         # dynamically name file to avoid overwriting plots
-        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{status}_{date}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
+        filepath = f'{configuration["DataLoc"]}/{outdir}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
         filepath += '{}.png'
         end = '_0'
         thisend = int(end[1])

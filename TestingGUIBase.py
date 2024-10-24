@@ -8,18 +8,12 @@ import time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
-#from pynput import keyboard
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
 then creates the GUI layout and then the GUI window. Once done, the script runs a loop which tracks and responds to the user's
 interaction with the layout.
 """
-
-#sg.show_debugger_window(
-#    location = (None, None),
-#)
-
 
 # Load configuration file
 configuration = {}
@@ -108,6 +102,7 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
                  'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
+             [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-', enable_events=True), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-', enable_events=True)],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
@@ -151,7 +146,8 @@ rightcol = sg.Frame('', [[sg.Frame('Select Tests', testsetup)], [sg.Button("End 
 
 layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)],
           [sg.Text("Carnegie Mellon University", text_color=cmured, font=('Arial', 20))],
-          [leftcol, rightcol],
+          [leftcol, sg.Push(), rightcol],
+          [sg.Push(), sg.Button("Grade Module")],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
           [sg.Frame('Status Bar', statusbar)]]
 
@@ -187,7 +183,7 @@ def disable_module_setup():
 def toggle_ts_tests(enabled):
     keys = ['-Pedestal-Run-', '-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', 
             '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', 'Restart Services', '-Trim-Pedestals-', '-Bias-Voltage-PedTrim-', '-Other-Script-', 
-            '-Bias-Voltage-Other-']
+            '-Bias-Voltage-Other-', '-Standard-Test-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
 
@@ -212,7 +208,7 @@ def disable_iv_tests():
 
 # Function to clear the values of the tests in the Select Tests section
 def clear_tests():
-    for key in ['-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
+    for key in ['-Standard-Test-', '-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
         basewindow[key].update(False)
     for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
 6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
@@ -304,26 +300,6 @@ basewindow['End Session'].update(disabled=True)
 clear_tests()
 clear_setup()
 
-#def on_press(key):
-#    try:
-#        print('alphanumeric key {0} pressed'.format(
-#            key.char))
-#    except AttributeError:
-#        print('special key {0} pressed'.format(
-#            key))
-#
-#def on_release(key):
-#    print('{0} released'.format(
-#        key))
-#    if key == keyboard.Key.esc:
-#        # Stop listener
-#        return False
-#
-#listener = keyboard.Listener(
-#    on_press=on_press,
-#    on_release=on_release)
-#listener.start()
-
 # Main window loop
 while True:
 
@@ -332,23 +308,7 @@ while True:
     
     event, values = basewindow.read()
     basewindow.maximize() # Fullscreen
-    print(event)
-    #print(basewindow.TKroot.focus_get())
-    #print('nped', basewindow['-N-Pedestals-'].widget.config())
-    #print('modind', basewindow['-Module-Index-'].widget.config())
-    #print(basewindow.TKroot.config())
-    #print(basewindow.TKroot.keys())
-    #print(basewindow.TKroot.attributes())
-    #print(basewindow.TKroot.winfo_ismapped())
-    if event == '-Pedestal-Run-':
-        basewindow['-N-Pedestals-'].widget.focus_set()
-        basewindow['-N-Pedestals-'].widget.config(state='normal')
-        basewindow.refresh()
-    #for key in ['q', 'w', 'e', 'r', 't','y','u','i','o','p','a','s','d','f','g','h','j','k','l','z','x','c','v','b','n','m']:
-    #    if keyboard.is_pressed(key):
-    #        print(key)
-
-    
+   
     SetLED(basewindow, '-Debug-Mode-', 'green' if values['-DEBUG-MODE-'] else 'red')
     DEBUG_MODE = values['-DEBUG-MODE-']        
 
@@ -518,7 +478,7 @@ while True:
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
 
-    # Only usign DCDC if LD Full
+    # Only using DCDC if LD Full
     if majortype[1] != 'L' or minortype[0] != 'F':
         basewindow['-DCDC-Connected-Txt-'].update("LV Cables Connected")
         basewindow['-DCDC-Powered-Txt-'].update("LV Output Powered")
@@ -557,6 +517,11 @@ while True:
 
         # If live module or hexaboard isn't selected, skip
         if not values['-IsLive-'] and not values['-IsHB-']:
+            show_string("Invalid Setup")
+            continue
+
+        # If no module status, skip
+        if modulestatus == '':
             show_string("Invalid Setup")
             continue
             
@@ -614,6 +579,11 @@ while True:
 
     # Only perform tests that involve the power supply and do not use the Trenz
     if event == 'Only IV Test':
+
+        # If no module status, skip
+        if modulestatus == '':
+            show_string("Invalid Setup")
+            continue
         
         # If module serial isn't defined well, skip
         if values['-IsHB-']:
@@ -667,7 +637,7 @@ while True:
         enable_module_setup()
 
         # if controlling box air automatically, turn off
-        if configuration['HasRHSensor']:
+        if configuration['HasRHSensor'] and not current_state['-Debug-Mode-']:
             from AirControl import AirControl
             ac = AirControl()
             ac.set_air_off()
@@ -676,13 +646,49 @@ while True:
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
 
+        
         os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}')
         current_date = datetime.now()
         date = current_date.isoformat().split('T')[0]
         status = values["-Module-Status-"].replace(' ', '_')
-        #print(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
         os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
-        
+
+        # ask user to tag this test
+        layout1 = [[sg.Text('Enter label for these tests:', font=('Arial', 30))],
+                   [sg.Text(f'Using no label puts test output directly in:', font=('Arial', 15))],
+                   [sg.Text(f'{configuration["DataLoc"]}/{moduleserial}/{status}_{date}', font=('Arial', 15))],
+                   [sg.Input(s=20, key='-Test-Tag-')],
+                   [sg.Button('Enter')]]
+        window1 = sg.Window(f"Module Test: Enter Test Tag", layout1, margins=(200,100))
+
+        tag = ''
+        while True:
+            event1, values1 = window1.read()
+            if event1 == 'Enter' or event1 == sg.WIN_CLOSED:
+                if values1 is not None:
+                    if '-Test-Tag-' not in values1.keys():
+                        tag = ''
+                        break
+                    else:
+                        tag = values1['-Test-Tag-'].rstrip()
+                        break
+                else:
+                    tag = ''
+                    break
+                    
+        window1.close()
+
+        tag = tag.replace(' ', '_')
+        if tag != '':
+            current_state['-Output-Subdir-'] = f'{moduleserial}/{status}_{date}/{tag}'
+            os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}/{tag}')
+        else:
+            current_state['-Output-Subdir-'] = f'{moduleserial}/{status}_{date}'
+        print(f' >> TestingGUIBase: will send test output to {current_state["-Output-Subdir-"]}')
+        if 'pc' in current_state.keys():
+            if current_state['pc'] is not None:
+                current_state['pc'].init_outdir(current_state['-Output-Subdir-'])
+                
         # Start by checking test stand services
         if current_state['-Hexactrl-Accessed-']:
             check_services(current_state)
@@ -782,7 +788,7 @@ while True:
                 thiswait = values[f'-DryIV-Wait-Time-{iV+1}-']
 
                 if thiswait == '':
-                    time_to_wait = 15. if not DEBUG_MODE else 0.5
+                    time_to_wait = 15. if not current_state['-Debug-Mode-'] else 0.5
                 elif thiswait == '0':
                     time_to_wait = 0.01
                 else:
@@ -790,7 +796,7 @@ while True:
                 final_dry_time = 60*(time_to_wait)
 
                 # open dry air valve manually or automatically
-                if not configuration['HasRHSensor']:
+                if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
                     from InteractionGUI import do_something_window
                     do_something_window('Open dry air valve', 'Open')
                 else:
@@ -848,10 +854,8 @@ while True:
         basewindow['Run Tests'].update(disabled=False)
 
         from InteractionGUI import waiting_window
-        current_date = datetime.now()
-	date = current_date.isoformat().split('T')[0]
-	status = values["-Module-Status-"].replace(' ', '_')
-        wait = waiting_window(f'Plots located in {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
+        outdir = current_state['-Output-Subdir-']
+        wait = waiting_window(f'Output located in {configuration["DataLoc"]}/{outdir}')
         time.sleep(2)
         wait.close()
         

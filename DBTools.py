@@ -38,16 +38,11 @@ def iv_save(datadict, state):
     """
 
     modulename = state['-Module-Serial-']
-    current_date = datetime.now()
-    date = current_date.isoformat().split('T')[0]
-    status = state['-Module-Status-'].replace(' ', '_')
-    
-    os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}')
-    os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}/{status}_{date}')
-    with open(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+    outdir = state['-Output-Subdir-']
+    with open(f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -74,15 +69,11 @@ def pedestal_upload(state, ind=-1):
     """
     
     modulename = state['-Module-Serial-']
-    status = state['-Module-Status-'].replace(' ', '_')
-    
-    current_date = datetime.now()
-    date = current_date.isoformat().split('T')[0]
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/pedestal_run/*')
+
+    outdir = state['-Output-Subdir-']
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/pedestal_run/*')
     runs.sort()
     fname = runs[ind]+'/pedestal_run0.root'
-
-    #print(runs[ind])
 
     print(f" >> DBTools: Uploading pedestal run of {modulename} board from summary file {fname} into database")
 
@@ -173,18 +164,23 @@ def pedestal_upload(state, ind=-1):
     
     # if live module, add the bias voltage to the row list
     if 'BV' in runs[ind] and '320-M' in modulename:
-        BV = int(runs[ind].split('_')[4].split('BV')[1].rstrip('\n '))
+        segments = runs[ind].split('_')
+        for seg in segments:
+            if 'BV' in seg:
+                BV = int(seg.split('BV')[1].rstrip('\n '))
         db_upload_ped['bias_vol'] = BV
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
+        if '-Leakage-Current-' in state.keys(): # add measured leakage current
+            db_upload_ped['meas_leakage_current'] = state['-Leakage-Current-']
     elif '320-M' in modulename:
         BV = -1
         db_upload_ped['bias_vol'] = BV
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
     else:
         pass
-
+    
     table = 'module_pedestal_test' if ('320-M' in modulename) else 'hxb_pedestal_test'
-
+    
     # upload
     coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
     loop = asyncio.get_event_loop()
@@ -209,7 +205,7 @@ def iv_upload(datadict, state):
     print(f" >> DBTools: Uploading (and saving) iv curve of {modulename}")
     
     # save iv as pkl file
-    iv_save(datadict, modulename)
+    iv_save(datadict, state)
     
     #### XYZ what should be commented?
     #### XYZ status? etc.
@@ -253,11 +249,8 @@ def other_test_upload(state, test_name, BV, ind=-1):
     now = datetime.now()
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
-
-    current_date = datetime.now()
-    date = current_date.isoformat().split('T')[0]
-    status = state['-Module-Status-'].replace(' ', '_')
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{test_name}/run_*')
+    outdir = state['-Output-Subdir-']
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{test_name}/run_*')
     runs.sort()
     thisrun = runs[ind] # most recent run by default
 
@@ -279,7 +272,11 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'other_test_name': test_name,
                        'other_test_output': tarfile 
                    }
-    
+
+    if '320-M' in modulename:
+        if '-Leakage-Current-' in state.keys(): # add measured leakage current
+            db_upload_other['meas_leakage_current'] = state['-Leakage-Current-']
+
     # upload
     coro = upload_PostgreSQL(table_name = 'mod_hxb_other_test', db_upload_data = db_upload_other)
     loop = asyncio.get_event_loop()
@@ -297,15 +294,12 @@ def plots_upload(state, ind=-1):
     
     # define the path to the hexmap plots
     modulename = state['-Module-Serial-']
-    current_date = datetime.now()
-    date = current_date.isoformat().split('T')[0]
-    status = state['-Module-Status-'].replace(' ', '_')
-
-    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_run*_adc_mean.png')
+    outdir = state['-Output-Subdir-']
+    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{modulename}_run*_adc_mean.png')
     hexinds = [ int(hexpaths[i].split('/')[-1].split('_')[1].split('n')[1]) for i in range(len(hexpaths)) ]
     hexinds.sort()
     thisind = hexinds[ind]
-    hexpath = f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/{modulename}_run{thisind}'
+    hexpath = f'{configuration["DataLoc"]}/{outdir}/{modulename}_run{thisind}'
     
     # if live, must modify with bias voltage and conditions
     fixpath = glob.glob(f'{hexpath}*.png')
@@ -326,7 +320,7 @@ def plots_upload(state, ind=-1):
                 hexstdd = f.read()
 
     # find pedestal run dir
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{status}_{date}/pedestal_run/*')
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/pedestal_run/*')
     runs.sort()
     dname = runs[ind] # should always be the same run
 
