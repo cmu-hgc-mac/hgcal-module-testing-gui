@@ -409,7 +409,7 @@ class Keithley2410:
             
         measurement = self._query("READ?", 0.)
         meascurr = float(self._parse_data(measurement)[0]['current'])
-       return '', meascurr, ''
+        return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.

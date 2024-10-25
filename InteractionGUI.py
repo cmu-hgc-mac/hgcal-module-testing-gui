@@ -830,3 +830,27 @@ def plot_IV_curves(state):
         plt.close(fig)
         os.system(f'gio open {filepath.format(end)}')
 
+def grade_module_window(moduleserial, qc_summary):
+
+    # no assembly grades at the moment
+    layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
+              [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 45))],
+              [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
+              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {qc_summary["list_cells_grounded"]}')],
+              [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
+              [sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
+              [sg.Text('Enter comments:')],
+              [sg.Multiline(size=(60, 5), key='comments')],
+              [sg.Button('Enter')]]
+    window = sg.Window(f"Grade Module {moduleserial}", layout, margins=(200,100))
+
+    comment = ''
+    while True:
+        event, values = window.read()
+        if event == 'Enter' or event == sg.WIN_CLOSED:
+            comment = values['comments']
+            break
+
+    window.close()
+    qc_summary['comments_all'] = comment
+    return qc_summary

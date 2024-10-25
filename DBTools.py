@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(1, '../')
 import PySimpleGUI as sg
 import numpy as np
 import traceback
@@ -8,7 +10,7 @@ from argparse import ArgumentParser
 from datetime import datetime 
 import os
 #import psycopg2
-from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL
+from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL
 import pandas as pd
 import glob
 import asyncio
@@ -18,6 +20,7 @@ from datetime import datetime
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
+from functools import reduce
 
 import yaml
 configuration = {}
@@ -61,7 +64,47 @@ def read_table(tablename, printall=False):
         for r in result:
             print(r)
    
+def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
+    """
+    Reads module_pedestal_test in the local database and returns the most recent test with the requested
+    module serial number, bias voltage, and trimming conditions
+    """
 
+    coro = fetch_serial_PostgreSQL('module_pedestal_test', moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    
+    for r in result:
+        #print(r['bias_vol'], r['trim_bias_voltage'], r['status_desc'], r['date_test'], r['time_test'])
+        if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
+            runs.append(r)
+
+    return runs        
+        
+def fetch_iv(moduleserial, modulestatus, dry=True, roomtemp=True):
+    """
+    Reads module_iv_test or hxb_pedestal_test in the local database and returns the most recent test with the requested
+    module serial number, bias voltage, and trimming conditions
+    """
+
+    coro = fetch_serial_PostgreSQL('module_iv_test', moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    
+    for r in result:
+        RH = float(r['rel_hum'])
+        T = float(r['temp_c'])
+        req1 = (RH < 8) if dry else (RH > 20)
+        req2 = (T > 10 and T < 30) if roomtemp else (T < -20)
+        if req1 and req2 and r['status_desc'] == modulestatus:
+            runs.append(r)
+
+    return runs        
+        
 def pedestal_upload(state, ind=-1):
     """
     Uploads the resultant data of a pedestal_run to the local database. The module serial and other information is read from the state dict. Unless
@@ -372,6 +415,149 @@ def plots_upload(state, ind=-1):
     
     read_table('module_pedestal_plots')
 
+def fetch_front_wirebond(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('front_wirebond', moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def fetch_module_inspect(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('module_inspect', moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def fetch_proto_inspect(moduleserial):
+
+    moduleserial.replace('M', 'P', 1) # protomodule serial number
+    
+    coro = fetch_serial_PostgreSQL('proto_inspect', moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def readout_info(moduleserial):
+
+    lowBVruns = fetch_pedestal(moduleserial, 10, 250, 'Frontside Encapsulated')
+    midBVruns = fetch_pedestal(moduleserial, 250, 250, 'Frontside Encapsulated')
+    highBVruns = fetch_pedestal(moduleserial, 800, 250, 'Frontside Encapsulated')
+
+    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
+        return None
+    
+    badcell = set()
+    
+    # check unbonded channels
+    unbondedrun = lowBVruns[-1]
+    noise = np.array(unbondedrun['adc_stdd'])
+    cellid = np.array(unbondedrun['cell'])
+    celltype = np.array(unbondedrun['channeltype'])
+    norm_mask = (celltype == 0) & (cellid > 0)
+    nc_mask = (celltype == 0) & (cellid < 0)
+    calib_mask = celltype == 1
+    print(noise[calib_mask], noise[nc_mask])
+    med_nc = np.median(noise[nc_mask])
+    uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
+    unconcells = cellid[norm_mask][uncon]
+    for cell in unconcells:
+        badcell.add(cell)
+    
+    # check dead channels
+    ldeadcells = []
+    for run in midBVruns:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        zeros = noise == 0
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        deadcell = cellid[zeros & (norm_mask | calib_mask)]
+        ldeadcells.append(deadcell)
+    # Find intersection
+    deadcells = reduce(np.intersect1d, ldeadcells)
+    for cell in deadcells:
+        badcell.add(cell)
+    
+    # check noisy channels
+    lnoisycells = []
+    for run in highBVruns:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        med_norm = np.median(noise[norm_mask])
+        mean_norm = np.mean(noise[norm_mask])
+        std_norm = np.std(noise[norm_mask])
+        noisy_limit = 2
+        # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+        noisycell = cellid[norm_mask | calib_mask][(noise[norm_mask | calib_mask] - med_norm) > noisy_limit]
+        lnoisycells.append(noisycell)
+    noisycells = reduce(np.union1d, lnoisycells)
+    for cell in noisycells:
+        badcell.add(cell)
+
+    frontwirebond = fetch_front_wirebond(moduleserial)[-1]
+    groundedcells = np.array(frontwirebond['list_grounded_cells'])
+    for cell in groundedcells:
+        badcell.add(cell)
+
+    #print(unconcells, deadcells, noisycells, groundedcells, badcell)
+    badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
+    return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
+
+def iv_info(moduleserial):
+
+    ivcurve = fetch_iv(moduleserial, 'Frontside Encapsulated', dry=True, roomtemp=True)
+    if len(ivcurve) < 1:
+        return None
+    ivcurve = ivcurve[-1]
+    v = np.array(ivcurve['program_v'])
+    i = np.array(ivcurve['meas_i'])
+    i_600v = i[v == 600]
+    i_850v = i[v == 850]
+
+    return i_600v[0], i_850v[0]
+
+def assembly_info(moduleserial):
+
+    moduleins = fetch_module_inspect(moduleserial)
+    protoins = fetch_proto_inspect(moduleserial)
+
+    print(len(moduleins), len(protoins))
+    if len(moduleins) < 1 or len(protoins) < 1:
+        return None
+
+    return protoins['thickness'], protoins['flatness'], protoins['x_offset_mu'], protoins['y_offset_mu'], protoins['ang_offset_deg'], moduleins['thickness'], moduleins['flatness'], moduleins['x_offset_mu'], moduleins['y_offset_mu'], moduleins['ang_offset_deg']
+
+def summary_upload(moduleserial, qc_summary):
+
+    coro = upload_PostgreSQL(table_name = 'module_qc_summary', db_upload_data = qc_summary)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded to qc summary table for {moduleserial}")
+    read_table('module_qc_summary')
+    
 def add_RH_T(state, force=False):
     """
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
@@ -428,3 +614,4 @@ def add_RH_T(state, force=False):
     # if no update, return state values
     else:
         return state['-Box-RH-'], state['-Box-T-']
+

@@ -20,7 +20,7 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
-from DBTools import add_RH_T
+from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
     
 # Create theme
 lgfont = ('Arial', 40)
@@ -701,7 +701,7 @@ while True:
 
         # If running an electrical test, re-check just to make sure
         #if values['-Pedestal-Scan-'] or values['-Vref-Scan-'] or values['-Pedestal-Run-']:
-        if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-']:
+        if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-'] or values['-Standard-Test-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
                 basewindow['Run Tests'].update(disabled=False)
                 show_string("Error in Statuses", field="Right")
@@ -711,6 +711,32 @@ while True:
         # values also modified at the start of an IV curve
         RH, Temp = add_RH_T(current_state)
 
+        # Standard test sequence links together lots of tests
+        if values['-Standard-Test-']:
+
+            # trim and take pedestals
+            trim_pedestals(current_state, 250)
+            multi_run_pedestals(current_state, [10, 250, 250, 250, 250, 250, 800, 800])
+
+            # take ambient IV curve, because why not
+            take_IV_curve(current_state)
+            plot_IV_curves(current_state)
+            
+            # open dry air valve manually or automatically                                                                                                                                              
+            if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
+                from InteractionGUI import do_something_window
+                do_something_window('Open dry air valve', 'Open')
+            else:
+                from AirControl import AirControl
+                ac = AirControl()
+                ac.set_air_on()
+                ac.set_air_on()
+
+            # sleep 20min and then take dry IV
+            time.sleep(20*60)
+            take_IV_curve(current_state)
+            plot_IV_curves(current_state)
+            
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -846,7 +872,7 @@ while True:
         # Reset test values
         clear_tests()
 
-        # Turn of HV output if live module
+        # Turn off HV output if live module
         if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
@@ -864,6 +890,96 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
+    if event == 'Grade Module':
+        if '320-X' in moduleserial:
+            show_string("Can't grade hexaboard", field='Right')
+            continue
+        elif '320-M' not in moduleserial:
+            show_string("Improper module serial", field='Right')
+            continue
+
+        try:
+            unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
+            i_600v, i_850v = iv_info(moduleserial)
+            #pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+        except TypeError:
+            show_string("Tests not complete", field='Right')
+            continue
+
+        # four individual grades
+        # last updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
+        if i_600v < 1e-4 and i_850v / i_600v < 2.5:
+            iv_grade = 'A'
+        elif i_600v < 2e-4 and i_850v / i_600v < 5:
+            iv_grade = 'B'
+        else:
+            iv_grade = 'C'
+
+        if badfrac < 0.02:
+            readout_grade = 'A'
+        elif badfrac < 0.05:
+            readout_grade = 'B'
+        else:
+            readout_grade = 'C'
+
+        #if pxoffset < 50 and pyoffset < 50 and pangoffset < 0.02:
+        #    proto_grade = 'A'
+        #elif pxoffset < 100 and pyoffset < 100 and pangoffset < 0.05:
+        #    proto_grade = 'B'
+        #else:
+        #    proto_grade = 'C'
+        #
+        #if mxoffset < 50 and myoffset < 50 and mangoffset < 0.02:
+        #    module_grade = 'A'
+        #elif mxoffset < 100 and myoffset < 100 and mangoffset < 0.05:
+        #    module_grade = 'B'
+        #else:
+        #    module_grade = 'C'
+
+        # determine overall grade = minimum indiv grade
+        grade_list = [iv_grade, readout_grade]#, proto_grade, module_grade]
+        if grade_list.count('A') == 2:
+            final_grade = 'A'
+        elif grade_list.count('C') == 0:
+            final_grade = 'B'
+        else:
+            final_grade = 'C'
+
+        print(grade_list, final_grade)
+
+        # pop-up window to show grade and display plots
+        # just show grade for now
+        
+        qc_summary = {'module_name': moduleserial,
+                      'final_grade': final_grade,
+                      #'comments_all': comments,
+                      #'proto_flatness': pflatness,
+                      #'proto_thickness': pthickness,
+                      #'proto_x_offset': pxoffset,
+                      #'proto_y_offset': pyoffset,
+                      #'proto_ang_offset': pangoffset,
+                      #'proto_grade': proto_grade,
+                      #'module_flatness': mthickness,
+                      #'module_thickness': mflatness,
+                      #'module_x_offset': mxoffset,
+                      #'module_y_offset': myoffset,
+                      #'module_ang_offset': mangoffset,
+                      #'module_grade': module_grade,
+                      'list_cells_unbonded': unconcells,
+                      'list_cells_grounded': groundedcells,
+                      'count_bad_cells': len(badcell),
+                      'list_noisy_cells': noisycells,
+                      'list_dead_cells': deadcells,
+                      'readout_grade': readout_grade,
+                      'i_at_600v': i_600v,
+                      'i_ratio_850v_600v': i_850v/i_600v,
+                      'iv_grade': iv_grade,
+                      }
+        
+        print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')
+        qc_summary = grade_module_window(moduleserial, qc_summary)
+        #summary_upload(moduleserial, qc_summary)
+        
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
     # or press the 'Close GUI' button.
     if event == sg.WIN_CLOSED:
