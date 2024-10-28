@@ -49,6 +49,7 @@ Lastly, create a configuration file with `writeconfig.py`. Open the python scrip
 * `MACSerial`: two-letter code for modules made by the MAC
 * `DataLoc`: path to where you want test results to be stored
 * `HVResource`: VISA resource name of the high voltage power supply found above
+* `HVDiscoveryMode`: way to use the `HVResource` above. If set to `by-resource`, the GUI will take the `HVResource` string and feed it into `pyvisa` directly. If instead you set it to `by-id`, your string for `HVResource` is instead the symlink shown by `ls -l /dev/serial/by-id`. This mode always ensures the Keithley is found, as the resource string can change if you unplug and re-plug the Keithley usb cable.
 * `HVTerminal`: `'Front'` for front terminals, `'Rear'` for rear terminals
 * `HVWiresPolarization`: `'Reverse'` for reverse bias (V in [0, 800]); `'Forward'` for forward bias (V in [-800, 0])
 * `PCKeyLoc`: location of the private key you made above
