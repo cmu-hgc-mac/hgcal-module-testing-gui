@@ -170,25 +170,25 @@ class TrenzTestStand:
                 error_check = False
 
         check1 = False
-        check2 = False
-        i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
-                           '[I2C] Board identification: V3 LD Semi or Half HB',
-                           '[I2C] Board identification: V3 HD Full HB',
-                           'Identify a board with HGCROC Siv3',
-                           'Identify a board with HGCROC Siv3b']
+        #check2 = False
+        #i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
+        #                   '[I2C] Board identification: V3 LD Semi or Half HB',
+        #                   '[I2C] Board identification: V3 HD Full HB',
+        #                   'Identify a board with HGCROC Siv3',
+        #                   'Identify a board with HGCROC Siv3b']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 check1 = True
+            
+            #for il in i2cstatus_lines:
+            #    if il in line:
+            #        check2 = True
 
-            for il in i2cstatus_lines:
-                if il in line:
-                    check2 = True
-
-        if check1 and check2:
+        if check1:# and check2:
             board_discovered = True
         if board_discovered:
-            print(' >> TrenzTestStand: Identified LD Full Hexaboard')
+            print(' >> TrenzTestStand: Identified Hexaboard')
 
         if board_discovered and daq_initiated and error_check:
             self.services = True
