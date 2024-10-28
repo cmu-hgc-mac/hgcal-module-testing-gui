@@ -1,5 +1,7 @@
 import sys
-sys.path.insert(1, '../')
+import subprocess
+homedir = subprocess.getoutput("echo $HOME").split('\n')[0]
+sys.path.insert(1, homedir)
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
@@ -898,6 +900,10 @@ while True:
             show_string("Improper module serial", field='Right')
             continue
 
+        if not configuration['HasLocalDB']:
+            show_string("Grading requires local db", field='Right')
+            continue
+        
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             i_600v, i_850v = iv_info(moduleserial)

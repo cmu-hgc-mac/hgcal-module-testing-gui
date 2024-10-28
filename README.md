@@ -5,14 +5,22 @@ A GUI for HGCAL hexaboard and silicon module testing
 We have been using detailed procedures for module testing, and though these do work, I found it was very easy for people new to the system to skip steps and make mistakes. Additionally, it seemed that a large portion of the test sequence can be automated. A GUI would greatly simplify training, force users to follow the correct steps in the correct order, and hide the parts of the sequence that require special skills (i.e. bash) behind automation. Also, this GUI is integrated with the database and may soon serve as the starting point for the multimodule testing GUI.
 
 ## Installing the GUI
-The GUI can be installed by simply cloning this repository. You will also need to  install `PySimpleGUI` (and let's preemptively install `psycopg2` and `asyncpg` as well):
+The GUI can be installed by simply cloning this repository. You will also need to  install a bunch of python packages:
 ```
-pip3 install PySimpleGUI psycopg2 asyncpg
+pip3 install psycopg2 asyncpg paramiko pyyaml pandas matplotlib uproot pyvisa pyvisa-py serial pyserial
 git clone https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui.git
 cd hgcal-module-testing-gui
 ```
+Unfortunately, PySimpleGUI has switched to a subscription model, so to avoid that, let's clone an older version and then use that.
+```
+pip3 uninstall PySimpleGUI
+cd
+git clone https://github.com/andor-pierdelacabeza/PySimpleGUI-4-foss
+mv PySimpleGUI-4-foss PySimpleGUI
+```
+The above clones it to the home directory. If for some reason you don't want it there, you'll have to change the first few lines of `TestingGUIBase.py` to reflect that.
 
-Also, if you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
+If you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
 ```
 ssh-keygen # follow the prompts, no need to enter a password or use a name other than the default
 ssh-copy-id -i ~/.ssh/id_rsa root@[TrenzFPGAHostname]
@@ -24,17 +32,19 @@ import pyvisa
 rm = pyvisa.ResourceManager()
 rm.list_resources()
 ```
-In some cases, it is needed to add the argument `'@py'` to the `ResourceManager()` intialization. Ignore the `'ASRL1::INSTR'` and `'ASRL2::INSTR'` resources. The resource name for the RS232 includes `USB0::INSTR`; look for something similar. If you are using GPIB, the resource name will include `GPIB`. To confirm it is correct, you can run from the same python shell:
+In some cases, it is needed to add the argument `'@py'` to the `ResourceManager()` intialization. Ignore the `'ASRL1::INSTR'` and `'ASRL2::INSTR'` resources. The resource name for our RS232 includes `USB0::INSTR`; look for something similar. If you are using GPIB, the resource name will include `GPIB`. To confirm it is correct, you can run from the same python shell:
 ```
 my_instrument = rm.open_resource('ASRL/dev/ttyUSB0::INSTR')
 print(my_instrument.query('*IDN?'))
 ```
-The power supply's make and model should be printed if you have found the correct string. If you at some time change which port the power supply is plugged into, this string may change.
+The power supply's make and model should be printed if you have found the correct string. This string will be used in your configuration file as the field `HVResource`. If you at some time change which port the power supply is plugged into, this string may change. If this isn't a problem, continue. If you prefer to avoid this, run `ls -l /dev/serial/by-id` and choose the link for the `ttyUSB` string you just found. This will not change when the usb cable is unplugged, and you can use that string instead for `HVResource` if you also set `HVDiscoveryMode` to `by-id` in the configuration file.
+
 
 Lastly, create a configuration file with `writeconfig.py`. Open the python script in a text editor and change the values in the dictionary:
 * `DebugMode`: initial value of the GUI's Debug Mode; keep this true for now!
 * `DefaultFontSize`: font of the GUI; matters depending on the resolution of your monitor: if the monitor is 1920x1080, 15 is good
 * `TestingPCOpSys`: operating system of the testing PC: 'Centos7' or 'Alma9'
+* `HexactrlSWBranch`: branch of `hexactrl-sw` you use. Should be `ROCv3` for everyone, but if you are using the `feature-alma9` branch instead, set this to `feature-alma9`
 * `TrenzHostname`: list of the hostnames of your Trenz FPGAs
 * `MACSerial`: two-letter code for modules made by the MAC
 * `DataLoc`: path to where you want test results to be stored
@@ -43,7 +53,7 @@ Lastly, create a configuration file with `writeconfig.py`. Open the python scrip
 * `HVWiresPolarization`: `'Reverse'` for reverse bias (V in [0, 800]); `'Forward'` for forward bias (V in [-800, 0])
 * `PCKeyLoc`: location of the private key you made above
 * `HasHVSwitch`: true if you have a switch on the dark box which can automatically detect if the box is closed; false otherwise
-* `HasRHSensor`: true if you have the ability to automatically read the relative humidity in the box; false otherwise
+* `HasRHSensor`: true if you have the ability to automatically read the relative humidity and temperature in the box; false otherwise
 * `Inspectors`: list CERN usernames of people who may use the GUI
 * `HasLocalDB`: boolean if MAC uses a local database
 * `DBHostname`, `DBDatabase`, `DBUsername`. `DBPassword`: Fields for local database connection (only needed if `HasLocalDB = True`)
@@ -87,7 +97,7 @@ The `DBTools.py` and `PostgresTools.py` scripts contain functions used to upload
 
 The `AirControl.py` class is used to control the dry air valve and automatically read the relative humidity and temperature inside the dark box. This setup is likely quite specific to CMU. If the configuration file sets `HasRHSensor = False` this will be ignored. Feel free to re-implement this class partially or entirely if you have these capabilities but must use them in a different way. Note however that changes to this class will be overwritten by gitlab.
 
-If your test system is different and you have capability that the CMU MAC does not, you will have to add interaction steps to perform them and/or sections of the GUI that controls them. Features that you may want to implement that are not currently implemented include thermal control of the test box and vacuum hold-down of the module. Additionally, you may desire to do things in a different order or add tests that are currently not implemented. 
+If your test system is different and you have capability that the CMU MAC does not, you will have to add interaction steps to perform them and/or sections of the GUI that controls them. Features that you may want to implement that are not currently implemented include thermal control of the test box and vacuum hold-down of the module. Additionally, you may desire to do things in a different order or add tests that are currently not implemented. I am happy to support these requests as possible.
 
 
 
