@@ -804,7 +804,7 @@ def plot_IV_curves(state):
         fig, ax = plt.subplots(figsize=(16, 12))
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
+            plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}% RH; {datadict['Temp']}ºC")
         
         outdir = state['-Output-Subdir-']
 

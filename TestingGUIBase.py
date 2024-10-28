@@ -1,7 +1,4 @@
 import sys
-import subprocess
-homedir = subprocess.getoutput("echo $HOME").split('\n')[0]
-sys.path.insert(1, homedir)
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
@@ -716,9 +713,15 @@ while True:
         # Standard test sequence links together lots of tests
         if values['-Standard-Test-']:
 
+            # only for live modules
+            if not values['-IsLive-']:
+                basewindow['Run Tests'].update(disabled=False)
+                show_string("Invalid for hexaboards", field="Right")
+                continue
+            
             # trim and take pedestals
-            trim_pedestals(current_state, 250)
-            multi_run_pedestals(current_state, [10, 250, 250, 250, 250, 250, 800, 800])
+            trim_pedestals(current_state, 300)
+            multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
             # take ambient IV curve, because why not
             take_IV_curve(current_state)
@@ -811,6 +814,16 @@ while True:
         # Now allowing multiple sequential dry curves
         if values['-Dry-IV-']:
 
+            # open dry air valve manually or automatically
+            if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
+                from InteractionGUI import do_something_window
+                do_something_window('Open dry air valve', 'Open')
+            else:
+                from AirControl import AirControl
+                ac = AirControl()
+                ac.set_air_on()
+                ac.set_air_on()
+                            
             for iV in range(int(values['-N-Dry-IV-'])):
 
                 thiswait = values[f'-DryIV-Wait-Time-{iV+1}-']
@@ -823,16 +836,6 @@ while True:
                     time_to_wait = float(thiswait)
                 final_dry_time = 60*(time_to_wait)
 
-                # open dry air valve manually or automatically
-                if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
-                    from InteractionGUI import do_something_window
-                    do_something_window('Open dry air valve', 'Open')
-                else:
-                    from AirControl import AirControl
-                    ac = AirControl()
-                    ac.set_air_on()
-                    ac.set_air_on()
-                            
                 time.sleep(1)
                 
                 drytime = time.time()

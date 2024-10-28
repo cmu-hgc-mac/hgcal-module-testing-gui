@@ -58,6 +58,10 @@ class CentosPC:
         elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'ROCv3'):
             self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
             self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+        # make sure above files exist
+        assert os.path.isfile(f'{self.env}')
+        assert os.path.isfile(f'{self.scriptloc}pedestal_run.py')
             
         density = self.modulename.split('-')[1][1]
         shape = self.modulename.split('-')[2][0]

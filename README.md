@@ -7,18 +7,16 @@ We have been using detailed procedures for module testing, and though these do w
 ## Installing the GUI
 The GUI can be installed by simply cloning this repository. You will also need to  install a bunch of python packages:
 ```
+sudo yum install python3-tkinter
 pip3 install psycopg2 asyncpg paramiko pyyaml pandas matplotlib uproot pyvisa pyvisa-py serial pyserial
 git clone https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui.git
 cd hgcal-module-testing-gui
 ```
-Unfortunately, PySimpleGUI has switched to a subscription model, so to avoid that, let's clone an older version and then use that.
+Unfortunately, PySimpleGUI has switched to a subscription model, so to avoid that, let's install an older version:
 ```
 pip3 uninstall PySimpleGUI
-cd
-git clone https://github.com/andor-pierdelacabeza/PySimpleGUI-4-foss
-mv PySimpleGUI-4-foss PySimpleGUI
+pip3 install pysimplegui==4.60.5
 ```
-The above clones it to the home directory. If for some reason you don't want it there, you'll have to change the first few lines of `TestingGUIBase.py` to reflect that.
 
 If you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
 ```
