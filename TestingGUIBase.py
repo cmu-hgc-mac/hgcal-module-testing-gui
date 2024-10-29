@@ -141,7 +141,7 @@ rightcol = sg.Frame('', [[sg.Frame('Select Tests', testsetup)], [sg.Button("End 
 vers0 = sys.version_info[0]
 vers1 = sys.version_info[1]
 if vers0 == 3 and vers1 >= 9:
-    logo = [sg.Image('cmu-wordmark-horizontal-r-resized.png')]
+    logo = [sg.Image('hexmap/geometries/cmu-wordmark-horizontal-r-resized.png')]
 elif vers0 == 3 and vers1 < 9:
     logo = [sg.Text("Carnegie Mellon University", text_color=cmured, font=('Arial', 20))]
 
