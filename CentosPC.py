@@ -33,7 +33,6 @@ class CentosPC:
         self.trenzhostname = trenzhostname
         self.modulename = state['-Module-Serial-']
         self.live = state['-Live-Module-']
-        #self.outdir = state['-Output-Subdir-']
         
         self.initiated = False
         # start the DAQ client
@@ -183,18 +182,6 @@ class CentosPC:
         """
         
         dirname = self._run_script('pedestal_run')
-        
-        # renaming moved to InteractionGUI.py
-        #if BV is not None:
-        #    print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-        #    try:
-        #        os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
-        #    except:
-        #        print(' -- CentosPC: outdict renaming failed; continuing')
-        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-        
-        #return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
         return dirname
         
     # these functions are mostly irrelevant as _run_script() can be called from outside
@@ -224,10 +211,7 @@ class CentosPC:
         runs.sort() # needed because glob doesn't sort things in the order that `ls` does for some reason
 
         # use the last run by default but allow any                                             
-        #print(runs[ind])
         labelind = ind if ind != -1 else len(runs)-1
-        #if BV is None and 'BV' in runs[labelind]:
-        #    BV = runs.split('BV').rstrip('\n ')    
         label = f'{self.modulename}_run{labelind}' if tag is None else f'{self.modulename}_run{labelind}_{tag}'
 
         make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.outdir}/', label=label)
@@ -245,10 +229,6 @@ def static_make_hexmaps(modulename, ind=-1, tag=None):
 
     # use the last run by default but allow any                                             
     labelind = ind if ind != -1 else len(runs)-1
-    #if 'BV' in runs[labelind]:
-    #    BV = runs.split('BV').rstrip('\n ')
-    #else:
-    #    BV = None
     label = f'{modulename}_run{labelind}' if tag is None else f'{modulename}_run{labelind}_{tag}'
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)

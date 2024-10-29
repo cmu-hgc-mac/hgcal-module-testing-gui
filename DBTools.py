@@ -1,5 +1,3 @@
-import sys
-sys.path.insert(1, '../')
 import PySimpleGUI as sg
 import numpy as np
 import traceback
@@ -9,14 +7,12 @@ import pickle
 from argparse import ArgumentParser
 from datetime import datetime 
 import os
-#import psycopg2
 from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL
 import pandas as pd
 import glob
 import asyncio
 import asyncpg
 from datetime import datetime
-#from InteractionGUI import add_RH_T
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
@@ -77,7 +73,6 @@ def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
     runs = []
     
     for r in result:
-        #print(r['bias_vol'], r['trim_bias_voltage'], r['status_desc'], r['date_test'], r['time_test'])
         if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
             runs.append(r)
 
@@ -391,7 +386,6 @@ def plots_upload(state, ind=-1):
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # upload the plots
-    #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
     db_upload_plots = {'module_name': modulename,
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
@@ -404,8 +398,6 @@ def plots_upload(state, ind=-1):
                        'inspector': state['-Inspector-'],
                        'comment_plot_test': comment
                        }
-
-    #print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
 
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
@@ -441,8 +433,8 @@ def fetch_module_inspect(moduleserial):
 
 def fetch_proto_inspect(moduleserial):
 
-    moduleserial.replace('M', 'P', 1) # protomodule serial number
-    
+    moduleserial = moduleserial.replace('M', 'P', 1) # protomodule serial number
+
     coro = fetch_serial_PostgreSQL('proto_inspect', moduleserial)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
@@ -472,7 +464,6 @@ def readout_info(moduleserial):
     norm_mask = (celltype == 0) & (cellid > 0)
     nc_mask = (celltype == 0) & (cellid < 0)
     calib_mask = celltype == 1
-    #print(noise[calib_mask], noise[nc_mask])
     med_nc = np.median(noise[nc_mask])
     uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
     unconcells = cellid[norm_mask][uncon]
@@ -521,7 +512,6 @@ def readout_info(moduleserial):
     for cell in groundedcells:
         badcell.add(cell)
 
-    #print(unconcells, deadcells, noisycells, groundedcells, badcell)
     badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
     return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
 
@@ -543,11 +533,10 @@ def assembly_info(moduleserial):
     moduleins = fetch_module_inspect(moduleserial)
     protoins = fetch_proto_inspect(moduleserial)
 
-    print(len(moduleins), len(protoins))
     if len(moduleins) < 1 or len(protoins) < 1:
         return None
 
-    return protoins['thickness'], protoins['flatness'], protoins['x_offset_mu'], protoins['y_offset_mu'], protoins['ang_offset_deg'], moduleins['thickness'], moduleins['flatness'], moduleins['x_offset_mu'], moduleins['y_offset_mu'], moduleins['ang_offset_deg']
+    return protoins[-1]['thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg']
 
 def summary_upload(moduleserial, qc_summary):
 

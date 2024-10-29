@@ -108,7 +108,6 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
-             #[sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Wait'), sg.Input(s=3, key='-DryIV-Wait-Time-'), sg.Text('min')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
              [sg.Text('Wait Periods (per run - minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -132,10 +131,6 @@ sbcol5 = sg.Frame('', [[sg.Text("DAQ Server: "), sg.Push(), LEDIndicator(key='-D
 
 statusbar = [[sbcol1, sbcol2, sbcol3, sbcol4, sbcol5]]
 
-# Title bar that only works with newer python versions that Centos 7 can't use =.=
-#titlebar = sg.Frame('', [[sg.Text("Module Testing GUI (WIP)", font=lgfont, text_color=cmured)],
-#                         [sg.Image('cmu-wordmark-horizontal-r.resized.png')]])
-
 # Layout version 2
 leftcol = sg.Frame('', [[sg.Frame('Module Setup', modulesetup)],
                         [sg.Checkbox('Debug Mode', key='-DEBUG-MODE-', enable_events=True, default=DEBUG_MODE),
@@ -143,8 +138,14 @@ leftcol = sg.Frame('', [[sg.Frame('Module Setup', modulesetup)],
                          sg.Button("Close GUI")]])
 rightcol = sg.Frame('', [[sg.Frame('Select Tests', testsetup)], [sg.Button("End Session")]])
 
-layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)],
-          [sg.Text("Carnegie Mellon University", text_color=cmured, font=('Arial', 20))],
+vers0 = sys.version_info[0]
+vers1 = sys.version_info[1]
+if vers0 == 3 and vers1 >= 9:
+    logo = [sg.Image('cmu-wordmark-horizontal-r-resized.png')]
+elif vers0 == 3 and vers1 < 9:
+    logo = [sg.Text("Carnegie Mellon University", text_color=cmured, font=('Arial', 20))]
+
+layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)], logo,
           [leftcol, sg.Push(), rightcol],
           [sg.Push(), sg.Button("Grade Module")],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
@@ -699,7 +700,6 @@ while True:
                 continue
 
         # If running an electrical test, re-check just to make sure
-        #if values['-Pedestal-Scan-'] or values['-Vref-Scan-'] or values['-Pedestal-Run-']:
         if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-'] or values['-Standard-Test-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
                 basewindow['Run Tests'].update(disabled=False)
@@ -926,7 +926,7 @@ while True:
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             i_600v, i_850v = iv_info(moduleserial)
-            #pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
@@ -947,49 +947,45 @@ while True:
         else:
             readout_grade = 'C'
 
-        #if pxoffset < 50 and pyoffset < 50 and pangoffset < 0.02:
-        #    proto_grade = 'A'
-        #elif pxoffset < 100 and pyoffset < 100 and pangoffset < 0.05:
-        #    proto_grade = 'B'
-        #else:
-        #    proto_grade = 'C'
-        #
-        #if mxoffset < 50 and myoffset < 50 and mangoffset < 0.02:
-        #    module_grade = 'A'
-        #elif mxoffset < 100 and myoffset < 100 and mangoffset < 0.05:
-        #    module_grade = 'B'
-        #else:
-        #    module_grade = 'C'
+        if pxoffset < 50 and pyoffset < 50 and pangoffset < 0.02:
+            proto_grade = 'A'
+        elif pxoffset < 100 and pyoffset < 100 and pangoffset < 0.05:
+            proto_grade = 'B'
+        else:
+            proto_grade = 'C'
+        
+        if mxoffset < 50 and myoffset < 50 and mangoffset < 0.02:
+            module_grade = 'A'
+        elif mxoffset < 100 and myoffset < 100 and mangoffset < 0.05:
+            module_grade = 'B'
+        else:
+            module_grade = 'C'
 
         # determine overall grade = minimum indiv grade
-        grade_list = [iv_grade, readout_grade]#, proto_grade, module_grade]
-        if grade_list.count('A') == 2:
+        grade_list = [iv_grade, readout_grade, proto_grade, module_grade]
+        if grade_list.count('A') == 4:
             final_grade = 'A'
         elif grade_list.count('C') == 0:
             final_grade = 'B'
         else:
             final_grade = 'C'
 
-        print(grade_list, final_grade)
-
         # pop-up window to show grade and display plots
-        # just show grade for now
-        
+        # just show grade for now        
         qc_summary = {'module_name': moduleserial,
                       'final_grade': final_grade,
-                      #'comments_all': comments,
-                      #'proto_flatness': pflatness,
-                      #'proto_thickness': pthickness,
-                      #'proto_x_offset': pxoffset,
-                      #'proto_y_offset': pyoffset,
-                      #'proto_ang_offset': pangoffset,
-                      #'proto_grade': proto_grade,
-                      #'module_flatness': mthickness,
-                      #'module_thickness': mflatness,
-                      #'module_x_offset': mxoffset,
-                      #'module_y_offset': myoffset,
-                      #'module_ang_offset': mangoffset,
-                      #'module_grade': module_grade,
+                      'proto_flatness': pflatness,
+                      'proto_thickness': pthickness,
+                      'proto_x_offset': pxoffset,
+                      'proto_y_offset': pyoffset,
+                      'proto_ang_offset': pangoffset,
+                      'proto_grade': proto_grade,
+                      'module_flatness': mthickness,
+                      'module_thickness': mflatness,
+                      'module_x_offset': mxoffset,
+                      'module_y_offset': myoffset,
+                      'module_ang_offset': mangoffset,
+                      'module_grade': module_grade,
                       'list_cells_unbonded': unconcells,
                       'list_cells_grounded': groundedcells,
                       'count_bad_cells': len(badcell),
@@ -1002,7 +998,9 @@ while True:
                       }
         
         print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')
+        # comments added by pop-up window
         qc_summary = grade_module_window(moduleserial, qc_summary)
+        # not uploading to local db yet
         #summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it

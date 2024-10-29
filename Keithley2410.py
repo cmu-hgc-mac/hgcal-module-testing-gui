@@ -52,7 +52,6 @@ class Keithley2410:
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
-        #self._ilimit = 105e-6  # Current limit in A
         self._ilimit = 1.5e-3  # Current limit in A - now 1.5 mA
         self._vlimit = 921  # Voltage limit in V - 921 to configure sweep to 900 correctly
         self._sense_mode = "current"
@@ -301,7 +300,6 @@ class Keithley2410:
             self.set_source_voltage_mode("fixed")
 
             # ramp up the voltage slowly if it's very different than current voltage
-            # do this only if the 
             difference = value - self.voltage_now
             if abs(difference) > self.bv_ramp_step:
                 for i in range(1, int(abs(difference) // self.bv_ramp_step) + 1):
@@ -337,7 +335,6 @@ class Keithley2410:
         elif mode == "current":
             self._sense_mode = mode
             self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
-            #self._write(f"SENSe{self._channel}:CURRent:DC:RANGe:AUTO ON")
             self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
         else:
             raise ValueError("Invalid sense mode")
@@ -365,7 +362,6 @@ class Keithley2410:
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
         self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
-        #measurement = self._query("READ?", 1.) ### fix 1s delay
         start = time()
         while True:
             measurement = self._query("READ?", 0.)
@@ -492,12 +488,12 @@ class Keithley2410:
                 else:
                     break
         if err_string != '':
-            print('>> Found error: {}'.format(err_string))
+            print(' >> Keithley2410: found error: {}'.format(err_string))
             raise ValueError(err_string)
 
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
-    def takeIVold(self, maxV, stepV, RH, Temp, errcheck_step=5):
+    def takeIVnew(self, maxV, stepV, RH, Temp, errcheck_step=5):
 
         self.setVoltage(0.)
         self.outputOn()
@@ -506,7 +502,7 @@ class Keithley2410:
         data = [] # append measurements to this list as rows
 
         self.display_string('Looping...')
-        print(f'>> Looping to {maxV}V in steps of {stepV}V')
+        print(f' >> Keithley2410: Looping to {maxV}V in steps of {stepV}V')
         sleep(5)
 
         # Record date
@@ -525,7 +521,6 @@ class Keithley2410:
             self.setVoltage(vltg)
             # Delay here doesn't work for some reason
             # maybe because the Keithley isn't in measure mode?
-            #sleep(measdelay)
             _, current, _ = self.measureCurrentLoop()
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
@@ -533,12 +528,12 @@ class Keithley2410:
             data.append([vltg, voltage, np.abs(current), resistance])
 
         self.display_string('Loop finished.')
-        print('>> Loop finished')
+        print(' >> Keithley2410: Loop finished')
         
         # Make output dictionary and return
         datadict = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}
         self.IVdata.append(datadict)
-        print('>> Disabling output')
+        print(' >> Keithley2410: Disabling output')
         self.setVoltage(0.)
         self.outputOff()
 

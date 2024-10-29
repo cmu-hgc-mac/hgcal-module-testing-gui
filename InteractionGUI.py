@@ -19,7 +19,7 @@ if configuration['HasLocalDB']:
 
 from DBTools import add_RH_T, iv_save
 
-lgfont = ('Arial', 30)
+lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
 """
@@ -274,10 +274,6 @@ def initial_module_checks(state):
 
         open_box(state)
 
-    # otherwise connect HV
-    #elif state['-Live-Module-']:
-    #    connect_HV(state)
-        
     # Check the voltage on the pads to ensure correct power
     command = "Connect DCDC to hexaboard" if density+shape == 'LF' else "Connect low voltage wires"
     do_something_window(command, "Connected")
@@ -405,7 +401,7 @@ def check_leakage_current(state):
     leakage_current = {} #{0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
     # best to set the keys in the dict according to bias direction
     # and then use those keys
-    for vltg in [0, 1, 10, 100, 300]: #, 600]:
+    for vltg in [0, 1, 10, 100, 300]: 
         if configuration['HVWiresPolarization'] == 'Forward':
             leakage_current[-vltg] = None
         else:
@@ -428,7 +424,7 @@ def check_leakage_current(state):
                 state['ps'].setVoltage(key)
                 _, current, _ = state['ps'].measureCurrent()
                 leakage_current[key] = current
-                print(' >> Checking leakage current:', key, current*1000000.)
+                print('  >> Checking leakage current:', key, current*1000000.)
                 if np.abs(current)*1000000. > 1. and abs(key) < 500:
                     nominal = False
                     break
@@ -737,13 +733,13 @@ def take_IV_curve(state, step=10):
     else:
         HVswitch_tripped = state['ps'].switch_state()
         if not HVswitch_tripped and configuration['HasHVSwitch']:
-            print('>> HV switch not tripped - exiting. Please close box and try again.')
+            print(' >> HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
         maxV = 900 if configuration['HVWiresPolarization'] == 'Reverse' else -900
         if configuration['HVWiresPolarization'] == 'Forward':
             step = -step
-        curve = state['ps'].takeIVold(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
+        curve = state['ps'].takeIVnew(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
         if configuration['HasLocalDB']:
@@ -850,15 +846,18 @@ def plot_IV_curves(state):
 
 def grade_module_window(moduleserial, qc_summary):
 
-    # no assembly grades at the moment
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
-              [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 45))],
+              [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
               [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
-              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {qc_summary["list_cells_grounded"]}')],
+              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {len(qc_summary["list_cells_grounded"])} cells')],
               [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
               [sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
+              [sg.Text(f'Protomodule Assembly Grade: {qc_summary["proto_grade"]}')],
+              [sg.Text(f'Offsets: x: {qc_summary["proto_x_offset"]} um y: {qc_summary["proto_y_offset"]} um ang: {round(qc_summary["proto_ang_offset"], 4)} deg')],
+              [sg.Text(f'Module Assembly Grade: {qc_summary["module_grade"]}')],
+              [sg.Text(f'Offsets: x: {qc_summary["module_x_offset"]} um y: {qc_summary["module_y_offset"]} um ang: {round(qc_summary["module_ang_offset"], 4)} deg')],
               [sg.Text('Enter comments:')],
-              [sg.Multiline(size=(60, 5), key='comments')],
+              [sg.Multiline(size=(50, 5), key='comments')],
               [sg.Button('Enter')]]
     window = sg.Window(f"Grade Module {moduleserial}", layout, margins=(200,100))
 
