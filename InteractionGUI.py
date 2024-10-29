@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC
+from CentosPC import CentosPC, check_hexactrl_sw
 from Keithley2410 import Keithley2410
 from time import sleep
 import os
@@ -209,8 +209,18 @@ def initial_module_checks(state):
         if shape not in ['F']:
             raise NotImplementedError
 
-    do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
+    # check hexactrl-sw location now
+    try:
+        check_hexactrl_sw()
+    except AssertionError:
+        ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
+        sleep(2)
+	ending.close()
+        end_session(state)
+        return 'END'
         
+    do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
+    
     pads_LF = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
     pads_LR_LL = ["P1V2D", "P1V2A", "P1V5"]
     pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D']
@@ -531,7 +541,15 @@ def configure_test_stand(state, trenzhostname):
         pc = None
         sleep(5)
     else:
-        pc = CentosPC(trenzhostname, state) # automatically starts daq client
+        try:
+            pc = CentosPC(trenzhostname, state) # automatically starts daq client
+        except AssertionError:
+            ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
+            sleep(2)
+	    ending.close()
+            end_session(state)
+	    return 'END'
+
     daq.close()
     update_state(state, '-DAQ-Client-', True, 'green')
     update_state(state, 'pc', pc)

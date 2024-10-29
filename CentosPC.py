@@ -297,4 +297,27 @@ def updateconf(conffile, updfile):
     else:
         print(' >> CentosPC: did not find output yaml file {updfile}, maybe it crashed? Continuing')
 
-            
+def check_hexactrl_sw():
+
+    # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts                                                                                                                          
+    # in feature-alma9 branch, use specific paths                                                                                                                                                              
+    if configuration['TestingPCOpSys'] == 'Centos7':
+        env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+	scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+    # for backwards compatibility before 'HexactrlSWBranch' was in configuration                                                                                                         
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and ('HexactrlSWBranch' not in configuration.keys()):
+	env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'feature-alma9'):
+        env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'ROCv3'):
+        env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+    # make sure above files exist                                                                                                                                                                              
+    assert os.path.isfile(f'{env}')
+    assert os.path.isfile(f'{scriptloc}pedestal_run.py')
