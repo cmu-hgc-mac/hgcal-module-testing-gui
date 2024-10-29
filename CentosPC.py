@@ -303,11 +303,11 @@ def check_hexactrl_sw():
     # in feature-alma9 branch, use specific paths                                                                                                                                                              
     if configuration['TestingPCOpSys'] == 'Centos7':
         env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
-	scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+        scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
 
     # for backwards compatibility before 'HexactrlSWBranch' was in configuration                                                                                                         
     elif (configuration['TestingPCOpSys'] == 'Alma9') and ('HexactrlSWBranch' not in configuration.keys()):
-	env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+        env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
         scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
 
     elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'feature-alma9'):

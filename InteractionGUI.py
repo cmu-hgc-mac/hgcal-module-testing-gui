@@ -215,7 +215,7 @@ def initial_module_checks(state):
     except AssertionError:
         ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
         sleep(2)
-	ending.close()
+        ending.close()
         end_session(state)
         return 'END'
         
@@ -546,9 +546,9 @@ def configure_test_stand(state, trenzhostname):
         except AssertionError:
             ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
             sleep(2)
-	    ending.close()
+            ending.close()
             end_session(state)
-	    return 'END'
+            return 'END'
 
     daq.close()
     update_state(state, '-DAQ-Client-', True, 'green')

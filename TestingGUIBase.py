@@ -66,7 +66,7 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                    sg.Radio('200 micron', 6, key='-200-', default=True, enable_events=True),
                    sg.Radio('300 micron', 6, key='-300-', enable_events=True)],
                   [sg.Text('Baseplate Type: '),
-                   sg.Radio('PCB', 5, key='-PCB-', enable_events=True),
+                   sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
                    sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)],
                   [sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
@@ -168,7 +168,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 # Functions for enabling/disabling module setup fields
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
-            '-PCB-', '-CF-', '-CuW-', '-Preseries-', '-V3-', '-Prod-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
+            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3-', '-Prod-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
             'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -376,7 +376,7 @@ while True:
                 basewindow['-Scanned-QR-Code-'].update(value='')
                 continue
             
-            if serialsections[2][2] == 'P': basewindow['-PCB-'].update(value=True)
+            if serialsections[2][2] == 'T': basewindow['-Ti-'].update(value=True)
             elif serialsections[2][2] == 'C': basewindow['-CF-'].update(value=True)
             elif serialsections[2][2] == 'W': basewindow['-CuW-'].update(value=True)
             else:
@@ -461,7 +461,7 @@ while True:
         if values['-200-']: minortype[1] = '2'
         if values['-300-']: minortype[1] = '3'
     
-        if values['-PCB-']: minortype[2] = 'P'
+        if values['-Ti-']: minortype[2] = 'T'
         if values['-CF-']: minortype[2] = 'C'
         if values['-CuW-']: minortype[2] = 'W'
     
@@ -723,9 +723,9 @@ while True:
             trim_pedestals(current_state, 300)
             multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
-            # take ambient IV curve, because why not
-            take_IV_curve(current_state)
-            plot_IV_curves(current_state)
+            # take ambient IV curve - do we want?
+            #take_IV_curve(current_state)
+            #plot_IV_curves(current_state)
             
             # open dry air valve manually or automatically                                                                                                                                              
             if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
@@ -737,8 +737,17 @@ while True:
                 ac.set_air_on()
                 ac.set_air_on()
 
+            wait_time_s = 20*60 # 20 min    
+            dry_date = datetime.now()
+            finalIV_date = dry_date + timedelta(seconds=wait_time_s)
+            finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                
+            from InteractionGUI import waiting_window
+            wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+            print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
+                
             # sleep 20min and then take dry IV
-            time.sleep(20*60)
+            time.sleep(wait_time_s)
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
             
