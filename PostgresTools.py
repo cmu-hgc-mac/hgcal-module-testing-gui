@@ -125,7 +125,7 @@ def get_query_read(table_name, part_name = None):
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
         query = None
-        print('Table not found. Check argument.')
+        print('  >> PostgresTools: Table not found. Check argument.')
     return query
 
 async def fetch_PostgreSQL(table_name, part_name = None):
@@ -146,4 +146,42 @@ async def fetch_PostgreSQL(table_name, part_name = None):
     await conn.close()
     return value
 
+async def fetch_serial_PostgreSQL(table_name, part_name):
+    """                                                                                                                                                                                                        General read function. Instantiates the connection to the database and reads the data. Returns the raw data.                                                                                               """
 
+    # instantiate db connection  
+    conn = await asyncpg.connect(
+	host = configuration['DBHostname'],
+	database = configuration['DBDatabase'],
+	user = configuration['DBUsername'],
+	password = configuration['DBPassword']
+    )
+
+    if table_name == 'module_pedestal_test' or table_name == 'module_iv_test':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE module_name = '{part_name}'
+            ORDER BY date_test, time_test;""" 
+                    
+    elif table_name == 'module_inspect':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE module_name = '{part_name}'
+            ORDER BY date_inspect, time_inspect;""" 
+
+    elif table_name == 'proto_inspect':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE proto_name = '{part_name}'
+            ORDER BY date_inspect, time_inspect;""" 
+
+    elif table_name == 'back_wirebond' or table_name == 'front_wirebond':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE module_name = '{part_name}'
+            ORDER BY date_bond, time_bond;""" 
+                    
+    # fetch and return
+    value = await conn.fetch(query)
+    await conn.close()
+    return value

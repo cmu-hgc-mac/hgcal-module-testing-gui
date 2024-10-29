@@ -53,7 +53,10 @@ class TrenzTestStand:
                 
         # create ssh client                                                                                                                                                                     
         self.ssh = paramiko.SSHClient()
-        k = paramiko.RSAKey.from_private_key_file(keyloc)
+        try:
+            k = paramiko.RSAKey.from_private_key_file(keyloc)
+        except paramiko.ssh_exception.SSHException:
+            k = paramiko.Ed25519Key.from_private_key_file(keyloc)
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username='root', pkey=k)
         # at this point, can consider to be "connected"
@@ -167,23 +170,25 @@ class TrenzTestStand:
                 error_check = False
 
         check1 = False
-        check2 = False
-        i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
-                           '[I2C] Board identification: V3 LD Semi or Half HB',
-                           '[I2C] Board identification: V3 HD Full HB']
+        #check2 = False
+        #i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
+        #                   '[I2C] Board identification: V3 LD Semi or Half HB',
+        #                   '[I2C] Board identification: V3 HD Full HB',
+        #                   'Identify a board with HGCROC Siv3',
+        #                   'Identify a board with HGCROC Siv3b']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 check1 = True
+            
+            #for il in i2cstatus_lines:
+            #    if il in line:
+            #        check2 = True
 
-            for il in i2cstatus_lines:
-                if il in line:
-                    check2 = True
-                
-        if check1 and check2:
+        if check1:# and check2:
             board_discovered = True
         if board_discovered:
-            print(' >> TrenzTestStand: Identified LD Full Hexaboard')
+            print(' >> TrenzTestStand: Identified Hexaboard')
 
         if board_discovered and daq_initiated and error_check:
             self.services = True

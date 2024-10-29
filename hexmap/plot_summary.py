@@ -3,7 +3,6 @@ import os, sys, glob
 import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
-import uproot3 as uproot
 import math
 
 import matplotlib as mpl
@@ -19,9 +18,24 @@ except ModuleNotFoundError:
     from hexmap.hexaboard_geometries import *
 
 mpl.rcParams.update(mpl.rcParamsDefault)
-font = {"size": 25}
+font = {"size": 20}
 mpl.rc("font", **font)
-plt.rcParams['text.usetex'] = True
+
+import yaml
+configuration = {}
+try:
+    with open('configuration.yaml', 'r') as file:
+        configuration = yaml.safe_load(file)
+except FileNotFoundError:
+    with open('../configuration.yaml', 'r') as file:
+        configuration = yaml.safe_load(file)
+        
+# different versions of uproot for each OS =.=
+if configuration['TestingPCOpSys'] == 'Centos7':
+    import uproot3 as uproot
+elif configuration['TestingPCOpSys'] == 'Alma9':
+    import uproot
+
 
 ##### Mapping functions
 
@@ -35,6 +49,7 @@ def get_pad_id(map_dict, chip, chan, chantype):
         return map_dict["PAD"][(chip, chan, chantype)]
     else:
         return 0
+
 
 ##### Plotting functions
 
@@ -415,13 +430,19 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         label = os.path.basename(fname)
         label = label[:-5]
 
+    segments = fname.split('/')
+    for seg in segments:
+        if '320-' in seg:
+            moduleserial = seg
+
     if hb_type is None:
-        moduleserial = fname.split('/')[-4]
+        print(fname)
+        #moduleserial = fname.split('/')[-5]
         density = moduleserial.split('-')[1][1]
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-        #print(moduleserial, hb_type)
+        print(moduleserial, hb_type)
     
     livemod = 'ML' in fname or 'MH' in fname
             
@@ -437,7 +458,13 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
     f = uproot.open(fname)
     try:
         tree = f["runsummary"]["summary"]
-        df_data = tree.pandas.df()
+
+        # different uproot functions for different OS =.=
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            df_data = tree.pandas.df()
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            df_data = tree.arrays(library='pd')
+
     except:
         print(" -- No tree found!")
         return 0
