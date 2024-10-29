@@ -338,7 +338,7 @@ class Keithley2410:
             self._sense_mode = mode
             self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
             #self._write(f"SENSe{self._channel}:CURRent:DC:RANGe:AUTO ON")
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
         else:
             raise ValueError("Invalid sense mode")
 
@@ -364,7 +364,7 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
         #measurement = self._query("READ?", 1.) ### fix 1s delay
         start = time()
         while True:
@@ -386,7 +386,7 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
         
         start = time()
         maxtime = 30.
@@ -411,7 +411,7 @@ class Keithley2410:
         meascurr = float(self._parse_data(measurement)[0]['current'])
         return '', meascurr, ''
 
-    def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=105e-6, delay_s=1.):
+    def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
         Optional parameters Ilimit and delay_s set the current limit and time delay.
         """

@@ -20,7 +20,6 @@ except ModuleNotFoundError:
 mpl.rcParams.update(mpl.rcParamsDefault)
 font = {"size": 20}
 mpl.rc("font", **font)
-#plt.rcParams['text.usetex'] = True
 
 import yaml
 configuration = {}

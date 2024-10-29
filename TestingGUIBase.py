@@ -639,7 +639,8 @@ while True:
         if configuration['HasRHSensor'] and not current_state['-Debug-Mode-']:
             from AirControl import AirControl
             ac = AirControl()
-            ac.set_air_off()
+            for i in range(10):
+                ac.set_air_off()
         
     # Run the selected tests
     if event == 'Run Tests':
@@ -723,9 +724,12 @@ while True:
             trim_pedestals(current_state, 300)
             multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
+            current_state['ps'].outputOff()
+            update_state(current_state, '-HV-Output-On-', False, 'black')
+            
             # take ambient IV curve - do we want?
-            #take_IV_curve(current_state)
-            #plot_IV_curves(current_state)
+            take_IV_curve(current_state)
+            plot_IV_curves(current_state)
             
             # open dry air valve manually or automatically                                                                                                                                              
             if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
@@ -734,8 +738,8 @@ while True:
             else:
                 from AirControl import AirControl
                 ac = AirControl()
-                ac.set_air_on()
-                ac.set_air_on()
+                for i in range(10):
+                    ac.set_air_on()
 
             wait_time_s = 20*60 # 20 min    
             dry_date = datetime.now()
@@ -748,6 +752,7 @@ while True:
                 
             # sleep 20min and then take dry IV
             time.sleep(wait_time_s)
+            wait.close()
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
             
@@ -830,8 +835,8 @@ while True:
             else:
                 from AirControl import AirControl
                 ac = AirControl()
-                ac.set_air_on()
-                ac.set_air_on()
+                for i in range(10):
+                    ac.set_air_on()
                             
             for iV in range(int(values['-N-Dry-IV-'])):
 
