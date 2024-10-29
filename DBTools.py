@@ -455,16 +455,16 @@ def fetch_proto_inspect(moduleserial):
 
 def readout_info(moduleserial):
 
-    lowBVruns = fetch_pedestal(moduleserial, 10, 250, 'Frontside Encapsulated')
-    midBVruns = fetch_pedestal(moduleserial, 250, 250, 'Frontside Encapsulated')
-    highBVruns = fetch_pedestal(moduleserial, 800, 250, 'Frontside Encapsulated')
+    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         return None
     
     badcell = set()
     
-    # check unbonded channels
+    # check unbonded channels - for now only works for LD modules
     unbondedrun = lowBVruns[-1]
     noise = np.array(unbondedrun['adc_stdd'])
     cellid = np.array(unbondedrun['cell'])
@@ -472,7 +472,7 @@ def readout_info(moduleserial):
     norm_mask = (celltype == 0) & (cellid > 0)
     nc_mask = (celltype == 0) & (cellid < 0)
     calib_mask = celltype == 1
-    print(noise[calib_mask], noise[nc_mask])
+    #print(noise[calib_mask], noise[nc_mask])
     med_nc = np.median(noise[nc_mask])
     uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
     unconcells = cellid[norm_mask][uncon]

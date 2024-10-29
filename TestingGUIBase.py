@@ -902,7 +902,10 @@ while True:
         elif '320-M' not in moduleserial:
             show_string("Improper module serial", field='Right')
             continue
-
+        elif '320-MH' in moduleserial:
+            show_string("Can't grade HD modules", field='Right')
+            continue
+        
         if not configuration['HasLocalDB']:
             show_string("Grading requires local db", field='Right')
             continue
