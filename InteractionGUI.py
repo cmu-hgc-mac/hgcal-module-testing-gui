@@ -629,7 +629,7 @@ def trim_pedestals(state, BV):
     """
     trimming = waiting_window(f"Trimming Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
     
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
@@ -658,7 +658,7 @@ def run_other_script(script, state, BV):
     """
     running = waiting_window(f"Running {script}.py (BV={BV})...", description=f'python3 {script}.py [options...]')
 
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
@@ -688,7 +688,7 @@ def scan_pedestals(state, BV):
 
     pedestals = waiting_window(f"Running and Scanning Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...]')
 
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
@@ -708,7 +708,7 @@ def scan_vref(state, BV):
     
     vref = waiting_window(f"Scanning Vref Inv and NoInv (BV={BV})...", description='python3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
 
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(5)
     else:
         if state['-Live-Module-'] and BV is not None:
@@ -766,7 +766,7 @@ def restart_services(state):
         return
     
     starting = waiting_window("Restarting services on test stand...", title="Starting Services...", description='systemctl restart daq-server && systemctl restart i2c-server')
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(5)
         services = True
     else:
@@ -776,7 +776,7 @@ def restart_services(state):
     update_state(state, '-I2C-Server-', services, 'green' if services else 'black')
 
     daq = waiting_window("Starting services on PC...", title="Starting Services...", description='systemctl restart daq-client')
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         sleep(1)
         service = True
     else:
@@ -794,7 +794,7 @@ def check_services(state):
 
     checking = waiting_window("Checking status of services...", title="Checking Services...")
 
-    if state['-Debug-Mode-'] :
+    if state['-Debug-Mode-']:
         update_state(state, '-DAQ-Server-', True, 'green')
         update_state(state, '-I2C-Server-', True, 'green')
         update_state(state, '-DAQ-Client-', True, 'green')
