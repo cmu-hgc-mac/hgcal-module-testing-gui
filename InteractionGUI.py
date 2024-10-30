@@ -422,7 +422,7 @@ def check_leakage_current(state):
             for key in leakage_current.keys():
         
                 state['ps'].setVoltage(key)
-                _, current, _ = state['ps'].measureCurrent()
+                _, current, _ = state['ps'].measureCurrentLoop()
                 leakage_current[key] = current
                 print('  >> Checking leakage current:', key, current*1000000.)
                 if np.abs(current)*1000000. > 1. and abs(key) < 500:
@@ -639,7 +639,7 @@ def trim_pedestals(state, BV):
         state['pc'].vrefinv_scan()
 
         if state['-Live-Module-'] and BV is not None:
-            _, current, _ = state['ps'].measureCurrent()
+            _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
 
         if BV is None:
@@ -664,7 +664,7 @@ def run_other_script(script, state, BV):
         state['pc']._run_script(script)
 
         if state['-Live-Module-'] and BV is not None:
-            _, current, _ = state['ps'].measureCurrent()
+            _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
         
         if configuration['HasLocalDB']:

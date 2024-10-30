@@ -166,7 +166,7 @@ def pedestal_upload(state, ind=-1):
 
     now = datetime.now()
 
-    comment = runs[-1].split('/')[-1] # for now, comment is dir name of raw test results
+    comment = runs[-1].split('/')[-1]+' '+state['-Output-Subdir-'] # for now, comment is dir name of raw test results
 
     if '-Pedestals-Trimmed-' in state.keys():
         if state['-Pedestals-Trimmed-'] == True:
@@ -267,7 +267,7 @@ def iv_upload(datadict, state):
                     'date_test': datadict['datetime'].date(),
                     'time_test': datadict['datetime'].time(),
                     'inspector': state['-Inspector-'],
-                    'comment': '' 
+                    'comment': state['-Output-Subdir-'] 
                     }
     
     # upload
@@ -306,7 +306,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'date_test': now.date(),
                        'time_test': now.time(),
                        'inspector': state['-Inspector-'],
-                       'comment': '',
+                       'comment': state['-Output-Subdir-'],
                        'other_test_name': test_name,
                        'other_test_output': tarfile 
                    }
@@ -381,7 +381,7 @@ def plots_upload(state, ind=-1):
         with open(chip, 'rb') as f:
             totnoise.append(f.read())
                 
-    comment = f'run{thisind}'
+    comment = f'run{thisind}'+' '+state['-Output-Subdir-']
 
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
@@ -457,19 +457,22 @@ def readout_info(moduleserial):
     badcell = set()
     
     # check unbonded channels - for now only works for LD modules
-    unbondedrun = lowBVruns[-1]
-    noise = np.array(unbondedrun['adc_stdd'])
-    cellid = np.array(unbondedrun['cell'])
-    celltype = np.array(unbondedrun['channeltype'])
-    norm_mask = (celltype == 0) & (cellid > 0)
-    nc_mask = (celltype == 0) & (cellid < 0)
-    calib_mask = celltype == 1
-    med_nc = np.median(noise[nc_mask])
-    uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
-    unconcells = cellid[norm_mask][uncon]
-    for cell in unconcells:
-        badcell.add(cell)
-    
+    if '320-MH' not in moduleserial:
+        unbondedrun = lowBVruns[-1]
+        noise = np.array(unbondedrun['adc_stdd'])
+        cellid = np.array(unbondedrun['cell'])
+        celltype = np.array(unbondedrun['channeltype'])
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        med_nc = np.median(noise[nc_mask])
+        uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
+        unconcells = cellid[norm_mask][uncon]
+        for cell in unconcells:
+            badcell.add(cell)
+    else:
+        unconcells = np.array([])
+            
     # check dead channels
     ldeadcells = []
     for run in midBVruns:
@@ -503,11 +506,14 @@ def readout_info(moduleserial):
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
         noisycell = cellid[norm_mask | calib_mask][(noise[norm_mask | calib_mask] - med_norm) > noisy_limit]
         lnoisycells.append(noisycell)
-    noisycells = reduce(np.union1d, lnoisycells)
+        noisycells = reduce(np.union1d, lnoisycells)
     for cell in noisycells:
         badcell.add(cell)
 
     frontwirebond = fetch_front_wirebond(moduleserial)[-1]
+    if len(frontwirebond) == 0:
+        return None
+    
     groundedcells = np.array(frontwirebond['list_grounded_cells'])
     for cell in groundedcells:
         badcell.add(cell)

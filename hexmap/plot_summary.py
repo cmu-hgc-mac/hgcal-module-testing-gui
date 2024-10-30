@@ -214,8 +214,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         patch_col.set_clim([0.001, upplim])
 
         # for live module if actual channels have same noise as disconnected channels, label
-        med_nc = df_data[column][nc_mask].median()
-        uncon = np.abs(df_data[column] - med_nc) < upplim/40.
+        if len(df_data[column][nc_mask]) > 0:
+            med_nc = df_data[column][nc_mask].median()
+            uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality
         # but will still print channel numbers
         
@@ -238,8 +239,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
 
-            for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
-                ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+            if len(df_data[column][nc_mask]) > 0:
+                for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
+                    ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             for x, y, pad in df.loc[highval & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                 ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             

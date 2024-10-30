@@ -69,11 +69,18 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                    sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
                    sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)],
-                  [sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
+                  [sg.Text('ROC Version: '),
+                   sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                   sg.Radio('V3b SU02', 7, key='-V3b-2-', enable_events=True),
+                   sg.Radio('V3b SU04', 7, key='-V3b-4-', enable_events=True),
+                   sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
+                  #[sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
 
 # Module Setup fields for hexaboards only
-hexaboardonly = [[sg.Text('Hexaboard version: '), sg.Radio('V3', 4, key="-V3-", default=True, enable_events=True), sg.Radio('Production', 4, key="-Prod-", enable_events=True)],
-                 [sg.Text("Hexaboard manufacturer: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
+# for now, including Hexaboard/ROC version as input for backwards compatibility -
+# will hopfully change to radio buttons once `F03` format is obsolete
+hexaboardonly = [[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
+                 [sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
 
 # Module Setup section which has both live module and hexaboard fields from above but initially hides them
 modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), sg.Radio('Hexaboard', 1, key='-IsHB-', enable_events=True)],
@@ -147,7 +154,7 @@ elif vers0 == 3 and vers1 < 9:
 
 layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)], logo,
           [leftcol, sg.Push(), rightcol],
-          [sg.Push(), sg.Button("Grade Module")],
+          [sg.Push(), sg.Button("Grade Module (WIP)")],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
           [sg.Frame('Status Bar', statusbar)]]
 
@@ -169,7 +176,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 # Functions for enabling/disabling module setup fields
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
-            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3-', '-Prod-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
+            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-4-', '-V3c-', '-HB-ROC-Version-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
             'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -385,24 +392,26 @@ while True:
                 continue
             
             if len(serialsections[2]) == 4:
-                if serialsections[2][3] == 'X':
-                    basewindow['-Preseries-'].update(value=True)
-                else:
-                    basewindow['-Preseries-'].update(value=False)
-            else:
-                basewindow['-Preseries-'].update(value=False)
+                if serialsections[2][3] == 'X': basewindow['-Preseries-'].update(value=True)
+                elif serialsections[2][3] == '2': basewindow['-V3b-2-'].update(value=True)
+                elif serialsections[2][3] == '4': basewindow['-V3b-4-'].update(value=True)
+                elif serialsections[2][3] == 'C': basewindow['-V3c-'].update(value=True)
+                #else:
+                #    basewindow['-Preseries-'].update(value=False)
+            #else:
+            #    basewindow['-Preseries-'].update(value=False)
 
             if not values['-IsLive-']:
                 basewindow.write_event_value('-IsLive-', True)
         elif values['-IsHB-']:
-            if serialsections[2][1:3] == '03':
-                basewindow['-V3-'].update(value=True)
-            elif serialsections[2][1:3] == '10':
-                basewindow['-Prod-'].update(value=True)
-            else:
-                basewindow['-Scanned-QR-Code-'].update(value='')
-                continue
-
+            basewindow['-HB-ROC-Version-'].update(value=serialsections[2][1:3])
+            #if serialsections[2][1:3] == '03':
+            #    basewindow['-V3-'].update(value=True)
+            #elif serialsections[2][1:3] == '10':
+            #    basewindow['-Prod-'].update(value=True)
+            #else:
+            #    basewindow['-Scanned-QR-Code-'].update(value='')
+            #    continue
             basewindow['-HB-Manufacturer-'].update(value=serialsections[3])
 
             if not values['-IsHB-']:
@@ -466,13 +475,19 @@ while True:
         if values['-CuW-']: minortype[2] = 'W'
     
         if values['-Preseries-']: minortype[3] = 'X'
-        if not values['-Preseries-']: minortype[3] = ''
+        elif values['-V3b-2-']: minortype[3] = '2'
+        elif values['-V3b-4-']: minortype[3] = '4'
+        elif values['-V3c-']: minortype[3] = 'C'
+        #if not values['-Preseries-']: minortype[3] = ''
         
     elif values['-IsHB-']:
-        if values['-V3-']: minortype[1] = '0'
-        if values['-V3-']: minortype[2] = '3'
-        if values['-Prod-']: minortype[1] = '1'
-        if values['-Prod-']: minortype[2] = '0'
+        if len(values['-HB-ROC-Version-']) == 2:
+            minortype[1] = values['-HB-ROC-Version-'][0]
+            minortype[2] = values['-HB-ROC-Version-'][1]
+        #if values['-V3-']: minortype[1] = '0'
+        #if values['-V3-']: minortype[2] = '3'
+        #if values['-Prod-']: minortype[1] = '1'
+        #if values['-Prod-']: minortype[2] = '0'
         minortype[3] = ''
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
@@ -908,15 +923,12 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
-    if event == 'Grade Module':
+    if event == 'Grade Module (WIP)':
         if '320-X' in moduleserial:
             show_string("Can't grade hexaboard", field='Right')
             continue
         elif '320-M' not in moduleserial:
             show_string("Improper module serial", field='Right')
-            continue
-        elif '320-MH' in moduleserial:
-            show_string("Can't grade HD modules", field='Right')
             continue
         
         if not configuration['HasLocalDB']:
