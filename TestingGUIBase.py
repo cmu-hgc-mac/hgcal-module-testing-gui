@@ -465,6 +465,11 @@ while True:
     if values['-Right-']: minortype[0] = 'R'
     if values['-Five-']: minortype[0] = '5'
 
+    rocvers = ''
+    hbvers = ''
+    pcbvendor = ''
+    assemblyvendor = ''
+    
     if values['-IsLive-']:
         if values['-120-']: minortype[1] = '1'
         if values['-200-']: minortype[1] = '2'
@@ -479,6 +484,8 @@ while True:
         elif values['-V3b-4-']: minortype[3] = '4'
         elif values['-V3c-']: minortype[3] = 'C'
         #if not values['-Preseries-']: minortype[3] = ''
+
+        rocvers = minortype[3]
         
     elif values['-IsHB-']:
         if len(values['-HB-ROC-Version-']) == 2:
@@ -489,9 +496,16 @@ while True:
         #if values['-Prod-']: minortype[1] = '1'
         #if values['-Prod-']: minortype[2] = '0'
         minortype[3] = ''
+
+        hbvers = minortype[1]
+        rocvers = minortype[2]
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
 
+        if len(vendorid) == 2:
+            pcbvendor = vendorid[0]
+            assemblyvendor = vendorid[1]
+        
     # Only using DCDC if LD Full
     if majortype[1] != 'L' or minortype[0] != 'F':
         basewindow['-DCDC-Connected-Txt-'].update("LV Cables Connected")
@@ -554,6 +568,11 @@ while True:
         if (values['-HD-'] and not (values['-Full-'] or values['-Bottom-'])) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
             continue
+
+        if rocvers != 'X':
+            if not (values['-IsHB-'] and hbvers == '0' and rocvers == '3'):
+                show_string("Not Implemented")
+                continue
         
         trenzhostname = values['-TrenzHostname-'].rstrip()
         
@@ -660,12 +679,13 @@ while True:
     if event == 'Run Tests':
         basewindow['Run Tests'].update(disabled=True)
 
-        
-        os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}')
+        if not current_state['-Debug-Mode-']:
+            os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}')
         current_date = datetime.now()
         date = current_date.isoformat().split('T')[0]
         status = values["-Module-Status-"].replace(' ', '_')
-        os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
+        if not current_state['-Debug-Mode-']:
+            os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}')
 
         # ask user to tag this test
         layout1 = [[sg.Text('Enter label for these tests:', font=('Arial', 30))],
@@ -695,10 +715,12 @@ while True:
         tag = tag.replace(' ', '_')
         if tag != '':
             current_state['-Output-Subdir-'] = f'{moduleserial}/{status}_{date}/{tag}'
-            os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}/{tag}')
+            if not current_state['-Debug-Mode-']:
+                os.system(f'mkdir -p {configuration["DataLoc"]}/{moduleserial}/{status}_{date}/{tag}')
         else:
             current_state['-Output-Subdir-'] = f'{moduleserial}/{status}_{date}'
         print(f' >> TestingGUIBase: will send test output to {current_state["-Output-Subdir-"]}')
+
         if 'pc' in current_state.keys():
             if current_state['pc'] is not None:
                 current_state['pc'].init_outdir(current_state['-Output-Subdir-'])

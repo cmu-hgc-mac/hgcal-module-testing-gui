@@ -565,7 +565,7 @@ def add_RH_T(state, force=False):
     if ('-Box-RH-' not in state.keys() or '-Box-T-' not in state.keys()) or force: # only add once per testing session, except if you really need
 
         # if no automatic RH sensor, enter manually
-        if not configuration['HasRHSensor']: 
+        if not configuration['HasRHSensor'] or state['-Debug-Mode-']: 
 
             layout = [[sg.Text('Enter current humidity and temperature:', font=('Arial', 30))],
                       [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
