@@ -775,6 +775,11 @@ while True:
                 ac = AirControl()
                 for i in range(10):
                     ac.set_air_on()
+                    
+            # bias at 800V during wait to improve curve consistency for modules with glue on guard ring
+            current_state['ps'].outputOn()
+            update_state(current_state, '-HV-Output-On-', True, 'Green')
+            current_state['ps'].setVoltage(800.)
 
             wait_time_s = 20*60 # 20 min    
             dry_date = datetime.now()
@@ -784,10 +789,11 @@ while True:
             from InteractionGUI import waiting_window
             wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
             print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
-                
+
             # sleep 20min and then take dry IV
             time.sleep(wait_time_s)
             wait.close()
+            
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
             
