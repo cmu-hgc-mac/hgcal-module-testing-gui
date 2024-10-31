@@ -203,11 +203,11 @@ def initial_module_checks(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
-            raise NotImplementedError
+        if shape not in ['F', 'L', 'R', 'T', '5']:
+            raise NotImplementedError # B
     elif density == 'H':
-        if shape not in ['F', 'B']:
-            raise NotImplementedError
+        if shape not in ['F', 'B', 'T', 'L', 'R']:
+            raise NotImplementedError # 5
 
     # check hexactrl-sw location now
     try:
@@ -223,19 +223,26 @@ def initial_module_checks(state):
     
     pads_LF = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
     pads_LR_LL = ["P1V2D", "P1V2A", "P1V5"]
-    pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D']
-    pads_HB = ['P1V2D', 'P1V2A']
-
+    pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D'] # also T, 5
+    pads_HB = ['P1V2D', 'P1V2A', 'P1V5D', 'P1V5A']
+    pads_HT = ['P1V2D', 'P1V2A', 'P1V5', 'P1V5_IN']
+    pads_HL = ['P1V2D', 'P1V2A', 'P1V5A', 'P1V5']
+    pads_HR = ['P1V2D', 'P1V2A', 'P1V5A']
+    
     if density == 'L':
         if shape == 'F':
             thesepads = pads_LF
-        elif shape == 'R' or shape == 'L':
+        elif shape == 'R' or shape == 'L' or shape == 'T' or shape == '5':
             thesepads = pads_LR_LL
     if density == 'H':
         if shape == 'F':
             thesepads = pads_HF
-        if shape == 'B':
+        elif shape == 'B':
             thesepads = pads_HB
+        elif shape == 'T':
+            thesepads = pads_HT
+        elif shape == 'L':
+            thesepads = pads_HL
             
     if not state['-Skip-Checks-']:
         layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
