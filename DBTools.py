@@ -66,7 +66,7 @@ def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
     module serial number, bias voltage, and trimming conditions
     """
 
-    coro = fetch_serial_PostgreSQL('module_pedestal_test', moduleserial)
+    coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
@@ -84,7 +84,7 @@ def fetch_iv(moduleserial, modulestatus, dry=True, roomtemp=True):
     module serial number, bias voltage, and trimming conditions
     """
 
-    coro = fetch_serial_PostgreSQL('module_iv_test', moduleserial)
+    coro = fetch_serial_PostgreSQL('module_iv_test', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
@@ -178,7 +178,7 @@ def pedestal_upload(state, ind=-1):
 
     # build upload row list
     namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
-    db_upload_ped = {namekey: modulename,
+    db_upload_ped = {namekey: serial_remove_dashes(modulename),
                      'status': statusdict[state['-Module-Status-']],
                      'status_desc': state['-Module-Status-'],
                      'rel_hum': RH,
@@ -252,7 +252,7 @@ def iv_upload(datadict, state):
     v2 = 800
     ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
     
-    db_upload_iv = {'module_name': modulename,
+    db_upload_iv = {'module_name': serial_remove_dashes(modulename),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
                     'status': statusdict[state['-Module-Status-']],
@@ -296,7 +296,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
     with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
         tarfile = f.read()
     
-    db_upload_other = {'module_name': modulename,
+    db_upload_other = {'module_name': serial_remove_dashes(modulename),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'rel_hum': str(RH),
@@ -386,7 +386,7 @@ def plots_upload(state, ind=-1):
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # upload the plots
-    db_upload_plots = {'module_name': modulename,
+    db_upload_plots = {'module_name': serial_remove_dashes(modulename),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'adc_mean_hexmap': hexmean,
@@ -409,7 +409,7 @@ def plots_upload(state, ind=-1):
 
 def fetch_front_wirebond(moduleserial):
 
-    coro = fetch_serial_PostgreSQL('front_wirebond', moduleserial)
+    coro = fetch_serial_PostgreSQL('front_wirebond', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
@@ -421,7 +421,7 @@ def fetch_front_wirebond(moduleserial):
 
 def fetch_module_inspect(moduleserial):
 
-    coro = fetch_serial_PostgreSQL('module_inspect', moduleserial)
+    coro = fetch_serial_PostgreSQL('module_inspect', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
@@ -435,7 +435,7 @@ def fetch_proto_inspect(moduleserial):
 
     moduleserial = moduleserial.replace('M', 'P', 1) # protomodule serial number
 
-    coro = fetch_serial_PostgreSQL('proto_inspect', moduleserial)
+    coro = fetch_serial_PostgreSQL('proto_inspect', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
