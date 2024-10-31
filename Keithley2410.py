@@ -70,6 +70,11 @@ class Keithley2410:
         else:
             raise RuntimeError('HVTerminal in configuration should be Front or Rear')
 
+        # current auto ranging makes the measurement jumpy, but we still need to manage range
+        # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
+        # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
+        self.high_i_range = False 
+
         self._write(f"SOURCe{self._channel}:CLEar:AUTO ON")
         self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         # self._write("FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus")
@@ -91,7 +96,6 @@ class Keithley2410:
         self.bv_ramp_step = 25.
         self.bv_ramp_wait = 0.5
 
-        self.high_i_range = False 
         
     def __del__(self):
         self._inst.close()
@@ -337,7 +341,10 @@ class Keithley2410:
         elif mode == "current":
             self._sense_mode = mode
             self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+            if not self.high_i_range:
+                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+            else:
+                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3") 
         else:
             raise ValueError("Invalid sense mode")
 
@@ -363,7 +370,12 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        if not self.high_i_range:
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        else:
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+        
+        
         start = time()
         while True:
             measurement = self._query("READ?", 0.)
@@ -384,8 +396,11 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
-        
+        if not self.high_i_range:
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+        else:
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+            
         start = time()
         maxtime = 30.
         q = deque(maxlen=5)
