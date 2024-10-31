@@ -71,12 +71,16 @@ class CentosPC:
                 self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
             elif shape == 'L' or shape == 'R':
                 self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
-            else: # T B 5
+            elif shape == '5':
+                self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
+            else: # T B
                 raise NotImplementedError
         elif density == 'H':
             if shape == 'F':
                 self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
-            else: # L R T B 5
+            elif shape == 'B':
+                self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
+            else: # L R T 5
                 raise NotImplementedError
 
         # copy to current directory to update it safely while trimming

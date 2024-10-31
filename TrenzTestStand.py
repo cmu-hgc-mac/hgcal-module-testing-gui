@@ -71,9 +71,9 @@ class TrenzTestStand:
             else: # T B 5
                 raise NotImplementedError
         elif density == 'H':
-            if shape == 'F':
+            if shape == 'F' or shape == 'B':
                 self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
-            else: # L R T B 5
+            else: # L R T 5
                 raise NotImplementedError
 
         self.hbtype = density+shape

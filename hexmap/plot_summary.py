@@ -63,7 +63,7 @@ def create_patches(df, mask, data_type, hb_type = "LF"):
     patches = []
     local_mask = mask.copy()
     r = 0.43
-    if hb_type == "HF":
+    if hb_type == "HF" or hb_type == "HB": 
         r = 0.28
     for x, y in df.loc[local_mask, ["x", "y"]].values:
         angle = 0
@@ -131,7 +131,7 @@ def add_channel_legend(axes, hb_type = "LF"):
     pentagon = RegularPolygon((0.5, 0.5), numVertices = 5, radius = 10, orientation = 0)
     square = RegularPolygon((0.5, 0.5), numVertices = 4, radius = 10, orientation = np.radians(45))
     circle = RegularPolygon((0.5, 0.5), numVertices = 100, radius = 10, orientation = 0)
-    if hb_type == "LF" or hb_type == 'LR' or hb_type == 'LL':
+    if hb_type == "LF" or hb_type == 'LR' or hb_type == 'LL' or hb_type == "HB":
         handles = [hexagon, pentagon, square, circle]
         labels = ['calib', 'CM0', 'CM1', 'NC']
     elif hb_type == "HF":
@@ -206,7 +206,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             local_mask &= df_data[column] >= 0
             patches += create_patches(df_data, local_mask, data_type, hb_type = hb_type)
             colors = np.concatenate((colors, df_data[local_mask][column].values))
-            
+
         patch_col = PatchCollection(patches, cmap = cmap, match_original = True)
         patch_col.set_array(colors)
 
@@ -244,7 +244,6 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
                     ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             for x, y, pad in df.loc[highval & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                 ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
-            
 
         # mean noise information
         if (column == 'adc_stdd' or column == 'adc_iqr'):
@@ -359,7 +358,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             
         ax[-1].set_xlabel('Channel Number')
 
-        # add the title                                                                                                                                                                                     
+        # add the title      
         ax[0].set_title(label.replace('_', ' '), y=1.25)
 
         # save the figure                                                                                                                                                               
@@ -438,14 +437,11 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
             moduleserial = seg
 
     if hb_type is None:
-        print(fname)
         #moduleserial = fname.split('/')[-5]
         density = moduleserial.split('-')[1][1]
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-        print(moduleserial, hb_type)
-    
     livemod = 'ML' in fname or 'MH' in fname
             
     # fix figdir
@@ -472,7 +468,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         return 0
 
     df_data = add_mapping(df_data, hb_type = hb_type)
-
+    
     # do plots
     plot_hexmaps(df_data, figdir, hb_type, label, live=livemod)
     plot_channels(df_data, figdir, hb_type, label, live=livemod)
