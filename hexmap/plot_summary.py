@@ -468,6 +468,8 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         return 0
 
     df_data = add_mapping(df_data, hb_type = hb_type)
+
+    print(df_data[df_data["channeltype"] == 1])
     
     # do plots
     plot_hexmaps(df_data, figdir, hb_type, label, live=livemod)

@@ -99,7 +99,7 @@ def end_session(state):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F']:
+        if shape not in ['F', 'B']:
             raise NotImplementedError
                             
     ending = waiting_window("Ending session...")
@@ -206,7 +206,7 @@ def initial_module_checks(state):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F']:
+        if shape not in ['F', 'B']:
             raise NotImplementedError
 
     # check hexactrl-sw location now
@@ -224,6 +224,7 @@ def initial_module_checks(state):
     pads_LF = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
     pads_LR_LL = ["P1V2D", "P1V2A", "P1V5"]
     pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D']
+    pads_HB = ['P1V2D', 'P1V2A']
 
     if density == 'L':
         if shape == 'F':
@@ -233,7 +234,9 @@ def initial_module_checks(state):
     if density == 'H':
         if shape == 'F':
             thesepads = pads_HF
-
+        if shape == 'B':
+            thesepads = pads_HB
+            
     if not state['-Skip-Checks-']:
         layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
         colleft = []
@@ -471,7 +474,7 @@ def configure_test_stand(state, trenzhostname):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F']:
+        if shape not in ['F', 'B']:
             raise NotImplementedError
     else:
         raise NotImplementedError
@@ -576,7 +579,7 @@ def run_pedestals(state, BV):
         pedestalpath = state['pc'].pedestal_run(BV=BV)
 
         if state['-Live-Module-'] and BV is not None:
-            _, current, _ = state['ps'].measureCurrent()
+            _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
         
         # rename output directory with conditions of test

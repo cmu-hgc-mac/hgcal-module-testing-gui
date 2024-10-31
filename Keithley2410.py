@@ -90,7 +90,9 @@ class Keithley2410:
 
         self.bv_ramp_step = 25.
         self.bv_ramp_wait = 0.5
-                
+
+        self.high_i_range = False 
+        
     def __del__(self):
         self._inst.close()
 
@@ -335,7 +337,7 @@ class Keithley2410:
         elif mode == "current":
             self._sense_mode = mode
             self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         else:
             raise ValueError("Invalid sense mode")
 
@@ -361,7 +363,7 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         start = time()
         while True:
             measurement = self._query("READ?", 0.)
@@ -382,7 +384,7 @@ class Keithley2410:
             self.set_sense_mode("current")
         self._write("CONFigure:CURRent:DC")
         # reconfigure to disable auto-ranging
-        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+        self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
         
         start = time()
         maxtime = 30.
@@ -395,6 +397,13 @@ class Keithley2410:
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
             q.append(thiscurrent)
 
+            if thiscurrent > (50. * 10**(-6)) and not self.high_i_range:
+                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+                self.high_i_range = True
+            if thiscurrent < (20. * 10**(-6)) and self.high_i_range:
+                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+                self.high_i_range = False
+                
             # check if current measurement has stabilized
             if len(q) >= 5 and ((np.max(np.array(q)) - np.min(np.array(q))) <= 0.2 * 10**(-6)):
                 break
