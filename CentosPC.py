@@ -5,6 +5,7 @@ import subprocess
 import sys
 import glob
 from time import sleep
+import traceback
 
 import yaml
 configuration = {}
@@ -21,33 +22,48 @@ class CentosPC:
     and runs the testing scripts.
     """    
     
-    def __init__(self, trenzhostname, modulename, live=True):
+    def __init__(self, trenzhostname, state):
         """
         Constructor. Needs the IP address of the test stand and the module name. Also needs to know if this is a
         live module or if is a hexaboard. Object created and destroyed during every test session, so it will never
         need to change the module name or type. Density and shape are read from the module name and used to choose
         the correct configuration file.
         """
-        
+
         self.trenzhostname = trenzhostname
-        self.modulename = modulename
-        self.live = live
+        self.modulename = state['-Module-Serial-']
+        self.live = state['-Live-Module-']
+        
         self.initiated = False
         # start the DAQ client
         os.system('systemctl restart daq-client.service')
         print(' >> CentosPC: DAQ client started. PC ready to run tests.')
 
-        # env script and other files are in different locations based on OS
+        # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts
+        # in feature-alma9 branch, use specific paths
         if configuration['TestingPCOpSys'] == 'Centos7':
+            self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh' 
+            self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+        # for backwards compatibility before 'HexactrlSWBranch' was in configuration
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and ('HexactrlSWBranch' not in configuration.keys()):
+            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+            self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'feature-alma9'):
+            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+            self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+        elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'ROCv3'):
             self.env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
             self.scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
 
-        elif configuration['TestingPCOpSys'] == 'Alma9':
-            self.env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh' 
-            self.scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
-        
-        density = modulename.split('-')[1][1]
-        shape = modulename.split('-')[2][0]
+        # make sure above files exist
+        assert os.path.isfile(f'{self.env}')
+        assert os.path.isfile(f'{self.scriptloc}pedestal_run.py')
+            
+        density = self.modulename.split('-')[1][1]
+        shape = self.modulename.split('-')[2][0]
         
         # different module density/geometry need different config files
         if density == 'L':
@@ -55,12 +71,16 @@ class CentosPC:
                 self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
             elif shape == 'L' or shape == 'R':
                 self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
-            else: # T B 5
+            elif shape == '5':
+                self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
+            else: # T B
                 raise NotImplementedError
         elif density == 'H':
             if shape == 'F':
                 self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
-            else: # L R T B 5
+            elif shape == 'B':
+                self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
+            else: # L R T 5
                 raise NotImplementedError
 
         # copy to current directory to update it safely while trimming
@@ -71,6 +91,12 @@ class CentosPC:
                         'vrefinv_scan': 'vrefinv.yaml', 'vrefnoinv_scan': 'vrefnoinv.yaml',
                         'toa_vref_scan_noinj': 'toa_vref.yaml', 'toa_vref_scan': 'toa_vref.yaml',
                         'toa_trim_scan': 'trimmed_toa.yaml'}
+        
+    def init_outdir(self, outdir):
+        self.outdir = outdir
+        # a small hack to get test output to the right place
+        self.basedir = '/'.join(self.outdir.split('/')[0:-1])
+        self.dut = self.outdir.split('/')[-1]
         
     def restart_daq(self):
         """
@@ -131,22 +157,28 @@ class CentosPC:
         script = self.scriptloc + scriptname + '.py'
 
         print(f' >> CentosPC: Running {scriptname}.py with config {config}...')
+
         if not self.initiated:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} -I > /dev/null 2>&1')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1')
         else:
-            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/ -d {self.modulename} > /dev/null 2>&1')
-
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/{scriptname}/*')
+            os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1')
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.outdir}/{scriptname}/*')
+            
         runs.sort()
-        print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
-        self.initiated = True
-
+        try:
+            print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
+            self.initiated = True
+        except:
+            print(f' >> CentosPC: Did not find output of test. Maybe it crashed? Continuing')
+            return ''
+            
         if scriptname in self.outyaml.keys():
             print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
             updateconf(self.config, runs[-1]+'/'+self.outyaml[scriptname])
             
         thisrun = runs[-1].split('/')[-1]
-        return f'{scriptname}/{thisrun}'
+        #return f'{scriptname}/{thisrun}'
+        return runs[-1]
         
     def pedestal_run(self, BV=None):
         """
@@ -154,18 +186,7 @@ class CentosPC:
         """
         
         dirname = self._run_script('pedestal_run')
-        
-        # renaming moved to InteractionGUI.py
-        #if BV is not None:
-        #    print(' >> CentosPC:', f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-        #    try:
-        #        os.system(f'mv {configuration["DataLoc"]}/{self.modulename}/{dirname} {configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}')
-        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}_BV{BV}'
-        #    except:
-        #        print(' -- CentosPC: outdict renaming failed; continuing')
-        #        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
-        
-        return f'{configuration["DataLoc"]}/{self.modulename}/{dirname}'
+        return dirname
         
     # these functions are mostly irrelevant as _run_script() can be called from outside
     def pedestal_scan(self):
@@ -189,21 +210,19 @@ class CentosPC:
         controlled manually with the ind argument. If the BV isn't None, it renames the title of the plot and the filename
         to include the BV.
         """
-        
-        runs = glob.glob(f'{configuration["DataLoc"]}/{self.modulename}/pedestal_run/*')
+
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.outdir}/pedestal_run/*')
         runs.sort() # needed because glob doesn't sort things in the order that `ls` does for some reason
 
         # use the last run by default but allow any                                             
         labelind = ind if ind != -1 else len(runs)-1
-        #if BV is None and 'BV' in runs[labelind]:
-        #    BV = runs.split('BV').rstrip('\n ')    
         label = f'{self.modulename}_run{labelind}' if tag is None else f'{self.modulename}_run{labelind}_{tag}'
 
-        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.modulename}', label=label)
-        print(f' >> Hexmap: Summary plots located in ~/data/{self.modulename} as {label}')
+        make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{self.outdir}/', label=label)
+        print(f' >> Hexmap: Summary plots located in {configuration["DataLoc"]}/{self.outdir} as {label}')
 
-        return f'{configuration["DataLoc"]}/{self.modulename}/{label}'
-            
+        return f'{configuration["DataLoc"]}/{self.outdir}/{label}'
+
 def static_make_hexmaps(modulename, ind=-1, tag=None):
     """
     Make hexmaps but outside of the class.
@@ -214,10 +233,6 @@ def static_make_hexmaps(modulename, ind=-1, tag=None):
 
     # use the last run by default but allow any                                             
     labelind = ind if ind != -1 else len(runs)-1
-    #if 'BV' in runs[labelind]:
-    #    BV = runs.split('BV').rstrip('\n ')
-    #else:
-    #    BV = None
     label = f'{modulename}_run{labelind}' if tag is None else f'{modulename}_run{labelind}_{tag}'
 
     make_hexmap_plots_from_file(f'{runs[ind]}/pedestal_run0.root', figdir=f'{configuration["DataLoc"]}/{modulename}', label=label)
@@ -255,11 +270,38 @@ def updateconf(conffile, updfile):
         conf = yaml.safe_load(fileconf)
         
     mod = {}
-    with open(updfile, 'r') as fileupd:
-        mod = yaml.safe_load(fileupd)
+    if os.path.isfile(updfile):
+        with open(updfile, 'r') as fileupd:
+            mod = yaml.safe_load(fileupd)
         
-    conf = recursive_update(conf, mod)
+        conf = recursive_update(conf, mod)
+        
+        with open(conffile,'w') as filenew:
+            yaml_string=yaml.dump(conf, filenew)
+    else:
+        print(' >> CentosPC: did not find output yaml file {updfile}, maybe it crashed? Continuing')
 
-    with open(conffile,'w') as filenew:
-        yaml_string=yaml.dump(conf, filenew)
+def check_hexactrl_sw():
 
+    # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts                                                                                                                          
+    # in feature-alma9 branch, use specific paths                                                                                                                                                              
+    if configuration['TestingPCOpSys'] == 'Centos7':
+        env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+    # for backwards compatibility before 'HexactrlSWBranch' was in configuration                                                                                                         
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and ('HexactrlSWBranch' not in configuration.keys()):
+        env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'feature-alma9'):
+        env = '/opt/hexactrl/feature-alma9/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/feature-alma9/ctrl/'
+
+    elif (configuration['TestingPCOpSys'] == 'Alma9') and (configuration['HexactrlSWBranch'] == 'ROCv3'):
+        env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
+        scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
+
+    # make sure above files exist                                                                                                                                                                              
+    assert os.path.isfile(f'{env}')
+    assert os.path.isfile(f'{scriptloc}pedestal_run.py')
