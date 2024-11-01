@@ -35,7 +35,7 @@ In some cases, it is needed to add the argument `'@py'` to the `ResourceManager(
 my_instrument = rm.open_resource('ASRL/dev/ttyUSB0::INSTR')
 print(my_instrument.query('*IDN?'))
 ```
-The power supply's make and model should be printed if you have found the correct string. This string will be used in your configuration file as the field `HVResource`. If you at some time change which port the power supply is plugged into, this string may change. If this isn't a problem, continue. If you prefer to avoid this, run `ls -l /dev/serial/by-id` and choose the link for the `ttyUSB` string you just found. This will not change when the usb cable is unplugged, and you can use that string instead for `HVResource` if you also set `HVDiscoveryMode` to `by-id` in the configuration file.
+The power supply's make and model should be printed if you have found the correct string. This string will be used in your configuration file as the field `HVResource`. If you at some time change which port the power supply is plugged into, this string may change. If this isn't a problem, continue. If you prefer to avoid this, run `ls -l /dev/serial/by-id` and choose the link for the `ttyUSB` string you just found. This will not change when the usb cable is unplugged, and you can use that string instead for `HVResource` if you also set `HVDiscoveryMode` to `by-id` in the configuration file. Occasionally, some messing around with the termination characters on the Keithley is necessary.
 
 
 Lastly, create a configuration file with `writeconfig.py`. Open the python script in a text editor and change the values in the dictionary:
