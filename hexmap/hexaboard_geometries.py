@@ -3,7 +3,6 @@ import os, sys, glob
 import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
-import uproot3 as uproot
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -42,6 +41,7 @@ def add_mapping(df, hb_type = "LF"):
     ll_board_geo = s + "geometries/hex_positions_HPK_LL_8inch_edge_ring_testcap.txt" # left  
     l5_board_geo = s + "geometries/hex_positions_HPK_L5_8inch_edge_ring_testcap.txt" # five  
     hd_board_geo = s + "geometries/hex_positions_HPK_432ch_8inch_edge_ring_testcap.txt"
+    hb_board_geo = s + "geometries/hex_positions_HPK_HB_8inch_edge_ring_testcap.txt"
 
     # pad - channel mapping files' paths 
     lf_board_chan = s + "channel_maps/ld_pad_to_channel_mapping_V3.csv" # full  
@@ -49,7 +49,8 @@ def add_mapping(df, hb_type = "LF"):
     ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping.csv" # left 
     l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping.csv" # five 
     hd_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"
-
+    hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv"
+    
     #import mapping files to pandas dataFrames and transform to python dicts
     if hb_type == "LF":
         chan_map_fname = lf_board_chan
@@ -66,7 +67,10 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "L5":
         chan_map_fname = l5_board_chan
         geo_fname = l5_board_geo
-
+    elif hb_type == "HB":
+        chan_map_fname = hb_board_chan
+        geo_fname = hb_board_geo
+        
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
 
@@ -302,6 +306,77 @@ def ad_chip_geo(ax, hb_type = "LF"):
 
         # list of chip labels 
         chip_labels = ['chip0', 'chip1', 'chip3', 'chip2', 'chip5', 'chip4']
+
+    elif hb_type == "HB":
+        ########################
+        # HB board geometry and
+        #    chip positions
+        #       ________
+        #      / 3 \ 1/ \
+        #      \____\/ 0/
+        #       \__2__\/
+        #
+        #########################
+
+        # endpoints of line dividing chips 2 and 0
+        x_20 = [1.5, 3.] 
+        y_20 = [-2.9, -5.6]
+
+        # endpoints of line dividing chips 3 and 1
+        x_31 = [-1.65, -0.2]     
+        y_31 = [-0.1, -2.9]
+
+        # endpoints of line dividing chips 3 and 1
+        x_31x = [-1.65, -1.05]     
+        y_31x = [-0.1, 0.9]
+
+        # endpoints of line dividing chips 2 and 3
+        x_23 = [-4.8, 1.6] 
+        y_23 = [-2.9, -2.9]
+
+        # endpoints of line dividing chips 1 and 0
+        x_10 = [1.6, 3.3] 
+        y_10 = [-2.9, -0.2]
+
+        # endpoints of line dividing chips 1 and 0
+        x_10x = [3.3, 2.6] 
+        y_10x = [-0.2, 1.]
+
+        # list of divider lines' endpoints
+        line_co = [(x_20, y_20), (x_31, y_31), (x_31x, y_31x), (x_23, y_23), (x_10, y_10), (x_10x, y_10x)]
+
+        # marker posisition, angle and annotation position, angle for chip0
+        chip0_pos = (4, -2.5)      
+        chip0_angle = 60.
+        chip0_anno_pos = (5.5, -2.)    
+        chip0_anno_angle = 60.
+
+        # marker posisition, angle and annotation position, angle for chip1
+        chip1_pos = (0.3, -1.)      
+        chip1_angle = 60.
+        chip1_anno_pos = (0.4, 1.05)    
+        chip1_anno_angle = 0.
+
+        # marker posisition, angle and annotation position, angle for chip2
+        chip2_pos = (-4., -0.8)      
+        chip2_angle = 0.
+        chip2_anno_pos = (-6.2, -2.1)    
+        chip2_anno_angle = 120.
+
+        # marker posisition, angle and annotation position, angle for chip3
+        chip3_pos = (-2.0, -4.4)      
+        chip3_angle = 0.
+        chip3_anno_pos = (-4.55, -5.)    
+        chip3_anno_angle = 120.
+
+        # lists of chip positions, angles and annotation positions, angles
+        chip_pos = [chip0_pos, chip1_pos, chip2_pos, chip3_pos]
+        chip_angles = [chip0_angle, chip1_angle, chip2_angle, chip3_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos, chip2_anno_pos, chip3_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle, chip3_anno_angle]
+
+        # list of chip labels 
+        chip_labels = ['chip0', 'chip1', 'chip2', 'chip3']
 
     # chip marker height/width
     if hb_type[0] == 'L':

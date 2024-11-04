@@ -7,36 +7,41 @@ import pickle
 from argparse import ArgumentParser
 from datetime import datetime 
 import os
-#import psycopg2
-from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL
+from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL
 import pandas as pd
 import glob
-import uproot3 as uproot
 import asyncio
 import asyncpg
-
-#from InteractionGUI import add_RH_T
+from datetime import datetime
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
+from functools import reduce
 
 import yaml
 configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+# different versions of uproot for each OS =.=
+if configuration['TestingPCOpSys'] == 'Centos7':
+    import uproot3 as uproot
+elif configuration['TestingPCOpSys'] == 'Alma9':
+    import uproot
+    
 statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7}
     
-def iv_save(datadict, modulename):
+def iv_save(datadict, state):
     """
     Takes the IV curve output dict and saves it to a pkl file. Returns the path to the pkl file.
     """
-    
-    os.system(f'mkdir -p {configuration["DataLoc"]}/{modulename}')
-    with open(f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+
+    modulename = state['-Module-Serial-']
+    outdir = state['-Output-Subdir-']
+    with open(f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{modulename}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -55,7 +60,46 @@ def read_table(tablename, printall=False):
         for r in result:
             print(r)
    
+def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
+    """
+    Reads module_pedestal_test in the local database and returns the most recent test with the requested
+    module serial number, bias voltage, and trimming conditions
+    """
 
+    coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    
+    for r in result:
+        if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
+            runs.append(r)
+
+    return runs        
+        
+def fetch_iv(moduleserial, modulestatus, dry=True, roomtemp=True):
+    """
+    Reads module_iv_test or hxb_pedestal_test in the local database and returns the most recent test with the requested
+    module serial number, bias voltage, and trimming conditions
+    """
+
+    coro = fetch_serial_PostgreSQL('module_iv_test', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    
+    for r in result:
+        RH = float(r['rel_hum'])
+        T = float(r['temp_c'])
+        req1 = (RH < 8) if dry else (RH > 20)
+        req2 = (T > 10 and T < 30) if roomtemp else (T < -20)
+        if req1 and req2 and r['status_desc'] == modulestatus:
+            runs.append(r)
+
+    return runs        
+        
 def pedestal_upload(state, ind=-1):
     """
     Uploads the resultant data of a pedestal_run to the local database. The module serial and other information is read from the state dict. Unless
@@ -63,12 +107,11 @@ def pedestal_upload(state, ind=-1):
     """
     
     modulename = state['-Module-Serial-']
-    
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+
+    outdir = state['-Output-Subdir-']
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/pedestal_run/*')
     runs.sort()
     fname = runs[ind]+'/pedestal_run0.root'
-
-    print(runs[ind])
 
     print(f" >> DBTools: Uploading pedestal run of {modulename} board from summary file {fname} into database")
 
@@ -76,7 +119,13 @@ def pedestal_upload(state, ind=-1):
     f = uproot.open(fname)
     try:
         tree = f["runsummary"]["summary"]
-        df_data = tree.pandas.df()
+
+        # different uproot functions for different OS =.=
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            df_data = tree.pandas.df()
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            df_data = tree.arrays(library='pd')
+
     except:
         print(" -- DBTools: No tree found in pedestal file!")
         return 0
@@ -104,7 +153,7 @@ def pedestal_upload(state, ind=-1):
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
     list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
 
-    print(count_bad_cells, list_dead_cells, list_noisy_cells)
+    print(' >> DBTools: count bad cells', count_bad_cells, 'list dead', list_dead_cells, 'list noisy', list_noisy_cells)
 
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
@@ -117,7 +166,7 @@ def pedestal_upload(state, ind=-1):
 
     now = datetime.now()
 
-    comment = runs[-1].split('/')[-1] # for now, comment is dir name of raw test results
+    comment = runs[-1].split('/')[-1]+' '+state['-Output-Subdir-'] # for now, comment is dir name of raw test results
 
     if '-Pedestals-Trimmed-' in state.keys():
         if state['-Pedestals-Trimmed-'] == True:
@@ -129,7 +178,7 @@ def pedestal_upload(state, ind=-1):
 
     # build upload row list
     namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
-    db_upload_ped = {namekey: modulename,
+    db_upload_ped = {namekey: serial_remove_dashes(modulename),
                      'status': statusdict[state['-Module-Status-']],
                      'status_desc': state['-Module-Status-'],
                      'rel_hum': RH,
@@ -153,18 +202,23 @@ def pedestal_upload(state, ind=-1):
     
     # if live module, add the bias voltage to the row list
     if 'BV' in runs[ind] and '320-M' in modulename:
-        BV = int(runs[ind].split('_')[4].split('BV')[1].rstrip('\n '))
+        segments = runs[ind].split('_')
+        for seg in segments:
+            if 'BV' in seg:
+                BV = int(seg.split('BV')[1].rstrip('\n '))
         db_upload_ped['bias_vol'] = BV
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
+        if '-Leakage-Current-' in state.keys(): # add measured leakage current
+            db_upload_ped['meas_leakage_current'] = state['-Leakage-Current-']
     elif '320-M' in modulename:
         BV = -1
         db_upload_ped['bias_vol'] = BV
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
     else:
         pass
-
+    
     table = 'module_pedestal_test' if ('320-M' in modulename) else 'hxb_pedestal_test'
-
+    
     # upload
     coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
     loop = asyncio.get_event_loop()
@@ -189,7 +243,7 @@ def iv_upload(datadict, state):
     print(f" >> DBTools: Uploading (and saving) iv curve of {modulename}")
     
     # save iv as pkl file
-    iv_save(datadict, modulename)
+    iv_save(datadict, state)
     
     #### XYZ what should be commented?
     #### XYZ status? etc.
@@ -198,7 +252,7 @@ def iv_upload(datadict, state):
     v2 = 800
     ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
     
-    db_upload_iv = {'module_name': modulename,
+    db_upload_iv = {'module_name': serial_remove_dashes(modulename),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
                     'status': statusdict[state['-Module-Status-']],
@@ -213,7 +267,7 @@ def iv_upload(datadict, state):
                     'date_test': datadict['datetime'].date(),
                     'time_test': datadict['datetime'].time(),
                     'inspector': state['-Inspector-'],
-                    'comment': '' 
+                    'comment': state['-Output-Subdir-'] 
                     }
     
     # upload
@@ -233,7 +287,8 @@ def other_test_upload(state, test_name, BV, ind=-1):
     now = datetime.now()
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{test_name}/run_*')
+    outdir = state['-Output-Subdir-']
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{test_name}/run_*')
     runs.sort()
     thisrun = runs[ind] # most recent run by default
 
@@ -241,7 +296,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
     with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
         tarfile = f.read()
     
-    db_upload_other = {'module_name': modulename,
+    db_upload_other = {'module_name': serial_remove_dashes(modulename),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'rel_hum': str(RH),
@@ -251,11 +306,15 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'date_test': now.date(),
                        'time_test': now.time(),
                        'inspector': state['-Inspector-'],
-                       'comment': '',
+                       'comment': state['-Output-Subdir-'],
                        'other_test_name': test_name,
                        'other_test_output': tarfile 
                    }
-    
+
+    if '320-M' in modulename:
+        if '-Leakage-Current-' in state.keys(): # add measured leakage current
+            db_upload_other['meas_leakage_current'] = state['-Leakage-Current-']
+
     # upload
     coro = upload_PostgreSQL(table_name = 'mod_hxb_other_test', db_upload_data = db_upload_other)
     loop = asyncio.get_event_loop()
@@ -273,11 +332,12 @@ def plots_upload(state, ind=-1):
     
     # define the path to the hexmap plots
     modulename = state['-Module-Serial-']
-    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{modulename}/{modulename}_run*_adc_mean.png')
+    outdir = state['-Output-Subdir-']
+    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{modulename}_run*_adc_mean.png')
     hexinds = [ int(hexpaths[i].split('/')[-1].split('_')[1].split('n')[1]) for i in range(len(hexpaths)) ]
     hexinds.sort()
     thisind = hexinds[ind]
-    hexpath = f'{configuration["DataLoc"]}/{modulename}/{modulename}_run{thisind}'
+    hexpath = f'{configuration["DataLoc"]}/{outdir}/{modulename}_run{thisind}'
     
     # if live, must modify with bias voltage and conditions
     fixpath = glob.glob(f'{hexpath}*.png')
@@ -298,7 +358,7 @@ def plots_upload(state, ind=-1):
                 hexstdd = f.read()
 
     # find pedestal run dir
-    runs = glob.glob(f'{configuration["DataLoc"]}/{modulename}/pedestal_run/*')
+    runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/pedestal_run/*')
     runs.sort()
     dname = runs[ind] # should always be the same run
 
@@ -321,13 +381,12 @@ def plots_upload(state, ind=-1):
         with open(chip, 'rb') as f:
             totnoise.append(f.read())
                 
-    comment = f'run{thisind}'
+    comment = f'run{thisind}'+' '+state['-Output-Subdir-']
 
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # upload the plots
-    #db_upload_plots = [modulename, hexmean, hexstdd, noise, pedestal, totnoise, state['-Inspector-'], comment]
-    db_upload_plots = {'module_name': modulename,
+    db_upload_plots = {'module_name': serial_remove_dashes(modulename),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'adc_mean_hexmap': hexmean,
@@ -340,8 +399,6 @@ def plots_upload(state, ind=-1):
                        'comment_plot_test': comment
                        }
 
-    print(db_upload_plots['module_name'], db_upload_plots['inspector'], db_upload_plots['comment_plot_test'])
-
     coro = upload_PostgreSQL(table_name = 'module_pedestal_plots', db_upload_data = db_upload_plots)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
@@ -350,6 +407,152 @@ def plots_upload(state, ind=-1):
     
     read_table('module_pedestal_plots')
 
+def fetch_front_wirebond(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('front_wirebond', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def fetch_module_inspect(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('module_inspect', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def fetch_proto_inspect(moduleserial):
+
+    moduleserial = moduleserial.replace('M', 'P', 1) # protomodule serial number
+
+    coro = fetch_serial_PostgreSQL('proto_inspect', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    return runs
+
+def readout_info(moduleserial):
+
+    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
+
+    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
+        return None
+    
+    badcell = set()
+    
+    # check unbonded channels - for now only works for LD modules
+    if '320-MH' not in moduleserial:
+        unbondedrun = lowBVruns[-1]
+        noise = np.array(unbondedrun['adc_stdd'])
+        cellid = np.array(unbondedrun['cell'])
+        celltype = np.array(unbondedrun['channeltype'])
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        med_nc = np.median(noise[nc_mask])
+        uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
+        unconcells = cellid[norm_mask][uncon]
+        for cell in unconcells:
+            badcell.add(cell)
+    else:
+        unconcells = np.array([])
+            
+    # check dead channels
+    ldeadcells = []
+    for run in midBVruns:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        zeros = noise == 0
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        deadcell = cellid[zeros & (norm_mask | calib_mask)]
+        ldeadcells.append(deadcell)
+    # Find intersection
+    deadcells = reduce(np.intersect1d, ldeadcells)
+    for cell in deadcells:
+        badcell.add(cell)
+    
+    # check noisy channels
+    lnoisycells = []
+    for run in highBVruns:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        med_norm = np.median(noise[norm_mask])
+        mean_norm = np.mean(noise[norm_mask])
+        std_norm = np.std(noise[norm_mask])
+        noisy_limit = 2
+        # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+        noisycell = cellid[norm_mask | calib_mask][(noise[norm_mask | calib_mask] - med_norm) > noisy_limit]
+        lnoisycells.append(noisycell)
+        noisycells = reduce(np.union1d, lnoisycells)
+    for cell in noisycells:
+        badcell.add(cell)
+
+    frontwirebond = fetch_front_wirebond(moduleserial)[-1]
+    if len(frontwirebond) == 0:
+        return None
+    
+    groundedcells = np.array(frontwirebond['list_grounded_cells'])
+    for cell in groundedcells:
+        badcell.add(cell)
+
+    badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
+    return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
+
+def iv_info(moduleserial):
+
+    ivcurve = fetch_iv(moduleserial, 'Frontside Encapsulated', dry=True, roomtemp=True)
+    if len(ivcurve) < 1:
+        return None
+    ivcurve = ivcurve[-1]
+    v = np.array(ivcurve['program_v'])
+    i = np.array(ivcurve['meas_i'])
+    i_600v = i[v == 600]
+    i_850v = i[v == 850]
+
+    return i_600v[0], i_850v[0]
+
+def assembly_info(moduleserial):
+
+    moduleins = fetch_module_inspect(moduleserial)
+    protoins = fetch_proto_inspect(moduleserial)
+
+    if len(moduleins) < 1 or len(protoins) < 1:
+        return None
+
+    return protoins[-1]['thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg']
+
+def summary_upload(moduleserial, qc_summary):
+
+    coro = upload_PostgreSQL(table_name = 'module_qc_summary', db_upload_data = qc_summary)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded to qc summary table for {moduleserial}")
+    read_table('module_qc_summary')
+    
 def add_RH_T(state, force=False):
     """
     Adds RH, T inside box to the state dictionary as integers. Uses AirControl class which was implemented for CMU and is not
@@ -362,7 +565,7 @@ def add_RH_T(state, force=False):
     if ('-Box-RH-' not in state.keys() or '-Box-T-' not in state.keys()) or force: # only add once per testing session, except if you really need
 
         # if no automatic RH sensor, enter manually
-        if not configuration['HasRHSensor']: 
+        if not configuration['HasRHSensor'] or state['-Debug-Mode-']: 
 
             layout = [[sg.Text('Enter current humidity and temperature:', font=('Arial', 30))],
                       [sg.Input(s=3, key='-RH-'), sg.Text("% RH"), sg.Input(s=4, key='-Temp-'), sg.Text(" deg C")], [sg.Button('Enter')]]
@@ -406,3 +609,39 @@ def add_RH_T(state, force=False):
     # if no update, return state values
     else:
         return state['-Box-RH-'], state['-Box-T-']
+
+def serial_add_dashes(moduleserial):
+
+    if moduleserial.count('-') == 4:
+        return moduleserial
+    elif moduleserial.count('-') > 0 and moduleserial.count('-') < 4:
+        raise ValueError
+
+    dashedserial = moduleserial[0:3]+'-'+moduleserial[3:5]+'-'
+
+    if '320-M' in dashedserial: # live module
+        dashedserial += moduleserial[5:9]+'-'+moduleserial[9:11]+'-'+moduleserial[11:15]
+    elif '320-X' in dashedserial: # hexaboard
+        dashedserial +=	moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
+    else:
+        raise ValueError
+        
+    return dashedserial
+
+def serial_remove_dashes(moduleserial):
+
+    if moduleserial.count('-') == 0:
+        return moduleserial
+    elif moduleserial.count('-') > 0 and moduleserial.count('-') < 4:
+        raise ValueError
+
+    undashedserial = moduleserial[0:3]+moduleserial[4:6]
+
+    if '320M' in undashedserial: # live module
+        undashedserial += moduleserial[7:11]+moduleserial[12:14]+moduleserial[15:19]
+    elif '320X' in undashedserial: # hexaboard
+        undashedserial += moduleserial[7:10]+moduleserial[11:13]+moduleserial[14:19]
+    else:
+        raise ValueError
+        
+    return undashedserial

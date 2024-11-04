@@ -2,11 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC
+from CentosPC import CentosPC, check_hexactrl_sw
 from Keithley2410 import Keithley2410
 from time import sleep
 import os
 import traceback
+from datetime import datetime
 
 import yaml
 configuration = {}
@@ -18,7 +19,7 @@ if configuration['HasLocalDB']:
 
 from DBTools import add_RH_T, iv_save
 
-lgfont = ('Arial', 30)
+lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
 """
@@ -98,7 +99,7 @@ def end_session(state):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F']:
+        if shape not in ['F', 'B']:
             raise NotImplementedError
                             
     ending = waiting_window("Ending session...")
@@ -202,56 +203,77 @@ def initial_module_checks(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
-            raise NotImplementedError
+        if shape not in ['F', 'L', 'R', 'T', '5']:
+            raise NotImplementedError # B
     elif density == 'H':
-        if shape not in ['F']:
-            raise NotImplementedError
+        if shape not in ['F', 'B', 'T', 'L', 'R']:
+            raise NotImplementedError # 5
 
-    do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
+    # check hexactrl-sw location now
+    try:
+        check_hexactrl_sw()
+    except AssertionError:
+        ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
+        sleep(2)
+        ending.close()
+        end_session(state)
+        return 'END'
         
+    do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
+    
     pads_LF = ["P1V2D", "P1V2A", "P1V5C", "P1V5D"]
     pads_LR_LL = ["P1V2D", "P1V2A", "P1V5"]
-    pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D']
-
+    pads_HF = ['P1V2_D', 'P1V2A_UP', 'P1V2A_DW', 'P1V5A', 'P1V5A_UP', 'P1V5D'] # also T, 5
+    pads_HB = ['P1V2D', 'P1V2A', 'P1V5D', 'P1V5A']
+    pads_HT = ['P1V2D', 'P1V2A', 'P1V5', 'P1V5_IN']
+    pads_HL = ['P1V2D', 'P1V2A', 'P1V5A', 'P1V5']
+    pads_HR = ['P1V2D', 'P1V2A', 'P1V5A']
+    
     if density == 'L':
         if shape == 'F':
             thesepads = pads_LF
-        elif shape == 'R' or shape == 'L':
+        elif shape == 'R' or shape == 'L' or shape == 'T' or shape == '5':
             thesepads = pads_LR_LL
     if density == 'H':
         if shape == 'F':
             thesepads = pads_HF
+        elif shape == 'B':
+            thesepads = pads_HB
+        elif shape == 'T':
+            thesepads = pads_HT
+        elif shape == 'L':
+            thesepads = pads_HL
             
-    layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
-    colleft = []
-    colright = []
-    idx = 2
-    for pad in thesepads:
-        colleft.append([sg.Text(f"{pad}: ")])
-        colright.append([sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
-        idx += 1
-    layout.append([sg.Column(colleft), sg.Column(colright)])
-    layout.append([sg.Button("Continue")])
+    if not state['-Skip-Checks-']:
+        layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
+        colleft = []
+        colright = []
+        idx = 2
+        for pad in thesepads:
+            colleft.append([sg.Text(f"{pad}: ")])
+            colright.append([sg.Radio('Short', idx, key=f"-{pad}-Short-"), sg.Radio('No Short', idx, key=f"-{pad}-No-Short-")])
+            idx += 1
+        layout.append([sg.Column(colleft), sg.Column(colright)])
+        layout.append([sg.Button("Continue")])
     
-    window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
+        window = sg.Window("Module Test: Check Hexaboard", layout, margins=(200,100))
 
-    while True:
-        event, values = window.read()
-        if event == "Continue":
-            noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
-            if not noshorts:
+        while True:
+            event, values = window.read()
+            if event == "Continue":
+                noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
+                if not noshorts:
+                    window.close()
+                    end_session(state)
+                    return 'END'
+                else:
+                    break
+            if event == sg.WIN_CLOSED:
                 window.close()
                 end_session(state)
                 return 'END'
-            else:
-                break
-        if event == sg.WIN_CLOSED:
-            window.close()
-            end_session(state)
-            return 'END'
 
-    window.close()
+        window.close()
 
     # If live module, check the bias voltage behavior
     if state['-Live-Module-']:
@@ -267,46 +289,48 @@ def initial_module_checks(state):
     do_something_window(command, "Connected")
     update_state(state, '-DCDC-Connected-', True, 'green')
 
-    command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
-    do_something_window(command, "Powered")
-    update_state(state, '-DCDC-Powered-', True, 'green')
-
-    layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")]]
-    colleft = []
-    colright = []
-    idx = 2
-    for pad in thesepads:
-        expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
-        colleft.append([sg.Text(f"{pad}:")])
-        colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
-        idx += 1
-    layout.append([sg.Column(colleft), sg.Column(colright)])
-    layout.append([sg.Button("Continue")])
-
-    window = sg.Window("Module Test: Probe power pads", layout, margins=(200,100))
-
-    while True:
-        event, values = window.read()
-        if event == "Continue":
-            allcorr = all([values[f"-{pad}-corr-"] for pad in thesepads])
-            if not allcorr:
+    if not state['-Skip-Checks-']:
+        command = "Connect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else "") if density+shape == 'LF' else "Turn on low voltage power"
+        do_something_window(command, "Powered")
+        update_state(state, '-DCDC-Powered-', True, 'green')
+        
+        layout = [[sg.Text("Measure voltage on pads", font=lgfont)], [sg.Text("Be careful to not short the probes!")]]
+        colleft = []
+        colright = []
+        idx = 2
+        for pad in thesepads:
+            expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
+            colleft.append([sg.Text(f"{pad}:")])
+            colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
+            idx += 1
+        layout.append([sg.Column(colleft), sg.Column(colright)])
+        layout.append([sg.Button("Continue")])
+        
+        window = sg.Window("Module Test: Probe power pads", layout, margins=(200,100))
+        
+        while True:
+            event, values = window.read()
+            if event == "Continue":
+                allcorr = all([values[f"-{pad}-corr-"] for pad in thesepads])
+                if not allcorr:
+                    window.close()
+                    end_session(state)
+                    return 'END'
+                else:
+                    break
+        
+                break
+            if event == sg.WIN_CLOSED or event == "Power incorrect":
                 window.close()
                 end_session(state)
                 return 'END'
-            else:
-                break
+                
+        window.close()
+        
+        command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
+        do_something_window(command, "Disconnected")
+        update_state(state, '-DCDC-Powered-', False, 'black')
 
-            break
-        if event == sg.WIN_CLOSED or event == "Power incorrect":
-            window.close()
-            end_session(state)
-            return 'END'
-            
-    window.close()
-
-    command = "Disconnect DCDC power cable"+(" (green)" if configuration['MACSerial'] == 'CM' else '') if density+shape == 'LF' else "Turn off low voltage power"
-    do_something_window(command, "Disconnected")
-    update_state(state, '-DCDC-Powered-', False, 'black')
     return 'CONT'
 
 def open_close_box(state, close=True):
@@ -373,8 +397,8 @@ def connect_HV(state):
             update_state(state, 'ps', ps)
         keith.close()
     
-    close_box(state)
-            
+    #close_box(state)
+    
 def check_leakage_current(state):
     """
     Measures the leakage current of the module at a few select bias voltages to ensure there are
@@ -387,56 +411,58 @@ def check_leakage_current(state):
     leakage_current = {} #{0: None, 1: None, 10: None, 100: None, 300: None, 600: None}
     # best to set the keys in the dict according to bias direction
     # and then use those keys
-    for vltg in [0, 1, 10, 100, 300, 600]:
+    for vltg in [0, 1, 10, 100, 300]: 
         if configuration['HVWiresPolarization'] == 'Forward':
             leakage_current[-vltg] = None
         else:
             leakage_current[vltg] = None
 
     connect_HV(state)
-
-    ivprobe = waiting_window('Verifying module IV behavior...')
-    nominal = True
-    if state['-Debug-Mode-']:
-        sleep(5)
-    else:
-        state['ps'].outputOn()
-        update_state(state, '-HV-Output-On-', True, 'green')
+    if not state['-Skip-Checks-']:
+        close_box(state)
         
-        for key in leakage_current.keys():
-
-            state['ps'].setVoltage(key)
-            _, current, _ = state['ps'].measureCurrent()
-            leakage_current[key] = current
-            print(' >> Checking leakage current:', key, current*1000000.)
-            if np.abs(current)*1000000. > 1. and abs(key) < 500:
-                nominal = False
-                break
-
-        state['ps'].outputOff()
-        update_state(state, '-HV-Output-On-', False, 'black')
-
-    ivprobe.close()
-    
-    readout = [[sg.Text(f"{key} V Bias: {round(1000000.*leakage_current[key],3)} μA") if leakage_current[key] is not None else sg.Text(f"{key} V Bias: {None} μA")] for key in leakage_current.keys()]
-
-    title = "Module leakage current good" if nominal else "Module leakage current not nominal. Continue?"
-    
-    layout = [[sg.Text(title, font=lgfont)],
-              [sg.Frame('Leakage Current', readout, key='-Leakage-Current-')],
-              [sg.Button("Continue"), sg.Button("End Test")]]
-    window = sg.Window(f"Module Test: Leakage Current Results", layout, margins=(200,100))
-
-    while True:
-        event, values = window.read()
-        if event == "Continue" or event == sg.WIN_CLOSED:
-            break
-        if event=="End Test":
-            window.close()
-            end_session(state)
-            return 'END'
+        ivprobe = waiting_window('Verifying module IV behavior...')
+        nominal = True
+        if state['-Debug-Mode-']:
+            sleep(5)
+        else:
+            state['ps'].outputOn()
+            update_state(state, '-HV-Output-On-', True, 'green')
             
-    window.close()
+            for key in leakage_current.keys():
+        
+                state['ps'].setVoltage(key)
+                _, current, _ = state['ps'].measureCurrentLoop()
+                leakage_current[key] = current
+                print('  >> Checking leakage current:', key, current*1000000.)
+                if np.abs(current)*1000000. > 1. and abs(key) < 500:
+                    nominal = False
+                    break
+        
+            state['ps'].outputOff()
+            update_state(state, '-HV-Output-On-', False, 'black')
+        
+        ivprobe.close()
+        
+        readout = [[sg.Text(f"{key} V Bias: {round(1000000.*leakage_current[key],3)} μA") if leakage_current[key] is not None else sg.Text(f"{key} V Bias: {None} μA")] for key in leakage_current.keys()]
+        
+        title = "Module leakage current good" if nominal else "Module leakage current not nominal. Continue?"
+        
+        layout = [[sg.Text(title, font=lgfont)],
+                  [sg.Frame('Leakage Current', readout, key='-Leakage-Current-')],
+                  [sg.Button("Continue"), sg.Button("End Test")]]
+        window = sg.Window(f"Module Test: Leakage Current Results", layout, margins=(200,100))
+        
+        while True:
+            event, values = window.read()
+            if event == "Continue" or event == sg.WIN_CLOSED:
+                break
+            if event=="End Test":
+                window.close()
+                end_session(state)
+                return 'END'
+                
+        window.close()
     return 'CONT'
 
 def configure_test_stand(state, trenzhostname):
@@ -455,7 +481,7 @@ def configure_test_stand(state, trenzhostname):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F']:
+        if shape not in ['F', 'B']:
             raise NotImplementedError
     else:
         raise NotImplementedError
@@ -521,7 +547,15 @@ def configure_test_stand(state, trenzhostname):
         pc = None
         sleep(5)
     else:
-        pc = CentosPC(trenzhostname, state['-Module-Serial-'], state['-Live-Module-']) # automatically starts daq client
+        try:
+            pc = CentosPC(trenzhostname, state) # automatically starts daq client
+        except AssertionError:
+            ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
+            sleep(2)
+            ending.close()
+            end_session(state)
+            return 'END'
+
     daq.close()
     update_state(state, '-DAQ-Client-', True, 'green')
     update_state(state, 'pc', pc)
@@ -551,6 +585,10 @@ def run_pedestals(state, BV):
 
         pedestalpath = state['pc'].pedestal_run(BV=BV)
 
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrentLoop()
+            state['-Leakage-Current-'] = current
+        
         # rename output directory with conditions of test
         trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
@@ -604,10 +642,15 @@ def trim_pedestals(state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
+            
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
+
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrentLoop()
+            state['-Leakage-Current-'] = current
 
         if BV is None:
             state['-Pedestals-Trimmed-'] = True
@@ -629,6 +672,10 @@ def run_other_script(script, state, BV):
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
         state['pc']._run_script(script)
+
+        if state['-Live-Module-'] and BV is not None:
+            _, current, _ = state['ps'].measureCurrentLoop()
+            state['-Leakage-Current-'] = current
         
         if configuration['HasLocalDB']:
             try:
@@ -678,9 +725,9 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-def take_IV_curve(state, step=20):
+def take_IV_curve(state, step=10):
     """
-    Takes an IV curve automatically using the power supply object. The range is assumed to be 0-800V
+    Takes an IV curve automatically using the power supply object. The range is assumed to be 0-900V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
     humidity. We intend to query this automatically in the future but do not have the capability at the 
     moment.
@@ -696,13 +743,13 @@ def take_IV_curve(state, step=20):
     else:
         HVswitch_tripped = state['ps'].switch_state()
         if not HVswitch_tripped and configuration['HasHVSwitch']:
-            print('>> HV switch not tripped - exiting. Please close box and try again.')
+            print(' >> HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
-        maxV = 800 if configuration['HVWiresPolarization'] == 'Reverse' else -800
+        maxV = 900 if configuration['HVWiresPolarization'] == 'Reverse' else -900
         if configuration['HVWiresPolarization'] == 'Forward':
             step = -step
-        curve = state['ps'].takeIV(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
+        curve = state['ps'].takeIVnew(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
         if configuration['HasLocalDB']:
@@ -711,7 +758,7 @@ def take_IV_curve(state, step=20):
             except Exception:
                 print('  -- IV upload exception:', traceback.format_exc())
         else:
-            iv_save(curve, state['-Module-Serial-']) # saves IV curve as pickle object
+            iv_save(curve, state) # saves IV curve as pickle object
     curvew.close()
     return 'CONT'
         
@@ -781,19 +828,20 @@ def plot_IV_curves(state):
         fig, ax = plt.subplots(figsize=(16, 12))
         for datadict in state['ps'].IVdata:
             data = datadict['data']
-            plt.plot(data[:,1], data[:,2]*1000000., 'o-', label=f"{datadict['RH']}\% RH; {datadict['Temp']}ºC")
+            plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}% RH; {datadict['Temp']}ºC")
         
+        outdir = state['-Output-Subdir-']
+
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
         ax.set_xlabel('Bias Voltage [V]')
-        ax.set_ylabel(r'Leakage Current [$\mu$A]')
-        ax.set_ylim(0.01, 100)
-        ax.set_xlim(0, 800)
+        ax.set_ylabel(r'Leakage Current [A]')
+        ax.set_ylim(1e-9, 1e-03)
+        ax.set_xlim(0, 900)
         ax.legend()
-        os.system(f'mkdir -p {configuration["DataLoc"]}/{state["-Module-Serial-"]}')
 
         # dynamically name file to avoid overwriting plots
-        filepath = f'{configuration["DataLoc"]}/{state["-Module-Serial-"]}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
+        filepath = f'{configuration["DataLoc"]}/{outdir}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
         filepath += '{}.png'
         end = '_0'
         thisend = int(end[1])
@@ -806,3 +854,30 @@ def plot_IV_curves(state):
         plt.close(fig)
         os.system(f'gio open {filepath.format(end)}')
 
+def grade_module_window(moduleserial, qc_summary):
+
+    layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
+              [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
+              [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
+              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {len(qc_summary["list_cells_grounded"])} cells')],
+              [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
+              [sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
+              [sg.Text(f'Protomodule Assembly Grade: {qc_summary["proto_grade"]}')],
+              [sg.Text(f'Offsets: x: {qc_summary["proto_x_offset"]} um y: {qc_summary["proto_y_offset"]} um ang: {round(qc_summary["proto_ang_offset"], 4)} deg')],
+              [sg.Text(f'Module Assembly Grade: {qc_summary["module_grade"]}')],
+              [sg.Text(f'Offsets: x: {qc_summary["module_x_offset"]} um y: {qc_summary["module_y_offset"]} um ang: {round(qc_summary["module_ang_offset"], 4)} deg')],
+              [sg.Text('Enter comments:')],
+              [sg.Multiline(size=(50, 5), key='comments')],
+              [sg.Button('Enter')]]
+    window = sg.Window(f"Grade Module {moduleserial}", layout, margins=(200,100))
+
+    comment = ''
+    while True:
+        event, values = window.read()
+        if event == 'Enter' or event == sg.WIN_CLOSED:
+            comment = values['comments']
+            break
+
+    window.close()
+    qc_summary['comments_all'] = comment
+    return qc_summary

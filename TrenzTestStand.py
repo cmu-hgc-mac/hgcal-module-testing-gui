@@ -1,3 +1,4 @@
+
 import paramiko
 import time
 import os
@@ -21,8 +22,13 @@ listeddevices = {'LF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', 
                         ['20: -- -- -- -- -- -- -- -- 28 29 2a 2b 2c 2d 2e 2f', '20: -- -- -- -- -- -- -- 27 28 29 2a 2b 2c 2d 2e 2f'],
                         ['40: -- -- -- -- -- -- -- -- 48 49 4a 4b 4c 4d 4e 4f', '40: -- -- -- -- -- -- -- 47 48 49 4a 4b 4c 4d 4e 4f'],
                         ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f'],
-                        ['60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f', '60: -- -- -- -- -- -- -- 67 68 69 6a 6b 6c 6d 6e 6f']]}
-    
+                        ['60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f', '60: -- -- -- -- -- -- -- 67 68 69 6a 6b 6c 6d 6e 6f']],
+                 'HB': [['20: -- -- -- -- -- -- -- -- 28 29 2a 2b 2c 2d 2e 2f', '20: -- -- -- -- -- -- -- 27 28 29 2a 2b 2c 2d 2e 2f'],
+                        ['60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f', '60: -- -- -- -- -- -- -- 67 68 69 6a 6b 6c 6d 6e 6f'],
+                        ['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f'],
+                        ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']]}
+
+
 class TrenzTestStand:
     """
     Class that wraps the Trenz-based testing system. The class connects to the Trenz using a paramiko
@@ -53,7 +59,10 @@ class TrenzTestStand:
                 
         # create ssh client                                                                                                                                                                     
         self.ssh = paramiko.SSHClient()
-        k = paramiko.RSAKey.from_private_key_file(keyloc)
+        try:
+            k = paramiko.RSAKey.from_private_key_file(keyloc)
+        except paramiko.ssh_exception.SSHException:
+            k = paramiko.Ed25519Key.from_private_key_file(keyloc)
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username='root', pkey=k)
         # at this point, can consider to be "connected"
@@ -68,9 +77,9 @@ class TrenzTestStand:
             else: # T B 5
                 raise NotImplementedError
         elif density == 'H':
-            if shape == 'F':
+            if shape == 'F' or shape == 'B':
                 self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
-            else: # L R T B 5
+            else: # L R T 5
                 raise NotImplementedError
 
         self.hbtype = density+shape
@@ -146,7 +155,7 @@ class TrenzTestStand:
         check1 = False
         check2 = False
         for line in ssh_stdout.readlines():
-            print(' >> daq:', line.strip('\n'))
+            print('   >> daq:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 check1 = True
 
@@ -167,23 +176,15 @@ class TrenzTestStand:
                 error_check = False
 
         check1 = False
-        check2 = False
-        i2cstatus_lines = ['[I2C] Board identification: V3 LD Full HB',
-                           '[I2C] Board identification: V3 LD Semi or Half HB',
-                           '[I2C] Board identification: V3 HD Full HB']
         for line in ssh_stdout.readlines():
             print('   >> i2c:', line.strip('\n'))
             if 'Active: active (running)' in line:
                 check1 = True
-
-            for il in i2cstatus_lines:
-                if il in line:
-                    check2 = True
-                
-        if check1 and check2:
+            
+        if check1:
             board_discovered = True
         if board_discovered:
-            print(' >> TrenzTestStand: Identified LD Full Hexaboard')
+            print(' >> TrenzTestStand: Identified Hexaboard')
 
         if board_discovered and daq_initiated and error_check:
             self.services = True

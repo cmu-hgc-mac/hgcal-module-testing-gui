@@ -3,7 +3,6 @@ import os, sys, glob
 import pandas as pd
 import numpy as np
 from argparse import ArgumentParser
-import uproot3 as uproot
 import math
 
 import matplotlib as mpl
@@ -19,9 +18,24 @@ except ModuleNotFoundError:
     from hexmap.hexaboard_geometries import *
 
 mpl.rcParams.update(mpl.rcParamsDefault)
-font = {"size": 25}
+font = {"size": 20}
 mpl.rc("font", **font)
-plt.rcParams['text.usetex'] = True
+
+import yaml
+configuration = {}
+try:
+    with open('configuration.yaml', 'r') as file:
+        configuration = yaml.safe_load(file)
+except FileNotFoundError:
+    with open('../configuration.yaml', 'r') as file:
+        configuration = yaml.safe_load(file)
+        
+# different versions of uproot for each OS =.=
+if configuration['TestingPCOpSys'] == 'Centos7':
+    import uproot3 as uproot
+elif configuration['TestingPCOpSys'] == 'Alma9':
+    import uproot
+
 
 ##### Mapping functions
 
@@ -36,6 +50,7 @@ def get_pad_id(map_dict, chip, chan, chantype):
     else:
         return 0
 
+
 ##### Plotting functions
 
 # To plot the patches
@@ -48,7 +63,7 @@ def create_patches(df, mask, data_type, hb_type = "LF"):
     patches = []
     local_mask = mask.copy()
     r = 0.43
-    if hb_type == "HF":
+    if hb_type == "HF" or hb_type == "HB": 
         r = 0.28
     for x, y in df.loc[local_mask, ["x", "y"]].values:
         angle = 0
@@ -116,7 +131,7 @@ def add_channel_legend(axes, hb_type = "LF"):
     pentagon = RegularPolygon((0.5, 0.5), numVertices = 5, radius = 10, orientation = 0)
     square = RegularPolygon((0.5, 0.5), numVertices = 4, radius = 10, orientation = np.radians(45))
     circle = RegularPolygon((0.5, 0.5), numVertices = 100, radius = 10, orientation = 0)
-    if hb_type == "LF" or hb_type == 'LR' or hb_type == 'LL':
+    if hb_type == "LF" or hb_type == 'LR' or hb_type == 'LL' or hb_type == "HB":
         handles = [hexagon, pentagon, square, circle]
         labels = ['calib', 'CM0', 'CM1', 'NC']
     elif hb_type == "HF":
@@ -191,7 +206,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             local_mask &= df_data[column] >= 0
             patches += create_patches(df_data, local_mask, data_type, hb_type = hb_type)
             colors = np.concatenate((colors, df_data[local_mask][column].values))
-            
+
         patch_col = PatchCollection(patches, cmap = cmap, match_original = True)
         patch_col.set_array(colors)
 
@@ -199,8 +214,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         patch_col.set_clim([0.001, upplim])
 
         # for live module if actual channels have same noise as disconnected channels, label
-        med_nc = df_data[column][nc_mask].median()
-        uncon = np.abs(df_data[column] - med_nc) < upplim/40.
+        if len(df_data[column][nc_mask]) > 0:
+            med_nc = df_data[column][nc_mask].median()
+            uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality
         # but will still print channel numbers
         
@@ -223,11 +239,11 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
 
-            for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
-                ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+            if len(df_data[column][nc_mask]) > 0:
+                for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
+                    ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             for x, y, pad in df.loc[highval & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                 ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
-            
 
         # mean noise information
         if (column == 'adc_stdd' or column == 'adc_iqr'):
@@ -342,7 +358,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
             
         ax[-1].set_xlabel('Channel Number')
 
-        # add the title                                                                                                                                                                                     
+        # add the title      
         ax[0].set_title(label.replace('_', ' '), y=1.25)
 
         # save the figure                                                                                                                                                               
@@ -415,14 +431,17 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         label = os.path.basename(fname)
         label = label[:-5]
 
+    segments = fname.split('/')
+    for seg in segments:
+        if '320-' in seg:
+            moduleserial = seg
+
     if hb_type is None:
-        moduleserial = fname.split('/')[-4]
+        #moduleserial = fname.split('/')[-5]
         density = moduleserial.split('-')[1][1]
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-        #print(moduleserial, hb_type)
-    
     livemod = 'ML' in fname or 'MH' in fname
             
     # fix figdir
@@ -437,13 +456,21 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
     f = uproot.open(fname)
     try:
         tree = f["runsummary"]["summary"]
-        df_data = tree.pandas.df()
+
+        # different uproot functions for different OS =.=
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            df_data = tree.pandas.df()
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            df_data = tree.arrays(library='pd')
+
     except:
         print(" -- No tree found!")
         return 0
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
+    print(df_data[df_data["channeltype"] == 1])
+    
     # do plots
     plot_hexmaps(df_data, figdir, hb_type, label, live=livemod)
     plot_channels(df_data, figdir, hb_type, label, live=livemod)
