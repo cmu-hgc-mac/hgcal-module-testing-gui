@@ -75,8 +75,9 @@ class CentosPC:
                     self.config = '{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
             elif shape == 'L' or shape == 'R':
                 if rocvers == '2' or rocvers == '4':
-                    raise NotImplementedError
-                self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
+                    self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
+                elif rocvers == 'X':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
             elif shape == '5':
                 if rocvers == 'X':
                     raise NotImplementedError

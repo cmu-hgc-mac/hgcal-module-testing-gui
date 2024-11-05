@@ -570,9 +570,11 @@ while True:
             continue
 
         if rocvers != 'X':
-            if (rocvers == '2' or rocvers == '4') and majortype[1] == 'L' and minortype[0] == 'F':
-                pass # only allow V3b ROC testing for LD full
-            elif not (values['-IsHB-'] and hbvers == '0' and rocvers == '3'):
+            if (rocvers == '2' or rocvers == '4') and majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R'):
+                pass # only allow V3b ROC testing for LD full and right
+            elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
+                pass # catch older hexaboard serial format
+            else:
                 show_string("Not Implemented")
                 continue
             
