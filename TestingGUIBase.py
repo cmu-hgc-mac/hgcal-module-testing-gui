@@ -753,10 +753,11 @@ while True:
         # Standard test sequence links together lots of tests
         if values['-Standard-Test-']:
 
-            # only for live modules
+            # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
-                show_string("Invalid for hexaboards", field="Right")
+                multi_run_pedestals(current_state, [None, None])
+                trim_pedestals(current_state, None)
+                multi_run_pedestals(current_state, [None, None, None, None, None])
                 continue
             
             # trim and take pedestals
