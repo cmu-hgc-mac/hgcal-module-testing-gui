@@ -1039,6 +1039,7 @@ while True:
                       'i_at_600v': i_600v,
                       'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
+                      'grade_version': 'preproduction_1_2024-10-16', 
                       }
         
         print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')
