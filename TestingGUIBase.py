@@ -240,7 +240,7 @@ inspector = ''
 modulestatus = ''
 
 hxb_statuses = ['Untaped', 'Taped']
-mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated']
+mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated', 'Bolted']
 
 # Function to clear the values entered into the Module Setup section
 def clear_setup():
