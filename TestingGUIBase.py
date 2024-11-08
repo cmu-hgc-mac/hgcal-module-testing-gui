@@ -240,7 +240,7 @@ inspector = ''
 modulestatus = ''
 
 hxb_statuses = ['Untaped', 'Taped']
-mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated']
+mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated', 'Bolted']
 
 # Function to clear the values entered into the Module Setup section
 def clear_setup():
@@ -570,10 +570,14 @@ while True:
             continue
 
         if rocvers != 'X':
-            if not (values['-IsHB-'] and hbvers == '0' and rocvers == '3'):
+            if (rocvers == '2' or rocvers == '4') and majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
+                pass # only allow V3b ROC testing for LD full, left, right
+            elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
+                pass # catch older hexaboard serial format
+            else:
                 show_string("Not Implemented")
                 continue
-        
+            
         trenzhostname = values['-TrenzHostname-'].rstrip()
         
         # Initialize test stand state dictionary
@@ -749,10 +753,11 @@ while True:
         # Standard test sequence links together lots of tests
         if values['-Standard-Test-']:
 
-            # only for live modules
+            # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
-                show_string("Invalid for hexaboards", field="Right")
+                multi_run_pedestals(current_state, [None, None])
+                trim_pedestals(current_state, None)
+                multi_run_pedestals(current_state, [None, None, None, None, None])
                 continue
             
             # trim and take pedestals
@@ -1034,6 +1039,7 @@ while True:
                       'i_at_600v': i_600v,
                       'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
+                      'grade_version': 'preproduction_1_2024-10-16', 
                       }
         
         print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')

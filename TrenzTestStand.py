@@ -29,7 +29,6 @@ listeddevices = {'LF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', 
                         ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']]}
 
 
-
 class TrenzTestStand:
     """
     Class that wraps the Trenz-based testing system. The class connects to the Trenz using a paramiko

@@ -64,18 +64,29 @@ class CentosPC:
             
         density = self.modulename.split('-')[1][1]
         shape = self.modulename.split('-')[2][0]
+        rocvers = self.modulename.split('-')[2][-1] # -1 so works for hexaboards and live modules
         
         # different module density/geometry need different config files
         if density == 'L':
             if shape == 'F':
-                self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
+                if rocvers == 'X':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
+                elif rocvers == '2' or rocvers == '4':
+                    self.config = '{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
             elif shape == 'L' or shape == 'R':
-                self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
+                if rocvers == '2' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
+                elif rocvers == 'X':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
             elif shape == '5':
+                if rocvers == 'X':
+                    raise NotImplementedError
                 self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
             else: # T B
                 raise NotImplementedError
         elif density == 'H':
+            if rocvers == '2' or rocvers == '4':
+                raise NotImplementedError
             if shape == 'F':
                 self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
             elif shape == 'B':
