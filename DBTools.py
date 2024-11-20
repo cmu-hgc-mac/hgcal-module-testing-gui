@@ -452,6 +452,7 @@ def readout_info(moduleserial):
     highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
+        print(f' >> DBTools: not enough pedestal tests: lowBV {len(lowBVruns)} midBV {len(midBVruns)} high BV {len(highBVruns)}')
         return None
     
     badcell = set()
@@ -510,11 +511,12 @@ def readout_info(moduleserial):
     for cell in noisycells:
         badcell.add(cell)
 
-    frontwirebond = fetch_front_wirebond(moduleserial)[-1]
+    frontwirebond = fetch_front_wirebond(moduleserial)
     if len(frontwirebond) == 0:
+        print(f' >> DBTools: no front wirebond info')
         return None
     
-    groundedcells = np.array(frontwirebond['list_grounded_cells'])
+    groundedcells = np.array(frontwirebond[-1]['list_grounded_cells'])
     for cell in groundedcells:
         badcell.add(cell)
 
@@ -525,6 +527,7 @@ def iv_info(moduleserial):
 
     ivcurve = fetch_iv(moduleserial, 'Frontside Encapsulated', dry=True, roomtemp=True)
     if len(ivcurve) < 1:
+        print(f' >> DBTools: no IV tests')
         return None
     ivcurve = ivcurve[-1]
     v = np.array(ivcurve['program_v'])
@@ -540,6 +543,7 @@ def assembly_info(moduleserial):
     protoins = fetch_proto_inspect(moduleserial)
 
     if len(moduleins) < 1 or len(protoins) < 1:
+        print(f' >> DBTools: no assembly info')
         return None
 
     return protoins[-1]['thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg']

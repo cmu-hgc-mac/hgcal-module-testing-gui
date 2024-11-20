@@ -966,7 +966,8 @@ while True:
         if not configuration['HasLocalDB']:
             show_string("Grading requires local db", field='Right')
             continue
-        
+
+        print(f' >> TestingGUIBase: Grading {moduleserial}')
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             i_600v, i_850v = iv_info(moduleserial)
