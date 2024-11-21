@@ -332,7 +332,7 @@ while True:
         else:
             moduleserial = scannedcode
 
-    print(moduleserial, scannedcode)
+        print(moduleserial, scannedcode)
             
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
@@ -999,16 +999,16 @@ while True:
         else:
             readout_grade = 'C'
 
-        if pxoffset < 50 and pyoffset < 50 and pangoffset < 0.02:
+        if abs(pxoffset) < 50 and abs(pyoffset) < 50 and abs(pangoffset) < 0.02:
             proto_grade = 'A'
-        elif pxoffset < 100 and pyoffset < 100 and pangoffset < 0.05:
+        elif abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.05:
             proto_grade = 'B'
         else:
             proto_grade = 'C'
         
-        if mxoffset < 50 and myoffset < 50 and mangoffset < 0.02:
+        if abs(mxoffset) < 50 and abs(myoffset) < 50 and abs(mangoffset) < 0.02:
             module_grade = 'A'
-        elif mxoffset < 100 and myoffset < 100 and mangoffset < 0.05:
+        elif abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.05:
             module_grade = 'B'
         else:
             module_grade = 'C'
@@ -1050,7 +1050,7 @@ while True:
                       'grade_version': 'preproduction_1_2024-10-16', 
                       }
         
-        print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')
+        print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
         # comments added by pop-up window
         qc_summary = grade_module_window(moduleserial, qc_summary)
         # not uploading to local db yet

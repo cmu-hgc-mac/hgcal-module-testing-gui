@@ -641,11 +641,12 @@ def serial_remove_dashes(moduleserial):
 
     undashedserial = moduleserial[0:3]+moduleserial[4:6]
 
-    if '320M' in undashedserial: # live module
+    if '320M' in undashedserial or '320P' in undashedserial: # live module
         undashedserial += moduleserial[7:11]+moduleserial[12:14]+moduleserial[15:19]
     elif '320X' in undashedserial: # hexaboard
         undashedserial += moduleserial[7:10]+moduleserial[11:13]+moduleserial[14:19]
     else:
+        print(undashedserial)
         raise ValueError
         
     return undashedserial
