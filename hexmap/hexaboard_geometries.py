@@ -70,11 +70,11 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "HB":
         chan_map_fname = hb_board_chan
         geo_fname = hb_board_geo
-        
+            
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
 
-    df_pad_map = pd.read_csv(geo_fname, skiprows= 7, delim_whitespace=True, names = ['padnumber', 'xposition', 'yposition', 'type', 'optional'])
+    df_pad_map = pd.read_csv(geo_fname, skiprows= 7, sep='\s+', names = ['padnumber', 'xposition', 'yposition', 'type', 'optional'])
     df_pad_map = df_pad_map[["padnumber","xposition","yposition"]].set_index("padnumber")
     d_pad_map = df_pad_map.to_dict()
 

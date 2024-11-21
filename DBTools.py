@@ -12,7 +12,7 @@ import pandas as pd
 import glob
 import asyncio
 import asyncpg
-from datetime import datetime
+from datetime import datetime, date
 from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
@@ -36,12 +36,12 @@ def iv_save(datadict, state):
     Takes the IV curve output dict and saves it to a pkl file. Returns the path to the pkl file.
     """
 
-    modulename = state['-Module-Serial-']
+    moduleserial = state['-Module-Serial-']
     outdir = state['-Output-Subdir-']
-    with open(f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+    with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{outdir}/{modulename}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -106,14 +106,14 @@ def pedestal_upload(state, ind=-1):
     otherwise specified, uploads the most recent run. Includes the RH and T from the pedestal run which are read from the state dict. 
     """
     
-    modulename = state['-Module-Serial-']
+    moduleserial = state['-Module-Serial-']
 
     outdir = state['-Output-Subdir-']
     runs = glob.glob(f'{configuration["DataLoc"]}/{outdir}/pedestal_run/*')
     runs.sort()
     fname = runs[ind]+'/pedestal_run0.root'
 
-    print(f" >> DBTools: Uploading pedestal run of {modulename} board from summary file {fname} into database")
+    print(f" >> DBTools: Uploading pedestal run of {moduleserial} board from summary file {fname} into database")
 
     # Open the hex data ".root" file and turn the contents into a pandas DataFrame.
     f = uproot.open(fname)
@@ -130,14 +130,13 @@ def pedestal_upload(state, ind=-1):
         print(" -- DBTools: No tree found in pedestal file!")
         return 0
 
-    density = modulename.split('-')[1][1]
-    shape = modulename.split('-')[2][0]
+    density = moduleserial.split('-')[1][1]
+    shape = moduleserial.split('-')[2][0]
     hb_type = density+shape
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
     norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df_data)
-
 
     # count dead/noisy channels
     column = 'adc_stdd'
@@ -177,8 +176,8 @@ def pedestal_upload(state, ind=-1):
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # build upload row list
-    namekey = 'module_name' if '320-M' in modulename else 'hxb_name'
-    db_upload_ped = {namekey: serial_remove_dashes(modulename),
+    namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
+    db_upload_ped = {namekey: serial_remove_dashes(moduleserial),
                      'status': statusdict[state['-Module-Status-']],
                      'status_desc': state['-Module-Status-'],
                      'rel_hum': RH,
@@ -201,7 +200,7 @@ def pedestal_upload(state, ind=-1):
         db_upload_ped[key] = df_data[key].tolist()
     
     # if live module, add the bias voltage to the row list
-    if 'BV' in runs[ind] and '320-M' in modulename:
+    if 'BV' in runs[ind] and '320-M' in moduleserial:
         segments = runs[ind].split('_')
         for seg in segments:
             if 'BV' in seg:
@@ -210,27 +209,109 @@ def pedestal_upload(state, ind=-1):
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
         if '-Leakage-Current-' in state.keys(): # add measured leakage current
             db_upload_ped['meas_leakage_current'] = state['-Leakage-Current-']
-    elif '320-M' in modulename:
+    elif '320-M' in moduleserial:
         BV = -1
         db_upload_ped['bias_vol'] = BV
         db_upload_ped['list_disconnected_cells'] = [] ### XYZ fix
     else:
         pass
     
-    table = 'module_pedestal_test' if ('320-M' in modulename) else 'hxb_pedestal_test'
+    table = 'module_pedestal_test' if ('320-M' in moduleserial) else 'hxb_pedestal_test'
     
     # upload
     coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
-    print(f" >> DBTools: Uploaded pedestal run of {modulename}!")
+    print(f" >> DBTools: Uploaded pedestal run of {moduleserial}!")
     
     read_table(table)
 
-def pedestal_exists(moduleserial, df):
+def previous_pedestal_upload(path):
 
-    coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    runs = glob.glob(f'{path}/pedestal_run/*')
+    runs.sort()
+    for run in runs:
+
+        moduleserial = run.removeprefix(configuration["DataLoc"]).split('/')[0]
+        fname = run+'/pedestal_run0.root'
+
+        df_data = df_from_path(run)
+        if pedestal_exists(moduleserial, df_data):
+            continue
+
+        norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df_data)
+
+        column = 'adc_stdd'
+        zeros = df_data[column] == 0
+        med_norm = df_data[column][norm_mask].median()
+        mean_norm = df_data[column][norm_mask].mean()
+        std_norm = df_data[column][norm_mask].std()
+        noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+        highval = (df_data[column] - med_norm) > noisy_limit
+
+        count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
+        list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
+        list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
+
+        status = None
+        date_test = None
+        
+        for key in statusdict.keys():
+            if key.replace(' ', '_') in run:
+                
+                status = key
+                datelist = [int(i) for i in run.removeprefix(configuration["DataLoc"]).split('/')[1].split('_')[-1].split('-')]
+                date_test = date(datelist[0], datelist[1], datelist[2])
+                
+        # build upload row list
+        namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
+        db_upload_ped = {namekey: serial_remove_dashes(moduleserial),
+                         'status': statusdict[status],
+                         'status_desc': status,
+                         'count_bad_cells': count_bad_cells,
+                         'list_dead_cells': list_dead_cells,
+                         'list_noisy_cells':list_noisy_cells,
+                         'date_test': date_test,
+                         'cell': df_data['pad'].tolist() # rename pad -> cell
+                         }
+
+        dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
+                  'adc_mean', 'adc_stdd', 'tot_mean', 'tot_stdd', 'toa_mean', 'toa_stdd', 'tot_efficiency', 'tot_efficiency_error',
+                  'toa_efficiency', 'toa_efficiency_error', 'x', 'y']
+        for key in dfkeys:
+            db_upload_ped[key] = df_data[key].tolist()
+
+        # if live module, add the bias voltage to the row list                                                       
+        if 'BV' in run and '320-M' in moduleserial:
+            segments = run.split('_')
+            for seg in segments:
+                if 'BV' in seg:
+                    BV = int(seg.split('BV')[1].rstrip('\n '))
+                    db_upload_ped['bias_vol'] = BV
+        elif '320-M' in moduleserial:
+            BV = -1
+            db_upload_ped['bias_vol'] = BV
+        else:
+            pass
+
+        table = 'module_pedestal_test' if ('320-M' in moduleserial or '320M' in moduleserial) else 'hxb_pedestal_test'
+
+        # upload                                                                                                                                       
+        coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
+        
+        print(f" >> DBTools: Uploaded pedestal run {run} for {moduleserial}!")
+        
+        #read_table(table)   
+        
+def pedestal_exists(moduleserial, df):
+    
+    if '320M' in moduleserial or '320-M' in moduleserial:
+        coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    elif '320X' in moduleserial or '320-X' in moduleserial:
+        coro = fetch_serial_PostgreSQL('hxb_pedestal_test', serial_remove_dashes(moduleserial))
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
@@ -240,7 +321,7 @@ def pedestal_exists(moduleserial, df):
         runs.append(r)
 
     for r in runs:
-       if r['adc_stdd'] == df['adc_stdd']:
+        if np.all(np.array(r['adc_stdd']) == np.array(df['adc_stdd'])):
            return True
 
     return False
@@ -248,7 +329,7 @@ def pedestal_exists(moduleserial, df):
 def df_from_path(path):
 
     fname = path+'/pedestal_run0.root'
-    moduleserial = path.removeprefix(dataloc).split('/')[0]
+    moduleserial = path.removeprefix(configuration["DataLoc"]).split('/')[0]
     f = uproot.open(fname)
     try:
         tree = f["runsummary"]["summary"]
@@ -262,12 +343,13 @@ def df_from_path(path):
         print(" -- DBTools: No tree found in pedestal file!")
         return 0
 
-    density = modulename.split('-')[1][1]
-    shape = modulename.split('-')[2][0]
+    density = moduleserial.split('-')[1][1]
+    shape = moduleserial.split('-')[2][0]
     hb_type = density+shape
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
+    return df_data
 
 def iv_upload(datadict, state):
     """
@@ -275,12 +357,12 @@ def iv_upload(datadict, state):
     IV data itself is read from the output datadict.
     """
     
-    modulename = state['-Module-Serial-']
+    moduleserial = state['-Module-Serial-']
     data = datadict['data']
     RH = datadict['RH']
     Temp = datadict['Temp'] 
 
-    print(f" >> DBTools: Uploading (and saving) iv curve of {modulename}")
+    print(f" >> DBTools: Uploading (and saving) iv curve of {moduleserial}")
     
     # save iv as pkl file
     iv_save(datadict, state)
@@ -292,7 +374,7 @@ def iv_upload(datadict, state):
     v2 = 800
     ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
     
-    db_upload_iv = {'module_name': serial_remove_dashes(modulename),
+    db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
                     'status': statusdict[state['-Module-Status-']],
@@ -315,12 +397,12 @@ def iv_upload(datadict, state):
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
-    print(f" >> DBTools: Uploaded iv curve of {modulename}")
+    print(f" >> DBTools: Uploaded iv curve of {moduleserial}")
     read_table('module_iv_test')
 
 def other_test_upload(state, test_name, BV, ind=-1):
 
-    modulename = state['-Module-Serial-']
+    moduleserial = state['-Module-Serial-']
     RH = state['-Box-RH-']
     Temp = state['-Box-T-']
 
@@ -336,7 +418,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
     with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
         tarfile = f.read()
     
-    db_upload_other = {'module_name': serial_remove_dashes(modulename),
+    db_upload_other = {'module_name': serial_remove_dashes(moduleserial),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'rel_hum': str(RH),
@@ -351,7 +433,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'other_test_output': tarfile 
                    }
 
-    if '320-M' in modulename:
+    if '320-M' in moduleserial:
         if '-Leakage-Current-' in state.keys(): # add measured leakage current
             db_upload_other['meas_leakage_current'] = state['-Leakage-Current-']
 
@@ -362,7 +444,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
 
     os.system(f'rm tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz')
 
-    print(f" >> DBTools: Uploaded other test of {modulename}")
+    print(f" >> DBTools: Uploaded other test of {moduleserial}")
     read_table('mod_hxb_other_test')
 
 def plots_upload(state, ind=-1):
@@ -371,13 +453,13 @@ def plots_upload(state, ind=-1):
     """
     
     # define the path to the hexmap plots
-    modulename = state['-Module-Serial-']
+    moduleserial = state['-Module-Serial-']
     outdir = state['-Output-Subdir-']
-    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{modulename}_run*_adc_mean.png')
+    hexpaths = glob.glob(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_run*_adc_mean.png')
     hexinds = [ int(hexpaths[i].split('/')[-1].split('_')[1].split('n')[1]) for i in range(len(hexpaths)) ]
     hexinds.sort()
     thisind = hexinds[ind]
-    hexpath = f'{configuration["DataLoc"]}/{outdir}/{modulename}_run{thisind}'
+    hexpath = f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_run{thisind}'
     
     # if live, must modify with bias voltage and conditions
     fixpath = glob.glob(f'{hexpath}*.png')
@@ -385,7 +467,7 @@ def plots_upload(state, ind=-1):
         thistag = '_'.join(fixpath[0].split('/')[-1].split('_')[2:-2])
         hexpath = hexpath + '_' + thistag
 
-    print(f" >> DBTools: Uploading pedestal plots of module {modulename} into database")
+    print(f" >> DBTools: Uploading pedestal plots of module {moduleserial} into database")
 
     # open hexmaps
     hexpaths = glob.glob(f'{hexpath}_*.png')
@@ -426,7 +508,7 @@ def plots_upload(state, ind=-1):
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
     # upload the plots
-    db_upload_plots = {'module_name': serial_remove_dashes(modulename),
+    db_upload_plots = {'module_name': serial_remove_dashes(moduleserial),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
                        'adc_mean_hexmap': hexmean,
@@ -443,7 +525,7 @@ def plots_upload(state, ind=-1):
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
-    print(f" >> DBTools: Uploaded pedestal plots of {modulename}")
+    print(f" >> DBTools: Uploaded pedestal plots of {moduleserial}")
     
     read_table('module_pedestal_plots')
 
