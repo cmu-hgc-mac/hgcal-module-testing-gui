@@ -228,6 +228,46 @@ def pedestal_upload(state, ind=-1):
     
     read_table(table)
 
+def pedestal_exists(moduleserial, df):
+
+    coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+
+    for r in result:
+        runs.append(r)
+
+    for r in runs:
+       if r['adc_stdd'] == df['adc_stdd']:
+           return True
+
+    return False
+
+def df_from_path(path):
+
+    fname = path+'/pedestal_run0.root'
+    moduleserial = path.removeprefix(dataloc).split('/')[0]
+    f = uproot.open(fname)
+    try:
+        tree = f["runsummary"]["summary"]
+
+        # different uproot functions for different OS =.=
+        if configuration['TestingPCOpSys'] == 'Centos7':
+            df_data = tree.pandas.df()
+        elif configuration['TestingPCOpSys'] == 'Alma9':
+            df_data = tree.arrays(library='pd')
+    except:
+        print(" -- DBTools: No tree found in pedestal file!")
+        return 0
+
+    density = modulename.split('-')[1][1]
+    shape = modulename.split('-')[2][0]
+    hb_type = density+shape
+
+    df_data = add_mapping(df_data, hb_type = hb_type)
+
 
 def iv_upload(datadict, state):
     """
