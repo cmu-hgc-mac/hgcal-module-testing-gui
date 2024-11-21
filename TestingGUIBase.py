@@ -323,10 +323,17 @@ while True:
     if values['-Scanned-QR-Code-'] != '':
         scannedcode = values['-Scanned-QR-Code-'].rstrip()
         if '-' not in scannedcode:
-            moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:9]+'-'+scannedcode[9:11]+'-'+scannedcode[11:]
+            if len(scannedcode) >= 4:
+                if scannedcode[3] == 'M':
+                    moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:9]+'-'+scannedcode[9:11]+'-'+scannedcode[11:]
+                elif scannedcode[3] == 'X':
+                    moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:8]+'-'+scannedcode[8:10]+'-'+scannedcode[10:]
+
         else:
             moduleserial = scannedcode
 
+    print(moduleserial, scannedcode)
+            
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
 

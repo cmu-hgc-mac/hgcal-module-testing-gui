@@ -65,6 +65,9 @@ class CentosPC:
         density = self.modulename.split('-')[1][1]
         shape = self.modulename.split('-')[2][0]
         rocvers = self.modulename.split('-')[2][-1] # -1 so works for hexaboards and live modules
+
+        if rocvers == '3':
+            rocvers = 'X'
         
         # different module density/geometry need different config files
         if density == 'L':
