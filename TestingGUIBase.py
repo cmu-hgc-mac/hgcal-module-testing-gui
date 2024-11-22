@@ -332,8 +332,6 @@ while True:
         else:
             moduleserial = scannedcode
 
-        print(moduleserial, scannedcode)
-            
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
 
@@ -765,6 +763,7 @@ while True:
                 multi_run_pedestals(current_state, [None, None])
                 trim_pedestals(current_state, None)
                 multi_run_pedestals(current_state, [None, None, None, None, None])
+                basewindow['Run Tests'].update(disabled=False)
                 continue
             
             # trim and take pedestals

@@ -75,7 +75,7 @@ class CentosPC:
                 if rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
                 elif rocvers == '2' or rocvers == '4':
-                    self.config = '{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
+                    self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
             elif shape == 'L' or shape == 'R':
                 if rocvers == '2' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
