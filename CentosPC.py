@@ -74,10 +74,10 @@ class CentosPC:
             if shape == 'F':
                 if rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
-                elif rocvers == '2' or rocvers == '4':
+                elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
             elif shape == 'L' or shape == 'R':
-                if rocvers == '2' or rocvers == '4':
+                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
                 elif rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
@@ -88,11 +88,12 @@ class CentosPC:
             else: # T B
                 raise NotImplementedError
         elif density == 'H':
-            if rocvers == '2' or rocvers == '4':
-                raise NotImplementedError
             if shape == 'F':
-                self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
-            elif shape == 'B':
+                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3-V3b.yaml'
+                elif rocvers == 'X':
+                    self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
+            elif shape == 'B' and rocvers == 'X':
                 self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
             else: # L R T 5
                 raise NotImplementedError

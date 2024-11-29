@@ -68,18 +68,25 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                   [sg.Text('Baseplate Type: '),
                    sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
-                   sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)],
-                  [sg.Text('ROC Version: '),
-                   sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                   sg.Radio('V3b SU02', 7, key='-V3b-2-', enable_events=True),
-                   sg.Radio('V3b SU04', 7, key='-V3b-4-', enable_events=True),
-                   sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
+                   sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)]]
+                  #[sg.Text('ROC Version: '),
+                  # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                  # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                  # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                  # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                  # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
                   #[sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
 
 # Module Setup fields for hexaboards only
 # for now, including Hexaboard/ROC version as input for backwards compatibility -
 # will hopfully change to radio buttons once `F03` format is obsolete
-hexaboardonly = [[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
+hexaboardonly = [#[sg.Text('ROC Version: '),
+                 # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                 # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                 # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                 # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                 # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
+                 #[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
                  [sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
 
 # Module Setup section which has both live module and hexaboard fields from above but initially hides them
@@ -89,6 +96,12 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                 sg.Radio("Bottom", 3, enable_events=True, key='-Bottom-'), sg.Radio("Left", 3, enable_events=True, key='-Left-'),
                 sg.Radio("Right", 3, enable_events=True, key='-Right-'), sg.Radio("Five", 3, enable_events=True, key='-Five-')],
                [sg.pin(sg.Column(livemoduleonly, key='-LM-Menu-', visible=False))],
+               [sg.Text('ROC Version: '),
+                sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
                [sg.pin(sg.Column(hexaboardonly, key='-HB-Menu-', visible=False))],
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
@@ -176,7 +189,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 # Functions for enabling/disabling module setup fields
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
-            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-4-', '-V3c-', '-HB-ROC-Version-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
+            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-B-', '-V3b-4-', '-V3c-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
             'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -399,6 +412,7 @@ while True:
             if len(serialsections[2]) == 4:
                 if serialsections[2][3] == 'X': basewindow['-Preseries-'].update(value=True)
                 elif serialsections[2][3] == '2': basewindow['-V3b-2-'].update(value=True)
+                elif serialsections[2][3] == 'B': basewindow['-V3b-B-'].update(value=True)
                 elif serialsections[2][3] == '4': basewindow['-V3b-4-'].update(value=True)
                 elif serialsections[2][3] == 'C': basewindow['-V3c-'].update(value=True)
                 #else:
@@ -409,11 +423,20 @@ while True:
             if not values['-IsLive-']:
                 basewindow.write_event_value('-IsLive-', True)
         elif values['-IsHB-']:
-            basewindow['-HB-ROC-Version-'].update(value=serialsections[2][1:3])
-            #if serialsections[2][1:3] == '03':
-            #    basewindow['-V3-'].update(value=True)
-            #elif serialsections[2][1:3] == '10':
-            #    basewindow['-Prod-'].update(value=True)
+            #basewindow['-HB-ROC-Version-'].update(value=serialsections[2][1:3])
+            if serialsections[2][1:3] == '03':
+                basewindow['-Preseries-'].update(value=True)
+            elif serialsections[2][1] == '4':
+                if serialsections[2][2] == 'X':
+                    basewindow['-Preseries-'].update(value=True)
+                elif serialsections[2][2] == '2':
+                    basewindow['-V3b-2-'].update(value=True)
+                elif serialsections[2][2] == 'B':
+                    basewindow['-V3b-B-'].update(value=True)
+                elif serialsections[2][2] == '4':
+                    basewindow['-V3b-4-'].update(value=True)
+                elif serialsections[2][2] == 'C':
+                    basewindow['-V3c-'].update(value=True)
             #else:
             #    basewindow['-Scanned-QR-Code-'].update(value='')
             #    continue
@@ -486,6 +509,7 @@ while True:
     
         if values['-Preseries-']: minortype[3] = 'X'
         elif values['-V3b-2-']: minortype[3] = '2'
+        elif values['-V3b-B-']: minortype[3] = 'B'
         elif values['-V3b-4-']: minortype[3] = '4'
         elif values['-V3c-']: minortype[3] = 'C'
         #if not values['-Preseries-']: minortype[3] = ''
@@ -493,9 +517,24 @@ while True:
         rocvers = minortype[3]
         
     elif values['-IsHB-']:
-        if len(values['-HB-ROC-Version-']) == 2:
-            minortype[1] = values['-HB-ROC-Version-'][0]
-            minortype[2] = values['-HB-ROC-Version-'][1]
+        if values['-Preseries-']:
+            minortype[1] = '0'
+            minortype[2] = '3'
+        elif values['-V3b-2-']:
+            minortype[1] = '4'
+            minortype[2] = '2'
+        elif values['-V3b-B-']:
+            minortype[1] = '4'
+            minortype[2] = 'B'
+        elif values['-V3b-4-']:
+            minortype[1] = '4'
+            minortype[2] = '4'
+        elif values['-V3c-']:
+            minortype[1] = '4'
+            minortype[2] = 'C'
+        #if len(values['-HB-ROC-Version-']) == 2:
+        #    minortype[1] = values['-HB-ROC-Version-'][0]
+        #    minortype[2] = values['-HB-ROC-Version-'][1]
         #if values['-V3-']: minortype[1] = '0'
         #if values['-V3-']: minortype[2] = '3'
         #if values['-Prod-']: minortype[1] = '1'
@@ -504,6 +543,9 @@ while True:
 
         hbvers = minortype[1]
         rocvers = minortype[2]
+
+        if rocvers == '3':
+            rocvers = 'X'
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
 
@@ -538,7 +580,6 @@ while True:
         elif values['-IsHB-']:
             moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{vendorid}-{moduleindex}'
 
-        
     basewindow['-Module-Serial-'].update(value=moduleserial)
     if values['-Inspector-'] != '':
         inspector = values['-Inspector-']
@@ -575,8 +616,11 @@ while True:
             continue
 
         if rocvers != 'X':
-            if (rocvers == '2' or rocvers == '4') and majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
-                pass # only allow V3b ROC testing for LD full, left, right
+            if (rocvers == '2' or rocvers == 'B' or rocvers == '4'):
+                if majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
+                    pass # allow V3b ROC testing for LD full, left, right
+                elif majortype[1] == 'H' and minortype[0] == 'F':
+                    pass # allow V3b ROC testing for HD Full
             elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
                 pass # catch older hexaboard serial format
             else:
