@@ -85,7 +85,7 @@ def create_patches(df, mask, data_type, hb_type = "LF"):
         elif data_type == 'nc':
             ver = 100
             rad = 0.75 * r
-        patch = RegularPolygon((x, y), numVertices = ver, radius = rad, orientation = angle, edgecolor = edgec, alpha = 0.9)
+        patch = RegularPolygon((x, y), numVertices = ver, radius = rad, orientation = angle, edgecolor = edgec, alpha = 0.9, lw=1.5)
         patches.append(patch)
     return patches
 
@@ -198,20 +198,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         if column != 'adc_mean' and column != 'adc_stdd':
             continue
 
-        patches = []
-        colors = np.array([])
-        
-        for mask, data_type in zip(masks, data_types):
-            local_mask = mask.copy()
-            local_mask &= df_data[column] >= 0
-            patches += create_patches(df_data, local_mask, data_type, hb_type = hb_type)
-            colors = np.concatenate((colors, df_data[local_mask][column].values))
-
-        patch_col = PatchCollection(patches, cmap = cmap, match_original = True)
-        patch_col.set_array(colors)
-
         upplim = 400. if column == 'adc_mean' or column == 'adc_median' else 8.
-        patch_col.set_clim([0.001, upplim])
 
         # for live module if actual channels have same noise as disconnected channels, label
         if len(df_data[column][nc_mask]) > 0:
@@ -224,8 +211,12 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         med_norm = df_data[column][norm_mask].median()
         mean_norm = df_data[column][norm_mask].mean()
         std_norm = df_data[column][norm_mask].std()
-        noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
-        highval = (df_data[column] - med_norm) > noisy_limit
+        if live:
+            noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+            highval = (df_data[column] - med_norm) > noisy_limit
+        else:
+            noisy_limit = 2
+            highval = df_data[column] > noisy_limit
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
         # for all modules, label if zero or max value
@@ -242,6 +233,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             if len(df_data[column][nc_mask]) > 0:
                 for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                     ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+        if column == 'adc_stdd' or column == 'adc_iqr':
             for x, y, pad in df.loc[highval & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                 ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
 
@@ -250,6 +242,36 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             print(' >> Hexmap mean noise: col  norm  calib  cm0  cm1  nc')
             print('   ', column, np.mean(df_data[column][norm_mask]), np.mean(df_data[column][calib_mask]),
                   np.mean(df_data[column][cm0_mask]), np.mean(df_data[column][cm1_mask]), np.mean(df_data[column][nc_mask]))
+
+        patches = []
+        colors = np.array([])
+        edgecolors = np.array([])
+        edgewidths = np.array([])
+
+        # color edges of pads red if noisy
+        edgeclr = np.array(['#ffffff00' for i in range(len(df_data))])
+        edgeclr[highval & norm_mask] = 'red'
+        edgeclr[calib_mask] = 'black'
+
+        edgewdth = np.array([1.5 for i in range(len(df_data))])
+        edgewdth[highval & norm_mask] = 3    
+        
+        for mask, data_type in zip(masks, data_types):
+            local_mask = mask.copy()
+            local_mask &= df_data[column] >= 0
+            patches += create_patches(df_data, local_mask, data_type, hb_type = hb_type)
+            colors = np.concatenate((colors, df_data[local_mask][column].values))
+
+            # color edges of pads red if noisy
+            edgecolors = np.concatenate((edgecolors, edgeclr[mask]))
+            edgewidths = np.concatenate((edgewidths, edgewdth[mask]))
+                
+        patch_col = PatchCollection(patches, cmap = cmap, match_original = True)
+        patch_col.set_array(colors)
+        patch_col.set_edgecolor(edgecolors)
+        patch_col.set_linewidth(edgewidths)
+        
+        patch_col.set_clim([0.001, upplim])
 
         ax.add_collection(patch_col)
         ax.set_xlim([-7.274, +7.274])
