@@ -215,10 +215,13 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
             highval = (df_data[column] - med_norm) > noisy_limit
         else:
-            noisy_limit = 2
+            noisy_limit = (2 if column == 'adc_stdd' else 5000)
             highval = df_data[column] > noisy_limit
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
+        # pick out channels with corrupted readout
+        corrupted = df_data['corruption'] == 1
+        
         # for all modules, label if zero or max value
         zeros = df_data[column] == 0
         maxes = df_data[column] >= upplim
@@ -252,9 +255,11 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         edgeclr = np.array(['#ffffff00' for i in range(len(df_data))])
         edgeclr[highval & norm_mask] = 'red'
         edgeclr[calib_mask] = 'black'
-
+        edgeclr[corrupted] = 'violet'
+        
         edgewdth = np.array([1.5 for i in range(len(df_data))])
         edgewdth[highval & norm_mask] = 3    
+        edgewdth[corrupted & norm_mask] = 3    
         
         for mask, data_type in zip(masks, data_types):
             local_mask = mask.copy()
