@@ -100,6 +100,7 @@ class CentosPC:
 
         # copy to current directory to update it safely while trimming
         os.system(f'cp {self.config} current_config.yaml')
+        print(f' >> CentosPC: copying {self.config} to current directory as current_config.yaml')
         self.config = 'current_config.yaml'
 
         self.outyaml = {'pedestal_scan': 'trimmed_pedestal.yaml', 'sampling_scan': 'best_phase.yaml',
