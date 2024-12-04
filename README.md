@@ -1,5 +1,6 @@
 # HGCal Module Testing GUI
 A GUI for HGCAL hexaboard and silicon module testing
+A component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac)
 
 ## Motivation
 We have been using detailed procedures for module testing, and though these do work, I found it was very easy for people new to the system to skip steps and make mistakes. Additionally, it seemed that a large portion of the test sequence can be automated. A GUI would greatly simplify training, force users to follow the correct steps in the correct order, and hide the parts of the sequence that require special skills (i.e. bash) behind automation. Also, this GUI is integrated with the database and may soon serve as the starting point for the multimodule testing GUI.
