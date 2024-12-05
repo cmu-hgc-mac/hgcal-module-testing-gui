@@ -168,7 +168,7 @@ def create_masks(df_data):
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
 # label: a label to put in the plot names
 def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
-    print(" >> Plotting hexmaps")
+    print(" >> Hexmap: Plotting hexmaps")
     df_data = df # create clone to avoid conflict
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
@@ -242,8 +242,8 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 
         # mean noise information
         if (column == 'adc_stdd' or column == 'adc_iqr'):
-            print(' >> Hexmap mean noise: col  norm  calib  cm0  cm1  nc')
-            print('   ', column, np.mean(df_data[column][norm_mask]), np.mean(df_data[column][calib_mask]),
+            print('   >> Hexmap mean noise: col  norm  calib  cm0  cm1  nc')
+            print('     ', column, np.mean(df_data[column][norm_mask]), np.mean(df_data[column][calib_mask]),
                   np.mean(df_data[column][cm0_mask]), np.mean(df_data[column][cm1_mask]), np.mean(df_data[column][nc_mask]))
 
         patches = []
@@ -270,7 +270,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             # color edges of pads red if noisy
             edgecolors = np.concatenate((edgecolors, edgeclr[mask]))
             edgewidths = np.concatenate((edgewidths, edgewdth[mask]))
-                
+
         patch_col = PatchCollection(patches, cmap = cmap, match_original = True)
         patch_col.set_array(colors)
         patch_col.set_edgecolor(edgecolors)
@@ -285,11 +285,17 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # print summary info to plot
         ax.text(5, 6.5, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask]), 2))+'$')
         ax.text(5, 6, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')            
-        if (column == 'adc_stdd'):
+        if (column == 'adc_stdd') and np.sum((corrupted) & (df_data["pad"] > 0)) == 0:
             ax.text(-6.8, -5.8, 'Channels:')
-            ax.text(-6.8, -6.3, f'{np.sum((zeros) & (df_data["pad"] > 0))} Dead')
+            ax.text(-6.8, -6.3, f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead')
             #ax.text(-6.8, -6.8, f'{np.sum(uncon & (df_data["pad"] > 0) & ~(calib_mask))} Unbonded')
-            ax.text(-6.8, -6.8, f'{np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
+            ax.text(-6.8, -6.8, f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
+        elif column == 'adc_stdd' and np.sum((corrupted) & (df_data["pad"] > 0)) > 0:
+            ax.text(-6.8, -5.3, 'Channels:')
+            ax.text(-6.8, -5.8, f'{np.sum((corrupted) & (df_data["pad"] > 0))} Corrupted') 
+            ax.text(-6.8, -6.3, f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead')
+            ax.text(-6.8, -6.8, f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
+            
             
         zlab = 'Noise [ADC counts]' if column == 'adc_stdd' else 'Pedestal [ADC counts]'    
         cb = plt.colorbar(patch_col, label = zlab)#, extend='both', extendrect=True)
@@ -309,7 +315,8 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         cb.ax.text(11./8.*upplim, -0.18/8.*upplim, r'$0$', ha='center', va='center')
         
         # annotate chip positions on plot
-        ad_chip_geo(ax, hb_type = hb_type)
+        ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
+                    add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
 
         # add the legend
         add_channel_legend(ax, hb_type = hb_type)
@@ -323,7 +330,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
     return 1
 
 def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False):
-    print(" >> Plotting channels in 1D")
+    print(" >> Hexmap: Plotting channels in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
     norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
@@ -394,7 +401,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
     return 1
 
 def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
-    print(" >> Plotting pads in 1D")
+    print(" >> Hexmap: Plotting pads in 1D")
     df_data = df # create clone to avoid conflict                                                                                                                                                       
 
     norm_mask, calib_mask, cm0_mask, cm1_mask, nc_mask = create_masks(df)
@@ -477,7 +484,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
     if not figdir.endswith("/"):
         figdir += "/"
     
-    print(">> Going to make plots for %s board from summary file %s into %s using label %s" %(hb_type, fname, figdir, label))
+    print(" >> Hexmap: Going to make plots for %s board from summary file %s into %s using label %s" %(hb_type, fname, figdir, label))
 
     # Open the hex data ".root" file and turn the contents into a pandas DataFrame.
     f = uproot.open(fname)
@@ -491,13 +498,11 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
             df_data = tree.arrays(library='pd')
 
     except:
-        print(" -- No tree found!")
+        print(" -- Hexmap: No tree found")
         return 0
 
     df_data = add_mapping(df_data, hb_type = hb_type)
 
-    print(df_data[df_data["channeltype"] == 1])
-    
     # do plots
     plot_hexmaps(df_data, figdir, hb_type, label, live=livemod)
     plot_channels(df_data, figdir, hb_type, label, live=livemod)

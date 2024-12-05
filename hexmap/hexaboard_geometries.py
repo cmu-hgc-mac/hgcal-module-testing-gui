@@ -26,6 +26,16 @@ def get_pad_id(map_dict, chip, chan, chantype):
     else:
         return 0
 
+class HandlerHexagon(HandlerPatch):
+    def create_artists(self, legend, orig_handle,
+                       xdescent, ydescent, width, height, fontsize, trans):
+        center = 0.5 * width - 0.5 * xdescent, 0.5 * height - 0.5 * ydescent
+        p = RegularPolygon(xy=center, numVertices = 6, radius = 10, orientation=0, edgecolor = 'k')
+        self.update_prop(p, orig_handle, legend)
+        p.set_transform(trans)
+        return [p]
+
+    
 # To add the pad - channel and geometry mapping to the data DataFrame  
 # df: pandas DataFrame with the data     
 # hb_type: the type of the board ("LF" for LD Full, LR for LD Right, LL for LD Left, or "HF" for HD Full)    
@@ -89,7 +99,7 @@ def add_mapping(df, hb_type = "LF"):
 # To mark asic (chip) places on the plot
 # axes: the plt.Axes object with the plot
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
-def ad_chip_geo(ax, hb_type = "LF"):
+def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
     if hb_type == 'LR':
         #########################
         # LD Right board geometry and
@@ -402,8 +412,19 @@ def ad_chip_geo(ax, hb_type = "LF"):
         ax.annotate(chip_label, text_pos, rotation = text_angle, fontsize = 18, alpha = 1., color = color)
 
     # create legend for chip position and add to plot
+    hexagon_r = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'red', lw=2, fill=None)
+    hexagon_v = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'violet', lw=2, fill=None)
+
     chip_legend_handle = [Rectangle((0.,0.), width = 0.9, height = 0.6, fill = False, color = color, alpha = 1.)]
-    chip_legend_label = ['chip position']
-    chip_legend = ax.legend(chip_legend_handle, chip_legend_label, loc = 'upper left', fontsize = 'small')
+    chip_legend_label = ['Chip Position']
+
+    if add_noisy:
+        chip_legend_handle.append(hexagon_r)
+        chip_legend_label.append('Noisy')
+    if add_corrupted:
+        chip_legend_handle.append(hexagon_v)
+        chip_legend_label.append('Corrupted')
+                
+    chip_legend = ax.legend(chip_legend_handle, chip_legend_label, loc = 'upper left', fontsize = 'small', handler_map={hexagon_r: HandlerHexagon(), hexagon_v: HandlerHexagon()})
     if len(chip_pos) != 0:
         ax.add_artist(chip_legend)
