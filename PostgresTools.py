@@ -104,15 +104,15 @@ def get_query_read(table_name, part_name = None):
 
     # define queries
     if table_name == 'module_pedestal_test':
-        query = f"""SELECT REPLACE(module_name,'-',''), rel_hum, temp_c, bias_vol, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, rel_hum, temp_c, bias_vol, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'hxb_pedestal_test':
-        query = f"""SELECT REPLACE(hxb_name,'-',''), rel_hum, temp_c, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(hxb_name,'-','') as module_name, rel_hum, temp_c, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_iv_test':
-        query = f"""SELECT REPLACE(module_name,'-',''), rel_hum, temp_c, meas_i, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, rel_hum, temp_c, meas_i, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_pedestal_plots' and part_name is not None:
@@ -120,7 +120,7 @@ def get_query_read(table_name, part_name = None):
             FROM {table_name}   
             WHERE REPLACE(module_name,'-','') = '{part_name}';"""
     elif table_name == 'module_pedestal_plots':
-        query = f"""SELECT REPLACE(module_name,'-',''), inspector, comment_plot_test                                                                                           
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                                                                           
             FROM {table_name}                                                                                                                                                                                
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
