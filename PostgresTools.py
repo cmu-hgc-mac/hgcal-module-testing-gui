@@ -108,7 +108,7 @@ def get_query_read(table_name, part_name = None):
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'hxb_pedestal_test':
-        query = f"""SELECT REPLACE(hxb_name,'-','') as module_name, rel_hum, temp_c, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(hxb_name,'-','') as hxb_name, rel_hum, temp_c, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_iv_test':
