@@ -104,11 +104,10 @@ class TrenzTestStand:
         Returns True if proper startup detected, otherwise returns False.
         """
 
-        ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw} && listdevice')
+        ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw}')
         stdout = ssh_stdout.read().decode('ascii')
 
         firmware_loaded = False
-        channels_found = True
         
         for line in stdout.split('\n'):
             print('   >> fw:', line)
@@ -118,13 +117,25 @@ class TrenzTestStand:
             print(' >> TrenzTestStand: Loaded firmware')
             firmware_loaded = True
 
-        # check channels in listdevice
-        for addressbar in listeddevices[self.hbtype]:
-            if addressbar[0] not in stdout and addressbar[1] not in stdout:
-                channels_found = False
+        for i in range(3):    
+            ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw}')
+            stdout = ssh_stdout.read().decode('ascii')
+            
+            channels_found = True
 
-        if channels_found:
-            print(' >> TrenzTestStand: Discovered ROC channels')
+            # check channels in listdevice
+            for addressbar in listeddevices[self.hbtype]:
+                if addressbar[0] not in stdout and addressbar[1] not in stdout:
+                    channels_found = False
+
+            if channels_found:
+                print(' >> TrenzTestStand: Discovered ROC channels')
+                break
+
+        if not channels_found:
+            print(' -- TrenzTestStand: unable to find ROC channels in listdevice')
+            return False
+                
 
         if firmware_loaded and channels_found:
             self.fwloaded = True
