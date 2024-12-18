@@ -201,7 +201,8 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         upplim = 400. if column == 'adc_mean' or column == 'adc_median' else 8.
 
         # for live module if actual channels have same noise as disconnected channels, label
-        if len(df_data[column][nc_mask]) > 0:
+        # but only label if in low-BV pedestal run
+        if len(df_data[column][nc_mask]) > 0 and 'BV10' in label:
             med_nc = df_data[column][nc_mask].median()
             uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality
@@ -315,9 +316,12 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         cb.ax.text(11./8., -0.18/8.*upplim, r'0', ha='center', va='center')
         
         # annotate chip positions on plot
-        ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
-                    add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
-
+        if column == 'adc_stdd':
+            ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
+                        add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
+        else:
+            ad_chip_geo(ax, hb_type = hb_type)
+            
         # add the legend
         add_channel_legend(ax, hb_type = hb_type)
 
