@@ -3,7 +3,7 @@ import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
-import time
+frim time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
@@ -306,7 +306,7 @@ def show_string(string, field='Left'):
     basewindow[f'-Display-Str-{field}-'].update(string)
     basewindow[f'-Display-Str-{field}-'].update(visible=True)
     basewindow.refresh()
-    time.sleep(2)
+    sleep(2)
     basewindow[f'-Display-Str-{field}-'].update(visible=False)
     basewindow.refresh()
 
@@ -804,9 +804,9 @@ while True:
 
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                multi_run_pedestals(current_state, [None, None])
+                #multi_run_pedestals(current_state, [None, None])
                 trim_pedestals(current_state, None)
-                multi_run_pedestals(current_state, [None, None, None, None, None])
+                multi_run_pedestals(current_state, [None, None, None, None, None, None])
                 basewindow['Run Tests'].update(disabled=False)
                 continue
             
@@ -846,7 +846,7 @@ while True:
             print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
             # sleep 20min and then take dry IV
-            time.sleep(wait_time_s)
+            sleep(wait_time_s)
             wait.close()
             
             take_IV_curve(current_state)
@@ -946,15 +946,15 @@ while True:
                     time_to_wait = float(thiswait)
                 final_dry_time = 60*(time_to_wait)
 
-                time.sleep(1)
+                sleep(1)
                 
-                drytime = time.time()
+                drytime = time()
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=final_dry_time)
                 finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
                 
                 # Wait until time passed, then run dry IV curve
-                time_to_wait = final_dry_time - (time.time() - drytime)
+                time_to_wait = final_dry_time - (time() - drytime)
                 from InteractionGUI import waiting_window
                 wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
@@ -970,7 +970,7 @@ while True:
                         update_state(current_state, '-HV-Output-On-', False, 'black')
                 
                 
-                time.sleep(time_to_wait)
+                sleep(time_to_wait)
 
                 if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                     current_state['ps'].setVoltage(0.)
@@ -997,7 +997,7 @@ while True:
         from InteractionGUI import waiting_window
         outdir = current_state['-Output-Subdir-']
         wait = waiting_window(f'Output located in {configuration["DataLoc"]}/{outdir}')
-        time.sleep(2)
+        sleep(2)
         wait.close()
         
     # Restart the services and check to ensure success

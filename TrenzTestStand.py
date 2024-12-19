@@ -118,7 +118,7 @@ class TrenzTestStand:
             firmware_loaded = True
 
         for i in range(3):    
-            ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw}')
+            ssh_stdout, ssh_stderr = self._runcmd(f'listdevice')
             stdout = ssh_stdout.read().decode('ascii')
             
             channels_found = True

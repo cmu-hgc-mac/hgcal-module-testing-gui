@@ -202,7 +202,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 
         # for live module if actual channels have same noise as disconnected channels, label
         # but only label if in low-BV pedestal run
-        if len(df_data[column][nc_mask]) > 0 and 'BV10' in label:
+        if len(df_data[column][nc_mask]) > 0:
             med_nc = df_data[column][nc_mask].median()
             uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality

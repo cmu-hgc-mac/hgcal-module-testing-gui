@@ -4,7 +4,7 @@ import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC, check_hexactrl_sw
 from Keithley2410 import Keithley2410
-from time import sleep
+from time import sleep, time
 import os
 import traceback
 from datetime import datetime
@@ -601,6 +601,7 @@ def run_pedestals(state, BV):
             os.system(f'mv {pedestalpath} {pedestalpath}_{testtag}')
         except:
             print(' -- InteractionGUI: pedestal run renaming failed')
+            print(f'    attempted: mv {pedestalpath} {pedestalpath}_{testtag}')
 
         if configuration['HasLocalDB']:
             try:
