@@ -3,7 +3,7 @@ import PySimpleGUI as sg
 from TrenzTestStand import TrenzTestStand
 from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
-frim time import sleep, time
+from time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
