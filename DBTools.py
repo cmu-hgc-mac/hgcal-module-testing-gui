@@ -29,7 +29,8 @@ if configuration['TestingPCOpSys'] == 'Centos7':
 elif configuration['TestingPCOpSys'] == 'Alma9':
     import uproot
     
-statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7, 'Bolted': 8}
+#statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Frontside Bonded': 5, 'Bonds Reworked': 6, 'Frontside Encapsulated': 7, 'Bolted': 8}
+statusdict = {'Untaped': 0, 'Taped': 1, 'Assembled': 2, 'Backside Bonded': 3, 'Backside Encapsulated': 4, 'Completely Bonded': 5, 'Bonds Reworked': 6, 'Completely Encapsulated': 7, 'Bolted': 8}
     
 def iv_save(datadict, state):
     """
