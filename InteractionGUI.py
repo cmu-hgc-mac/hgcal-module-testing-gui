@@ -731,7 +731,7 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-def take_IV_curve(state, step=10):
+def take_IV_curve(state, step=10, maxV=900):
     """
     Takes an IV curve automatically using the power supply object. The range is assumed to be 0-900V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
@@ -752,9 +752,11 @@ def take_IV_curve(state, step=10):
             print(' >> HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
-        maxV = 900 if configuration['HVWiresPolarization'] == 'Reverse' else -900
+
         if configuration['HVWiresPolarization'] == 'Forward':
+            maxV = -maxV
             step = -step
+            
         curve = state['ps'].takeIVnew(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
@@ -847,14 +849,17 @@ def plot_IV_curves(state):
         ax.legend()
 
         # add grading info to plot
-        v = data[:,0]
-        i600 = data[np.argwhere(v==600.),2]*10**6
-        i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
-        grade = 'A' if (i600 < 100. and i850600 < 2.5) else ('B' if (i600 < 200. and i850600 < 5.) else 'C')
-        ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
-        ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
-        ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
-
+        try:
+            v = data[:,0]
+            i600 = data[np.argwhere(v==600.),2]*10**6
+            i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
+            grade = 'A' if (i600 < 100. and i850600 < 2.5) else ('B' if (i600 < 200. and i850600 < 5.) else 'C')
+            ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
+            ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
+            ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
+        except Exception:
+            print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
+            
         # dynamically name file to avoid overwriting plots
         filepath = f'{configuration["DataLoc"]}/{outdir}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
         filepath += '{}.png'

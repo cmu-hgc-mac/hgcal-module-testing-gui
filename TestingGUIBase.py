@@ -127,9 +127,10 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
-             [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
+             [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-'), sg.Text(' Max V:'), sg.Input(s=5,key='-AmbIV-MaxV-')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
-             [sg.Text('Wait Periods (per run - minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-')],
+             [sg.Text('Wait Periods (minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-'),
+              sg.Text(' Max V:'), sg.Input(s=5,key='-DryIV-MaxV-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
 
 # Status Bar version 2
@@ -216,7 +217,7 @@ def disable_ts_tests():
     toggle_ts_tests(False)
 
 def toggle_iv_tests(enabled):
-    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-',]
+    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
         
@@ -235,6 +236,8 @@ def clear_tests():
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
+    basewindow['-DryIV-MaxV-'].update(value='900')
+    basewindow['-AmbIV-MaxV-'].update(value='900')
         
 # Variables that will be set by the user and then used to create the module serial number
 trenzhostname = ''
@@ -918,7 +921,7 @@ while True:
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            take_IV_curve(current_state)
+            take_IV_curve(current_state, maxV=int(values['-AmbIV-MaxV-']))
             plot_IV_curves(current_state)
 
         # If taking IV curve at zero humidity, must wait some time for humidity to drop
@@ -978,7 +981,7 @@ while True:
 
                 wait.close()
 
-                take_IV_curve(current_state)
+                take_IV_curve(current_state, maxV=int(values['-DryIV-MaxV-']))
                 plot_IV_curves(current_state)
 
         # After tests run, check status of services
