@@ -22,7 +22,7 @@ pip3 install pysimplegui==4.60.5
 If you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
 ```
 ssh-keygen # follow the prompts, no need to enter a password or use a name other than the default
-ssh-copy-id -i ~/.ssh/id_rsa root@[TrenzFPGAHostname]
+ssh-copy-id -i ~/.ssh/id_rsa root@[FPGAHostname]
 ```
 
 The GUI uses PyVISA to control the HV power supply. CMU uses an RS232 cable to control it; if you have another type of cable, you may have to re-implement part of the code. To discover the VISA resource name, run the following in a python shell:
@@ -44,7 +44,8 @@ Lastly, create a configuration file with `writeconfig.py`. Open the python scrip
 * `DefaultFontSize`: font of the GUI; matters depending on the resolution of your monitor: if the monitor is 1920x1080, 15 is good
 * `TestingPCOpSys`: operating system of the testing PC: 'Centos7' or 'Alma9'
 * `HexactrlSWBranch`: branch of `hexactrl-sw` you use. Should be `ROCv3` for everyone, but if you are using the `feature-alma9` branch instead, set this to `feature-alma9`
-* `TrenzHostname`: list of the hostnames of your Trenz FPGAs
+* `FPGAHostname`: list of the hostnames of your Trenz or Kria FPGAs
+* `FPGAType`: list of types of FPGAs, either 'Trenz' or 'Kria' for each. must be same order as `FPGAHostname` as it expects them to match
 * `MACSerial`: two-letter code for modules made by the MAC
 * `DataLoc`: path to where you want test results to be stored
 * `HVResource`: VISA resource name of the high voltage power supply found above
