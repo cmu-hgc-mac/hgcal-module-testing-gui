@@ -74,12 +74,18 @@ class FPGATestStand:
         self.fw = ''
         if density == 'L':
             if shape in ['F', 'L', 'R']:
-                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v3'
+                if self.fpgatype == 'Trenz':
+                    self.fw = 'hexaboard-hd-tester-v1p1-trophy-v3'
+                elif self.fpgatype == 'Kria':
+                    self.fw = 'hexaboard-hd-tester-v2p0-trophy-v3'
             else: # T B 5
                 raise NotImplementedError
         elif density == 'H':
             if shape == 'F' or shape == 'B':
-                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
+                if self.fpgatype == 'Trenz':
+                    self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
+                else: # Kria
+                    raise NotImplementedError
             else: # L R T 5
                 raise NotImplementedError
 
@@ -214,8 +220,14 @@ class FPGATestStand:
             return False
 
         if self.fpgatype == 'Kria':
+            print(self.fpgatype, 'adding to firewall')
             ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
-        
+            for line in ssh_stdout.readlines():
+                print(line)
+            for line in ssh_stderr.readlines():
+                print(line)
+
+            
     def statusservers(self):
         """
         Check status of DAQ and I2C servers. Returns status of servers as a 2-length tuple.

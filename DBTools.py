@@ -570,9 +570,9 @@ def fetch_proto_inspect(moduleserial):
 
 def readout_info(moduleserial):
 
-    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
-    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
-    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
+    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Completely Encapsulated')
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Completely Encapsulated')
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         print(f' >> DBTools: not enough pedestal tests: lowBV {len(lowBVruns)} midBV {len(midBVruns)} high BV {len(highBVruns)}')
@@ -648,7 +648,7 @@ def readout_info(moduleserial):
 
 def iv_info(moduleserial):
 
-    ivcurve = fetch_iv(moduleserial, 'Frontside Encapsulated', dry=True, roomtemp=True)
+    ivcurve = fetch_iv(moduleserial, 'Completely Encapsulated', dry=True, roomtemp=True)
     if len(ivcurve) < 1:
         print(f' >> DBTools: no IV tests')
         return None
