@@ -833,7 +833,7 @@ while True:
             take_IV_curve(current_state)
             plot_IV_curves(current_state)
             
-            # open dry air valve manually or automatically                                                                                                                                              
+            # open dry air valve manually or automatically            
             if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
                 from InteractionGUI import do_something_window
                 do_something_window('Open dry air valve', 'Open')
