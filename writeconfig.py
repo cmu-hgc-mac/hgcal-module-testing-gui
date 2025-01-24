@@ -4,7 +4,8 @@ config_dict = {'DebugMode': True,
                'DefaultFontSize': '15', # 15 works well for 1920x1080 screens
                'TestingPCOpSys': 'Centos7', # or 'Alma9'
                'HexactrlSWBranch': 'ROCv3', # gitlab branch of `hexactrl-sw`, should be 'ROCv3' for most. If you updated to Alma 9 some time ago (but not recently), use 'feature-alma9' instead.
-               'TrenzHostname': ['cmshgcaltb4.lan.local.cmu.edu'],
+               'FPGAHostname': ['cmshgcaltb4.lan.local.cmu.edu', 'cmshgcalkria1.lan.local.cmu.edu'], # renamed Trenz->FPGA
+               'FPGAType': ['Trenz', 'Kria'], # type of FPGA; order __must__ match 'FPGAHostname'
                'MACSerial': 'CM',
                'DataLoc': '/home/hgcal/data/', # place to store all output data
                'HVResource': 'ASRL/dev/ttyUSB0::INSTR',
