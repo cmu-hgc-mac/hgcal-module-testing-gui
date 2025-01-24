@@ -16,9 +16,9 @@ sys.path.insert(1, './hexmap')
 from plot_summary import make_hexmap_plots_from_file
 import plot_summary
 
-class CentosPC:
+class ExternalPC: # no longer Centos7
     """
-    Class that wraps the role of the Centos7 PC in module testing. It starts and tracks the DAQ client service 
+    Class that wraps the role of the Testing PC in module testing. It starts and tracks the DAQ client service 
     and runs the testing scripts.
     """    
     
@@ -37,7 +37,7 @@ class CentosPC:
         self.initiated = False
         # start the DAQ client
         os.system('systemctl restart daq-client.service')
-        print(' >> CentosPC: DAQ client started. PC ready to run tests.')
+        print(' >> ExternalPC: DAQ client started. PC ready to run tests.')
 
         # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts
         # in feature-alma9 branch, use specific paths
@@ -100,7 +100,7 @@ class CentosPC:
 
         # copy to current directory to update it safely while trimming
         os.system(f'cp {self.config} current_config.yaml')
-        print(f' >> CentosPC: copying {self.config} to current directory as current_config.yaml')
+        print(f' >> ExternalPC: copying {self.config} to current directory as current_config.yaml')
         self.config = 'current_config.yaml'
 
         self.outyaml = {'pedestal_scan': 'trimmed_pedestal.yaml', 'sampling_scan': 'best_phase.yaml',
@@ -119,19 +119,19 @@ class CentosPC:
         Restarts DAQ client service by running a bash command, then checks the status and returns it.
         """
 
-        print(' >> CentosPC: systemctl restart daq-client.service')
+        print(' >> ExternalPC: systemctl restart daq-client.service')
         os.system('systemctl restart daq-client.service')
         sleep(1)
-        print(' >> CentosPC: systemctl status daq-client')
+        print(' >> ExternalPC: systemctl status daq-client')
         stdout = os.popen('systemctl status daq-client').read().split('\n')
         client = False
         for line in stdout:
             if 'Active: active (running)' in line:
-                print(' >> CentosPC: DAQ client running')
+                print(' >> ExternalPC: DAQ client running')
                 client = True
 
         if not client:
-            print(' -- CentosPC: Error in DAQ client')
+            print(' -- ExternalPC: Error in DAQ client')
 
         return client
         
@@ -140,16 +140,16 @@ class CentosPC:
         Checks the status of the DAQ client and returns it.
         """
 
-        print(' >> CentosPC: systemctl status daq-client')
+        print(' >> ExternalPC: systemctl status daq-client')
         stdout = os.popen('systemctl status daq-client').read().split('\n')
         client = False
         for line in stdout:
             if 'Active: active (running)' in line:
-                print(' >> CentosPC: DAQ client running')
+                print(' >> ExternalPC: DAQ client running')
                 client = True
                 
         if not client:
-            print(' -- CentosPC: Error in DAQ client')
+            print(' -- ExternalPC: Error in DAQ client')
         return client
 
     def _run_script(self, scriptname, config=None):
@@ -172,7 +172,7 @@ class CentosPC:
         
         script = self.scriptloc + scriptname + '.py'
 
-        print(f' >> CentosPC: Running {scriptname}.py with config {config}...')
+        print(f' >> ExternalPC: Running {scriptname}.py with config {config}...')
 
         if not self.initiated:
             os.system(f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1')
@@ -182,14 +182,14 @@ class CentosPC:
             
         runs.sort()
         try:
-            print(f' >> CentosPC: Output of {scriptname}.py located in {runs[-1]}')
+            print(f' >> ExternalPC: Output of {scriptname}.py located in {runs[-1]}')
             self.initiated = True
         except:
-            print(f' >> CentosPC: Did not find output of test. Maybe it crashed? Continuing')
+            print(f' >> ExternalPC: Did not find output of test. Maybe it crashed? Continuing')
             return ''
             
         if scriptname in self.outyaml.keys():
-            print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
+            print(f' >> ExternalPC: Updating configuration file with {runs[-1]}/{self.outyaml[scriptname]}')
             updateconf(self.config, runs[-1]+'/'+self.outyaml[scriptname])
             
         thisrun = runs[-1].split('/')[-1]
@@ -295,7 +295,7 @@ def updateconf(conffile, updfile):
         with open(conffile,'w') as filenew:
             yaml_string=yaml.dump(conf, filenew)
     else:
-        print(' >> CentosPC: did not find output yaml file {updfile}, maybe it crashed? Continuing')
+        print(' >> ExternalPC: did not find output yaml file {updfile}, maybe it crashed? Continuing')
 
 def check_hexactrl_sw():
 

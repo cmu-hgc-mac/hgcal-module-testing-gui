@@ -1,7 +1,5 @@
 import sys
 import PySimpleGUI as sg
-from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
 from time import sleep, time
 from InteractionGUI import *
@@ -18,7 +16,11 @@ interaction with the layout.
 configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
+if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration.keys():
+    configuration['FPGAHostname'] = configuration['TrenzHostname']
+    configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
+    
 from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
     
 # Create theme
@@ -106,7 +108,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
-               [sg.Text("Test Stand IP: "), sg.Combo(configuration['TrenzHostname'], default_value=configuration['TrenzHostname'][0], key="-TrenzHostname-")],
+               [sg.Text("Test Stand IP: "), sg.Combo(configuration['FPGAHostname'], default_value=configuration['FPGAHostname'][0], key="-FPGAHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
                [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
                [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
@@ -190,7 +192,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 # Functions for enabling/disabling module setup fields
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
-            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-B-', '-V3b-4-', '-V3c-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
+            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-B-', '-V3b-4-', '-V3c-', '-HB-Manufacturer-', '-Module-Index-', '-FPGAHostname-', 'Configure Test Stand',
             'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -240,7 +242,7 @@ def clear_tests():
     basewindow['-AmbIV-MaxV-'].update(value='900')
         
 # Variables that will be set by the user and then used to create the module serial number
-trenzhostname = ''
+fpgahostname = ''
 livemodule = None
 
 ivonly_skip = False
@@ -590,7 +592,7 @@ while True:
     modulestatus = values['-Module-Status-']
         
     # Now, check for button presses
-    # Configure test stand starts the Trenz assembly and startup process
+    # Configure test stand starts the FPGA assembly and startup process
     if event == "Configure Test Stand":
 
         # If live module or hexaboard isn't selected, skip
@@ -604,7 +606,7 @@ while True:
             continue
             
         # If module serial isn't defined well, skip
-        if moduleindex == '' or values['-TrenzHostname-'].rstrip() == '':
+        if moduleindex == '' or values['-FPGAHostname-'].rstrip() == '':
             show_string("Invalid Setup")
             continue
         if values['-IsHB-'] and vendorid == '':
@@ -631,7 +633,7 @@ while True:
                 show_string("Not Implemented")
                 continue
             
-        trenzhostname = values['-TrenzHostname-'].rstrip()
+        fpgahostname = values['-FPGAHostname-'].rstrip()
         
         # Initialize test stand state dictionary
         init_state()
@@ -645,9 +647,15 @@ while True:
         
         if outcode == 'CONT':
 
+            # figure out FPGA type based on chosen hostname
+            for iN in range(len(configuration['FPGAHostname'])):
+                if configuration['FPGAHostname'][iN] == fpgahostname:
+                    fpgatype = configuration['FPGAType'][iN]
+            current_state['-FPGA-Type-'] = fpgatype
+                    
             # If checks are good, assemble the parts and configure the test stand
             # If there is an issue, the function handles the ending of the test session
-            outcode = configure_test_stand(current_state, trenzhostname)
+            outcode = configure_test_stand(current_state, fpgahostname)
             
             if outcode == 'CONT':
 
@@ -666,7 +674,7 @@ while True:
         elif outcode == 'END':
             enable_module_setup()
 
-    # Only perform tests that involve the power supply and do not use the Trenz
+    # Only perform tests that involve the power supply and do not use the FPGA
     if event == 'Only IV Test':
 
         # If no module status, skip

@@ -29,22 +29,23 @@ listeddevices = {'LF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', 
                         ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']]}
 
 
-class TrenzTestStand:
+class FPGATestStand:
     """
-    Class that wraps the Trenz-based testing system. The class connects to the Trenz using a paramiko
+    Class that wraps the Trenz- or Kria-based testing system. The class connects to the FPGA using a paramiko
     SSH client and then runs commands over ssh.
     """
    
-    def __init__(self, hostname, modulename, keyloc=configuration['PCKeyLoc']):
+    def __init__(self, hostname, modulename, fpgatype='Trenz', keyloc=configuration['PCKeyLoc']):
         """
-        Instantiates object. Can run as soon as Trenz is powered; will wait until ping succeeds to try 
+        Instantiates object. Can run as soon as FPGA is powered; will wait until ping succeeds to try 
         to connect. Some issues with this that are being debugged.
         """
     
         self.fwloaded = False
         self.services = False
         self.hostname = hostname
-        print(f' >> TrenzTestStand: Connecting to Trenz at {self.hostname}...')
+        self.fpgatype = fpgatype
+        print(f' >> FPGATestStand: Connecting to FPGA at {self.hostname}...')
 
         time.sleep(2)
         
@@ -66,7 +67,7 @@ class TrenzTestStand:
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=hostname, username='root', pkey=k)
         # at this point, can consider to be "connected"
-        print(' >> TrenzTestStand: Connected')
+        print(' >> FPGATestStand: Connected')
 
         density = modulename.split('-')[1][1]
         shape = modulename.split('-')[2][0]
@@ -89,7 +90,7 @@ class TrenzTestStand:
         Class to run an arbitrary bash command over ssh. Currently sleeps for three seconds to ensure safety.
         """
 
-        print(' >> TrenzTestStand:', cmd)
+        print(' >> FPGATestStand:', cmd)
         ssh_stdin, ssh_stdout, ssh_stderr = self.ssh.exec_command(cmd)
         time.sleep(3)
         ssh_stdin.close()
@@ -104,6 +105,12 @@ class TrenzTestStand:
         Returns True if proper startup detected, otherwise returns False.
         """
 
+        # activate gpio lines
+        if self.fpgatype == 'Kria':
+            ssh_stdout, ssh_stderr = self._runcmd(f'kconn_pwr on')
+            stdout = ssh_stdout.read().decode('ascii')
+
+        # load firmware
         ssh_stdout, ssh_stderr = self._runcmd(f'fw-loader load {self.fw}')
         stdout = ssh_stdout.read().decode('ascii')
 
@@ -114,7 +121,7 @@ class TrenzTestStand:
 
         # check fw load
         if 'Loaded the device tree overlay successfully using the zynqMP FPGA manager' in stdout:
-            print(' >> TrenzTestStand: Loaded firmware')
+            print(' >> FPGATestStand: Loaded firmware')
             firmware_loaded = True
 
         for i in range(3):    
@@ -129,11 +136,11 @@ class TrenzTestStand:
                     channels_found = False
 
             if channels_found:
-                print(' >> TrenzTestStand: Discovered ROC channels')
+                print(' >> FPGATestStand: Discovered ROC channels')
                 break
 
         if not channels_found:
-            print(' -- TrenzTestStand: unable to find ROC channels in listdevice')
+            print(' -- FPGATestStand: unable to find ROC channels in listdevice')
             return False
                 
 
@@ -146,7 +153,7 @@ class TrenzTestStand:
     
     def startservers(self):
         """
-        Starts the DAQ and I2C servers on the Trenz and then checks their status to ensure proper instantiation. Returns True if proper startup
+        Starts the DAQ and I2C servers on the FPGA and then checks their status to ensure proper instantiation. Returns True if proper startup
         detected, otherwise returns False.
         """
 
@@ -176,7 +183,7 @@ class TrenzTestStand:
         if check1 and check2:
             daq_initiated = True
         if daq_initiated:
-            print(' >> TrenzTestStand: DAQ server initiated')
+            print(' >> FPGATestStand: DAQ server initiated')
         
         ssh_stdout, ssh_stderr = self._runcmd('systemctl status i2c-server.service')    
         board_discovered = False
@@ -195,17 +202,20 @@ class TrenzTestStand:
         if check1:
             board_discovered = True
         if board_discovered:
-            print(' >> TrenzTestStand: Identified Hexaboard')
+            print(' >> FPGATestStand: Identified Hexaboard')
 
         if board_discovered and daq_initiated and error_check:
             self.services = True
-            print(' >> TrenzTestStand: Started services successfully')
+            print(' >> FPGATestStand: Started services successfully')
             return True
         else:
             self.services = False
-            print(' -- TrenzTestStand: Error in starting services')
+            print(' -- FPGATestStand: Error in starting services')
             return False
 
+        if self.fpgatype == 'Kria':
+            ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
+        
     def statusservers(self):
         """
         Check status of DAQ and I2C servers. Returns status of servers as a 2-length tuple.
@@ -243,10 +253,10 @@ class TrenzTestStand:
                 i2c_running = True
 
         if daq_running and  i2c_running:
-            print(' >> TrenzTestStand: Services up and running')
+            print(' >> FPGATestStand: Services up and running')
             self.services = True
         else:
-            print(f' -- TrenzTestStand: Services not running: DAQ {daq_running} I2C {i2c_running}')
+            print(f' -- FPGATestStand: Services not running: DAQ {daq_running} I2C {i2c_running}')
             self.services = False
         return daq_running, i2c_running
 
@@ -256,10 +266,10 @@ class TrenzTestStand:
 
     def shutdown(self):
         """
-        Shuts the Trenz down remotely. Tested many times and works properly.
+        Shuts the FPGA down remotely. Tested many times and works properly.
         """
 
-        print(' >> TrenzTestStand: Shutting down the Trenz test stand')
+        print(' >> FPGATestStand: Shutting down the FPGA test stand')
         ssh_stdout, ssh_stderr = self._runcmd('shutdown now')
         time.sleep(5)
         return ssh_stdout.readlines(), ssh_stderr.readlines()

@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
-from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC, check_hexactrl_sw
+from FPGATestStand import FPGATestStand
+from ExternalPC import ExternalPC, check_hexactrl_sw
 from Keithley2410 import Keithley2410
 from time import sleep, time
 import os
@@ -92,8 +92,8 @@ def end_session(state):
     system. In general, shutting it down broadly follows five steps:
         - Disabling the HV power
         - De-powering the DCDC or Low Voltage Supply
-        - Shutting down the Trenz
-        - De-powering the Trenz
+        - Shutting down the FPGA
+        - De-powering the FPGA
         - Disconnecting all of the parts and the module
     """
 
@@ -138,6 +138,10 @@ def end_session(state):
                         update_state(state, '-DAQ-Server-', False, 'black')
                         update_state(state, '-I2C-Server-', False, 'black')
                         update_state(state, '-Hexactrl-Accessed-', False, 'black')
+
+                    if state['-FPGA-Type-'] == 'Kria':
+                        do_something_window("Turn off Kria hexacontroller power switch", "Switched Off")
+                        update_state(state, '-Hexactrl-Powered-', False, 'black')
                         
                     do_something_window("Disconnect hexacontroller power"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Disconnected")
                     update_state(state, '-Hexactrl-Powered-', False, 'black')
@@ -470,11 +474,11 @@ def check_leakage_current(state):
         window.close()
     return 'CONT'
 
-def configure_test_stand(state, trenzhostname):
+def configure_test_stand(state, fpgahostname):
     """
     Guides the user through connecting the various boards and then handles the startup of the testing system. At
-    the moment, it assumes the DCDC has already been connected but is not powered. The Trenz test stand is added to
-    the `state` dictionary under the field 'ts' and the Centos PC object is added under the field 'pc'. If the objects
+    the moment, it assumes the DCDC has already been connected but is not powered. The FPGA test stand is added to
+    the `state` dictionary under the field 'ts' and the External PC object is added under the field 'pc'. If the objects
     detect errors in the firmware or services, the function returns 'END' after ending the sesion; if all succeed, 
     it returns 'CONT'.
     """
@@ -502,13 +506,18 @@ def configure_test_stand(state, trenzhostname):
         close_box(state)
     do_something_window("Connect hexacontroller power cable"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Powered", title='Power Hexacontroller')
     update_state(state, '-Hexactrl-Powered-', True, 'green')
+
+    if state['-FPGA-Type-'] == 'Kria':
+        update_state(state, '-Hexactrl-Powered-', False, 'black')
+        do_something_window("Turn on Kria hexacontroller power switch", "Powered", title='Switch On Hexacontroller')
+        update_state(state, '-Hexactrl-Powered-', True, 'green')
     
-    connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{trenzhostname}')
+    connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{fpgahostname}')
     if state['-Debug-Mode-']:
         sleep(5)
         ts = None
     else:
-        ts = TrenzTestStand(trenzhostname, state['-Module-Serial-']) # will take some time if the Trenz was just powered
+        ts = FPGATestStand(fpgahostname, state['-Module-Serial-'], fpgatype=state['-FPGA-Type-']) # will take some time if the FPGA was just powered
     connecting.close()
     update_state(state, '-Hexactrl-Accessed-', True, 'green')
     update_state(state, 'ts', ts)
@@ -541,7 +550,7 @@ def configure_test_stand(state, trenzhostname):
     update_state(state, '-DAQ-Server-', services, 'green' if services else 'red')
     update_state(state, '-I2C-Server-', services, 'green' if services else 'red')
     if not services:
-        ending = waiting_window("Error in Trenz services. Exiting...", title="Error in Services")
+        ending = waiting_window("Error in FPGA services. Exiting...", title="Error in Services")
         sleep(2)
         ending.close()
         end_session(state)
@@ -553,7 +562,7 @@ def configure_test_stand(state, trenzhostname):
         sleep(5)
     else:
         try:
-            pc = CentosPC(trenzhostname, state) # automatically starts daq client
+            pc = ExternalPC(fpgahostname, state) # automatically starts daq client
         except AssertionError:
             ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
             sleep(2)
