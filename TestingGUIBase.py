@@ -1082,13 +1082,13 @@ while True:
         qc_summary = {'module_name': moduleserial,
                       'final_grade': final_grade,
                       'proto_flatness': pflatness,
-                      'proto_thickness': pthickness,
+                      'proto_ave_thickness': pthickness,
                       'proto_x_offset': pxoffset,
                       'proto_y_offset': pyoffset,
                       'proto_ang_offset': pangoffset,
                       'proto_grade': proto_grade,
-                      'module_flatness': mthickness,
-                      'module_thickness': mflatness,
+                      'module_flatness': mflatness,
+                      'module_ave_thickness': mthickness,
                       'module_x_offset': mxoffset,
                       'module_y_offset': myoffset,
                       'module_ang_offset': mangoffset,
@@ -1102,14 +1102,13 @@ while True:
                       'i_at_600v': i_600v,
                       'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
-                      'grade_version': 'preproduction_1_2024-10-16', 
+                      #'grade_version': 'preproduction_1_2024-10-16', 
                       }
         
         print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
         # comments added by pop-up window
         qc_summary = grade_module_window(moduleserial, qc_summary)
-        # not uploading to local db yet
-        #summary_upload(moduleserial, qc_summary)
+        summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
     # or press the 'Close GUI' button.
