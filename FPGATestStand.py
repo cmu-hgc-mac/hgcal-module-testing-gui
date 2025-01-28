@@ -210,6 +210,15 @@ class FPGATestStand:
         if board_discovered:
             print(' >> FPGATestStand: Identified Hexaboard')
 
+        if self.fpgatype == 'Kria':
+            print(self.fpgatype, 'adding to firewall')
+            ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
+            for line in ssh_stdout.readlines():
+                print(line)
+            for line in ssh_stderr.readlines():
+                print(line)
+
+            
         if board_discovered and daq_initiated and error_check:
             self.services = True
             print(' >> FPGATestStand: Started services successfully')
@@ -219,13 +228,6 @@ class FPGATestStand:
             print(' -- FPGATestStand: Error in starting services')
             return False
 
-        if self.fpgatype == 'Kria':
-            print(self.fpgatype, 'adding to firewall')
-            ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
-            for line in ssh_stdout.readlines():
-                print(line)
-            for line in ssh_stderr.readlines():
-                print(line)
 
             
     def statusservers(self):
