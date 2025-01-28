@@ -139,6 +139,9 @@ def end_session(state):
                         update_state(state, '-I2C-Server-', False, 'black')
                         update_state(state, '-Hexactrl-Accessed-', False, 'black')
 
+                    # new open_box call b/c for the kria have to open box to flip switch
+                    open_box(state)
+
                     if state['-FPGA-Type-'] == 'Kria':
                         do_something_window("Turn off Kria hexacontroller power switch", "Switched Off")
                         update_state(state, '-Hexactrl-Powered-', False, 'black')
@@ -220,7 +223,8 @@ def initial_module_checks(state):
 
     # check hexactrl-sw location now
     try:
-        check_hexactrl_sw()
+        if not state['-Debug-Mode-']:
+            check_hexactrl_sw()
     except AssertionError:
         ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
         sleep(2)
@@ -502,8 +506,7 @@ def configure_test_stand(state, fpgahostname):
     do_something_window("Ensure NOTHING is powered", "No power")
     do_something_window("Connect trophy board and hexacontroller", "Connected", title='Connect Hexacontroller')
     update_state(state, '-Hexactrl-Connected-', True, 'green')
-    if state['-Live-Module-']:
-        close_box(state)
+
     do_something_window("Connect hexacontroller power cable"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Powered", title='Power Hexacontroller')
     update_state(state, '-Hexactrl-Powered-', True, 'green')
 
@@ -511,7 +514,11 @@ def configure_test_stand(state, fpgahostname):
         update_state(state, '-Hexactrl-Powered-', False, 'black')
         do_something_window("Turn on Kria hexacontroller power switch", "Powered", title='Switch On Hexacontroller')
         update_state(state, '-Hexactrl-Powered-', True, 'green')
-    
+
+    # now have close box after powering on test stand b/c kria has a switch
+    if state['-Live-Module-']:
+        close_box(state)
+
     connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{fpgahostname}')
     if state['-Debug-Mode-']:
         sleep(5)
