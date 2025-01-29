@@ -46,21 +46,28 @@ def add_mapping(df, hb_type = "LF"):
     if not os.getcwd().endswith('hexmap'):
         s = 'hexmap/'
     # geometry mapping files' paths
-    lf_board_geo = s + "geometries/hex_positions_HPK_198ch_8inch_edge_ring_testcap.txt" # full 
-    lr_board_geo = s + "geometries/hex_positions_HPK_LR_8inch_edge_ring_testcap.txt" # right   
-    ll_board_geo = s + "geometries/hex_positions_HPK_LL_8inch_edge_ring_testcap.txt" # left  
-    l5_board_geo = s + "geometries/hex_positions_HPK_L5_8inch_edge_ring_testcap.txt" # five  
-    hd_board_geo = s + "geometries/hex_positions_HPK_432ch_8inch_edge_ring_testcap.txt"
-    hb_board_geo = s + "geometries/hex_positions_HPK_HB_8inch_edge_ring_testcap.txt"
-
+    lf_board_geo = s + "geometries/hex_positions_HPK_198ch_8inch_edge_ring_testcap.txt" # ld full 
+    lr_board_geo = s + "geometries/hex_positions_HPK_LR_8inch_edge_ring_testcap.txt"    # ld right   
+    ll_board_geo = s + "geometries/hex_positions_HPK_LL_8inch_edge_ring_testcap.txt"    # ld left  
+    l5_board_geo = s + "geometries/hex_positions_HPK_L5_8inch_edge_ring_testcap.txt"    # ld five  
+    l5_board_geo = s + "geometries/hex_positions_HPK_LT_8inch_edge_ring_testcap.txt"    # ld top  
+    hd_board_geo = s + "geometries/hex_positions_HPK_432ch_8inch_edge_ring_testcap.txt" # hd full
+    hb_board_geo = s + "geometries/hex_positions_HPK_HB_8inch_edge_ring_testcap.txt"    # hd bottom
+    hb_board_geo = s + "geometries/hex_positions_HPK_HL_8inch_edge_ring_testcap.txt"    # hd left
+    hb_board_geo = s + "geometries/hex_positions_HPK_HT_8inch_edge_ring_testcap.txt"    # hd top
+   
     # pad - channel mapping files' paths 
-    lf_board_chan = s + "channel_maps/ld_pad_to_channel_mapping_V3.csv" # full  
-    lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping.csv" # right 
-    ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping.csv" # left 
-    l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping.csv" # five 
-    hd_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"
-    hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv"
-    
+    lf_board_chan = s + "channel_maps/lf_pad_to_channel_mapping_Nov2024.csv" # ld full  
+    lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping_Nov2024.csv" # ld right 
+    ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping_Nov2024.csv" # ld left 
+    l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld five 
+    lt_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld top
+    lb_board_chan = s + "channel_maps/lb_pad_to_channel_mapping_Jan2025.csv" # ld bottom 
+    hd_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"    # hd full
+    hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv" # hd bottom
+    hl_board_chan = s + "channel_maps/hl_pad_to_channel_mapping_Nov2024.csv" # hd left
+    ht_board_chan = s + "channel_maps/ht_pad_to_channel_mapping_Jan2025.csv" # hd top
+     
     #import mapping files to pandas dataFrames and transform to python dicts
     if hb_type == "LF":
         chan_map_fname = lf_board_chan
@@ -74,12 +81,21 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "LL":
         chan_map_fname = ll_board_chan
         geo_fname = ll_board_geo
+    elif hb_type == "LB":
+        chan_map_fname = lb_board_chan
+        geo_fname = lb_board_geo
     elif hb_type == "L5":
         chan_map_fname = l5_board_chan
         geo_fname = l5_board_geo
     elif hb_type == "HB":
         chan_map_fname = hb_board_chan
         geo_fname = hb_board_geo
+    elif hb_type == "HT":
+        chan_map_fname = ht_board_chan
+        geo_fname = ht_board_geo
+    elif hb_type == "HL":
+        chan_map_fname = hl_board_chan
+        geo_fname = hl_board_geo
             
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
