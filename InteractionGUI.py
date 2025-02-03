@@ -895,7 +895,7 @@ def grade_module_window(moduleserial, qc_summary):
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
               [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
               [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
-              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {len(qc_summary["list_cells_grounded"])} cells')],
+              [sg.Text(f'{len(qc_summary["list_dead_cells"])} dead; {len(qc_summary["list_cells_unbonded"])} unbonded; {len(qc_summary["list_noisy_cells"])} noisy; {len(qc_summary["list_cells_grounded"])} grounded; {qc_summary["count_bad_cells"]} total bad cells')],
               [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
               [sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
               [sg.Text(f'Protomodule Assembly Grade: {qc_summary["proto_grade"]}')],

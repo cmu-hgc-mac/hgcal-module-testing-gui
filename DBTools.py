@@ -605,7 +605,7 @@ def readout_info(moduleserial):
             
     # check dead channels
     ldeadcells = []
-    for run in midBVruns:
+    for run in midBVruns[-5:]:
         noise = np.array(run['adc_stdd'])
         cellid = np.array(run['cell'])
         celltype = np.array(run['channeltype'])
@@ -622,7 +622,7 @@ def readout_info(moduleserial):
     
     # check noisy channels
     lnoisycells = []
-    for run in highBVruns:
+    for run in highBVruns[-2:]:
         noise = np.array(run['adc_stdd'])
         cellid = np.array(run['cell'])
         celltype = np.array(run['channeltype'])
@@ -649,6 +649,7 @@ def readout_info(moduleserial):
     for cell in groundedcells:
         badcell.add(cell)
 
+    print(f' >> DBTools: uncon {unconcells} dead {deadcells} noisy {noisycells} grounded {groundedcells}')
     badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
     return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
 
