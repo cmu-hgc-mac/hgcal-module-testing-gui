@@ -57,7 +57,7 @@ def add_mapping(df, hb_type = "LF"):
     hb_board_geo = s + "geometries/hex_positions_HPK_HT_8inch_edge_ring_testcap.txt"    # hd top
    
     # pad - channel mapping files' paths 
-    lf_board_chan = s + "channel_maps/lf_pad_to_channel_mapping_Nov2024.csv" # ld full  
+    lf_board_chan = s + "channel_maps/ld_pad_to_channel_mapping_V3.csv" # ld full  
     lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping_Nov2024.csv" # ld right 
     ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping_Nov2024.csv" # ld left 
     l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld five 
