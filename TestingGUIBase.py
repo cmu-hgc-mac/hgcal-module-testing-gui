@@ -813,14 +813,14 @@ while True:
             
             # If services not running properly, do not proceed with tests (but it does not automatically end session)
             if not (values['-FW-Loaded-'] and values['-DAQ-Server-'] and values['-I2C-Server-'] and values['-DAQ-Client-']):
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Error in Statuses", field="Right")
                 continue
 
         # If running an electrical test, re-check just to make sure
         if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-'] or values['-Standard-Test-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Error in Statuses", field="Right")
                 continue
 
@@ -910,7 +910,7 @@ while True:
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
             if (tpbv == '' or not tpbv.isnumeric()) and values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
@@ -928,7 +928,7 @@ while True:
 
             # Check to make sure number of runs is entered
             if values['-N-Pedestals-'].rstrip() == '' or not values['-N-Pedestals-'].rstrip().isnumeric():
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
