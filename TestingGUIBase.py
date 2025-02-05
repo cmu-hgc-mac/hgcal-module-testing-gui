@@ -813,14 +813,14 @@ while True:
             
             # If services not running properly, do not proceed with tests (but it does not automatically end session)
             if not (values['-FW-Loaded-'] and values['-DAQ-Server-'] and values['-I2C-Server-'] and values['-DAQ-Client-']):
-                exit_tests()
+                basewindow['Run Tests'].update(disabled=False)
                 show_string("Error in Statuses", field="Right")
                 continue
 
         # If running an electrical test, re-check just to make sure
         if values['-Trim-Pedestals-'] or values['-Pedestal-Run-'] or values['-Other-Script-'] or values['-Standard-Test-']:
             if not (current_state['-DCDC-Powered-'] and current_state['-Hexactrl-Accessed-'] and current_state['-I2C-Server-'] and current_state['-DAQ-Client-']):
-                exit_tests()
+                basewindow['Run Tests'].update(disabled=False)
                 show_string("Error in Statuses", field="Right")
                 continue
 
