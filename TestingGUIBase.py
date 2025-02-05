@@ -240,7 +240,24 @@ def clear_tests():
     basewindow['-Bias-Voltage-Other-'].update(value='300')
     basewindow['-DryIV-MaxV-'].update(value='900')
     basewindow['-AmbIV-MaxV-'].update(value='900')
-        
+
+def exit_tests():
+
+    # After tests run, check status of services
+    if current_state['-Hexactrl-Accessed-']:
+        check_services(current_state)
+
+    # Reset test values
+    clear_tests()
+
+    # Turn off HV output if live module
+    if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+        current_state['ps'].outputOff()
+        update_state(current_state, '-HV-Output-On-', False, 'black')
+
+    basewindow['Run Tests'].update(disabled=False)
+
+    
 # Variables that will be set by the user and then used to create the module serial number
 fpgahostname = ''
 livemodule = None
@@ -817,20 +834,29 @@ while True:
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
                 #multi_run_pedestals(current_state, [None, None])
-                trim_pedestals(current_state, None)
-                multi_run_pedestals(current_state, [None, None, None, None, None, None])
-                basewindow['Run Tests'].update(disabled=False)
+                status = trim_pedestals(current_state, None)
+                if status == 'CONT':
+                    status = multi_run_pedestals(current_state, [None, None, None, None, None, None])
+                exit_tests()
                 continue
             
             # trim and take pedestals
-            trim_pedestals(current_state, 300)
-            multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
+            status = trim_pedestals(current_state, 300)
+            if status == 'CONT':
+                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
+
+            if status != 'CONT':
+                exit_tests()
+                continue
             
             # take ambient IV curve - do we want?
-            take_IV_curve(current_state)
+            status = take_IV_curve(current_state)
+            if status != 'CONT':
+                exit_tests()
+                continue
             plot_IV_curves(current_state)
             
             # open dry air valve manually or automatically            
@@ -852,16 +878,32 @@ while True:
             dry_date = datetime.now()
             finalIV_date = dry_date + timedelta(seconds=wait_time_s)
             finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
-                
-            from InteractionGUI import waiting_window
-            wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+
+            layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                      [sg.Button('Terminate Test')]]
+            waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+
+            event, values = waiting.read(timeout=100)
+
             print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
-            # sleep 20min and then take dry IV
-            sleep(wait_time_s)
-            wait.close()
-            
-            take_IV_curve(current_state)
+            while True:
+                event, values = waiting.read(timeout=1)
+                if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                    print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                    status = 'TERM'
+                    break
+                if datetime.now() >= finalIV_date:
+                    break
+
+            if status != 'CONT':
+                exit_tests()
+                continue
+
+            status = take_IV_curve(current_state)
+            if status != 'CONT':
+                exit_tests()
+                continue
             plot_IV_curves(current_state)
             
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
@@ -873,9 +915,13 @@ while True:
                 continue
 
             if values['-IsLive-']:
-                trim_pedestals(current_state, tpbv)
+                status = trim_pedestals(current_state, tpbv)
             else:
-                trim_pedestals(current_state, None)
+                status = trim_pedestals(current_state, None)
+
+            if status != 'CONT':
+                exit_tests()
+                continue
 
         # If pedestal run, read settings and then run        
         if values['-Pedestal-Run-']:
@@ -910,7 +956,10 @@ while True:
                 continue
 
             # Run
-            multi_run_pedestals(current_state, BVs)
+            status = multi_run_pedestals(current_state, BVs)
+            if status != 'CONT':
+                exit_tests()
+                continue
             
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Other-Script-']:
@@ -922,16 +971,24 @@ while True:
             
             script = values['-Other-Which-Script-']
             if values['-IsLive-']:
-                run_other_script(script, current_state, osbv)
+                status = run_other_script(script, current_state, osbv)
             else:
-                run_other_script(script, current_state, None)
+                status = run_other_script(script, current_state, None)
+
+            if status != 'CONT':
+                exit_tests()
+                continue
 
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            take_IV_curve(current_state, maxV=int(values['-AmbIV-MaxV-']))
-            plot_IV_curves(current_state)
-
+            status = take_IV_curve(current_state)
+            if status == 'CONT':
+                plot_IV_curves(current_state)
+            else:
+                exit_tests()
+                continue
+            
         # If taking IV curve at zero humidity, must wait some time for humidity to drop
         # Now allowing multiple sequential dry curves
         if values['-Dry-IV-']:
@@ -964,11 +1021,14 @@ while True:
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=final_dry_time)
                 finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                time_to_wait = final_dry_time - (time() - drytime)
                 
                 # Wait until time passed, then run dry IV curve
-                time_to_wait = final_dry_time - (time() - drytime)
-                from InteractionGUI import waiting_window
-                wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+                layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                          [sg.Button('Terminate Test')]]
+                waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+
+                event, values = waiting.read(timeout=100)
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
                 # module conditioning
@@ -981,37 +1041,40 @@ while True:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
                 
-                
-                sleep(time_to_wait)
+                while True:
+                    event, values = waiting.read(timeout=1)
+                    if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                        print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                        status = 'TERM'
+                        break
+                    if datetime.now() >= finalIV_date:
+                        break
 
                 if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                     current_state['ps'].setVoltage(0.)
 
-                wait.close()
+                waiting.close()
 
-                take_IV_curve(current_state, maxV=int(values['-DryIV-MaxV-']))
-                plot_IV_curves(current_state)
+                if status != 'CONT':
+                    exit_tests()
+                    continue
 
-        # After tests run, check status of services
-        if current_state['-Hexactrl-Accessed-']:
-            check_services(current_state)    
+                status = take_IV_curve(current_state)
+                if status == 'CONT':
+                    plot_IV_curves(current_state)
+                else:
+                    exit_tests()
+                    continue
 
-        # Reset test values
-        clear_tests()
-
-        # Turn off HV output if live module
-        if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-            current_state['ps'].outputOff()
-            update_state(current_state, '-HV-Output-On-', False, 'black')
-            
-        basewindow['Run Tests'].update(disabled=False)
+        # check service status, clear test values, turn off HV, reset buttons        
+        exit_tests()
 
         from InteractionGUI import waiting_window
         outdir = current_state['-Output-Subdir-']
         wait = waiting_window(f'Output located in {configuration["DataLoc"]}/{outdir}')
         sleep(2)
         wait.close()
-        
+
     # Restart the services and check to ensure success
     if event == 'Restart Services':
         restart_services(current_state)
