@@ -104,8 +104,8 @@ class ExternalPC: # no longer Centos7
             elif shape == 'T':
                 if rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initHD-top-V3b.yaml'
-		elif rocvers == 'X':
-		    raise NotImplementedError
+                elif rocvers == 'X':
+                    raise NotImplementedError
 
         # copy to current directory to update it safely while trimming
         os.system(f'cp {self.config} current_config.yaml')
