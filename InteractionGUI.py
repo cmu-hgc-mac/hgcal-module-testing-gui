@@ -703,7 +703,7 @@ def trim_pedestals(state, BV):
             state['ps'].setVoltage(float(BV))
 
         proc = state['pc'].create_proc('pedestal_run')
-	while not proc.is_finished():
+        while not proc.is_finished():
             event, values = trimming.read(timeout=1)
             if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
                 print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
@@ -711,24 +711,12 @@ def trim_pedestals(state, BV):
                 break
 
         proc.end_test()
-	del proc
+        del proc
 
         if status == 'RUN':
             proc = state['pc'].create_proc('pedestal_scan')
             while not proc.is_finished():
-		event, values = trimming.read(timeout=1)
-                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
-                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
-                    status = 'TERM'
-                    break
-
-            proc.end_test()
-	    del proc
-
-        if status == 'RUN':
-            proc = state['pc'].create_proc('vrefnoinv_scan')
-	    while not proc.is_finished():
-	        event, values = trimming.read(timeout=1)
+                event, values = trimming.read(timeout=1)
                 if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
                     print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
                     status = 'TERM'
@@ -737,17 +725,29 @@ def trim_pedestals(state, BV):
             proc.end_test()
             del proc
 
-	if status == 'RUN':
-            proc = state['pc'].create_proc('vrefinv_scan')
+        if status == 'RUN':
+            proc = state['pc'].create_proc('vrefnoinv_scan')
             while not proc.is_finished():
-		event, values = trimming.read(timeout=1)
+                event, values = trimming.read(timeout=1)
                 if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
                     print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
                     status = 'TERM'
                     break
 
             proc.end_test()
-	    del proc
+            del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('vrefinv_scan')
+            while not proc.is_finished():
+                event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+            del proc
 
         if status == 'RUN':
             status = 'CONT'
@@ -759,7 +759,7 @@ def trim_pedestals(state, BV):
 
         if not status == 'TERM':
             if state['-Live-Module-'] and BV is not None:
-	        _, current, _ = state['ps'].measureCurrentLoop()
+                _, current, _ = state['ps'].measureCurrentLoop()
                 state['-Leakage-Current-'] = current
 
             if BV is None:
