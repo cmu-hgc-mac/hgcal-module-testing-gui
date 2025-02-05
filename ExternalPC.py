@@ -204,7 +204,29 @@ class ExternalPC: # no longer Centos7
         thisrun = runs[-1].split('/')[-1]
         #return f'{scriptname}/{thisrun}'
         return runs[-1]
-        
+
+    def create_proc(self, scriptname):
+            
+        script = self.scriptloc + scriptname + '.py'
+
+        if not self.initiated:
+            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {self.config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1'
+        else:
+            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {self.config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1'
+
+	proc = ScriptProcess(scriptname, command, self)
+	return proc
+
+    def pedestal_proc(self, BV=None):
+
+        proc = self.create_proc('pedestal_run')
+        return proc
+
+    def script_proc(self, script, BV=None):
+
+        proc = self.create_proc(script)
+        return proc
+
     def pedestal_run(self, BV=None):
         """
         Runs the pedestal_run.py script and then, if the bias voltage isn't None, renames the output dir to include the bias voltage.
@@ -330,3 +352,55 @@ def check_hexactrl_sw():
     # make sure above files exist                                                                                                                                                                              
     assert os.path.isfile(f'{env}')
     assert os.path.isfile(f'{scriptloc}pedestal_run.py')
+
+
+# Class to handle detached test script processes running on the PC 
+class ScriptProcess:
+
+    def __init__(self, scriptname, command, pc):
+
+        self.pc = pc
+        self.command = command
+        self.scriptname = scriptname
+
+        print(f' >> CentosPC: Running {self.scriptname}.py with config {self.pc.config}...')
+
+        self.proc = subprocess.Popen(self.command, shell=True, executable="/bin/bash")
+
+    def is_finished(self):
+
+        isfin = self.proc.poll()
+
+        if isfin is None:
+            return False
+        elif isfin == 0:
+            return True
+        else:
+            print(f' >> CentosPC: Issue encountered in test. Ending test sequence...')
+            raise RuntimeError
+
+    def end_test(self):
+
+        terminated = False
+        if not self.is_finished:
+            terminated = True
+            self.proc.terminate()
+
+        runs = glob.glob(f'{configuration["DataLoc"]}/{self.pc.outdir}/{self.scriptname}/*')
+        runs.sort()
+
+        try:
+            print(f' >> CentosPC: Output of {self.scriptname}.py located in {runs[-1]}')
+            self.pc.initiated = True
+        except:
+            print(f' >> CentosPC: Did not find output of test. Maybe it crashed? Continuing')
+            return ''
+
+        if self.scriptname in self.pc.outyaml.keys() and not terminated:
+            print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.pc.outyaml[self.scriptname]}')
+            updateconf(self.pc.config, runs[-1]+'/'+self.pc.outyaml[self.scriptname])
+
+	thisrun = runs[-1].split('/')[-1]
+        #return f'{scriptname}/{thisrun}'
+        return runs[-1]
+
