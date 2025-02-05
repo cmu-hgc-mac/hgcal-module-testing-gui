@@ -73,21 +73,15 @@ class FPGATestStand:
         shape = modulename.split('-')[2][0]
         self.fw = ''
         if density == 'L':
-            if shape in ['F', 'L', 'R']:
-                if self.fpgatype == 'Trenz':
-                    self.fw = 'hexaboard-hd-tester-v1p1-trophy-v3'
-                elif self.fpgatype == 'Kria':
-                    self.fw = 'hexaboard-hd-tester-v2p0-trophy-v3'
-            else: # T B 5
-                raise NotImplementedError
+            if self.fpgatype == 'Trenz':
+                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v3'
+            elif self.fpgatype == 'Kria':
+                self.fw = 'hexaboard-hd-tester-v2p0-trophy-v3'
         elif density == 'H':
-            if shape == 'F' or shape == 'B':
-                if self.fpgatype == 'Trenz':
-                    self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
-                else: # Kria
-                    raise NotImplementedError
-            else: # L R T 5
-                raise NotImplementedError
+            if self.fpgatype == 'Trenz':
+                self.fw = 'hexaboard-hd-tester-v1p1-trophy-v2'
+            elif self.fpgatype == 'Kria':
+                self.fw = 'hexaboard-hd-tester-v2p0-trophy-v2'
 
         self.hbtype = density+shape
             

@@ -76,7 +76,7 @@ class ExternalPC: # no longer Centos7
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
                 elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
-            elif shape == 'L' or shape == 'R':
+            elif shape == 'L' or shape == 'R' or shape == 'T' or shape == 'B':
                 if rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
                 elif rocvers == 'X':
@@ -85,18 +85,27 @@ class ExternalPC: # no longer Centos7
                 if rocvers == 'X':
                     raise NotImplementedError
                 self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
-            else: # T B
-                raise NotImplementedError
         elif density == 'H':
             if shape == 'F':
                 if rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3-V3b.yaml'
                 elif rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
-            elif shape == 'B' and rocvers == 'X':
-                self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
-            else: # L R T 5
-                raise NotImplementedError
+            elif shape == 'B':
+                if rocvers == 'X':
+                    self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
+                else: # no V3b bottom yet
+                    raise NotImplementedErro
+            elif shape == 'R' or 'L':
+                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initHD-semi-V3b.yaml'
+                elif rocvers == 'X':
+                    raise NotImplementedError
+            elif shape == 'T':
+                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initHD-top-V3b.yaml'
+		elif rocvers == 'X':
+		    raise NotImplementedError
 
         # copy to current directory to update it safely while trimming
         os.system(f'cp {self.config} current_config.yaml')
