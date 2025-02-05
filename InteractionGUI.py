@@ -807,7 +807,7 @@ def run_other_script(script, state, BV):
             _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
         
-        if configuration['HasLocalDB']:
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 other_test_upload(state, script, BV)            
             except Exception:
