@@ -8,6 +8,7 @@ from Keithley2410 import Keithley2410
 from time import sleep, time
 import os
 import traceback
+from multiprocessing import Process, Manager
 from datetime import datetime
 
 mpl.rcParams.update(mpl.rcParamsDefault)
@@ -914,8 +915,14 @@ def take_IV_curve(state, step=10, maxV=500):
      
     connect_HV(state) # will do nothing if already connected
     RH, Temp = add_RH_T(state, force=True) # also adds RH,T to state dict
-        
-    curvew = waiting_window(f'Taking IV curve...')
+
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Taking IV curve...", font=lgfont)],
+              [sg.Button('Terminate Test')]]
+    curvew = sg.Window(f"Module Test: Taking IV Curve", layout, margins=(200,100))
+
+    event, values = curvew.read(timeout=100)
 
     if state['-Debug-Mode-']:
        sleep(5)
@@ -930,18 +937,52 @@ def take_IV_curve(state, step=10, maxV=500):
             maxV = -maxV
             step = -step
             
-        curve = state['ps'].takeIVnew(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
+        # use multiprocessing to run IV curve in separate process
+        # output dict is shared between main proc and IV proc
+        manager = Manager()
+        curve = manager.dict()
+        curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp])
+        curve_proc.start()
+
+        while curve_proc.is_alive():
+            event, values = curvew.read(timeout=1)
+            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
+                status = 'TERM'
+                break
+
+        curve_proc.terminate()
+        sleep(2)
+        curve_proc.close()
+
+	if status == 'RUN':
+            status = 'CONT'
+        else:
+            #for i in range(5):
+            #    a = state['ps']._query("OUTPut?") # get value keithley was in process of sending back                                                                                  
+            #    print(a)
+            #voltage, _, _ = state['ps'].measureVoltage()
+            #print('voltage', voltage)
+            state['ps']._write(":ABORt")
+            state['ps']._write(":TRIGger:CLEar")
+            state['ps']._write(":TRACe:CLEar")
+            state['ps']._write(":CALCulate2:CLIMits:CLEar")
+            a = state['ps']._query("OUTPut?")
+            print('a', a)
+            state['ps'].setVoltage(0)
+            state['ps'].outputOff()
+            
         update_state(state, '-HV-Output-On-', False, 'black')
 
-        if configuration['HasLocalDB']:
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
             except Exception:
                 print('  -- IV upload exception:', traceback.format_exc())
-        else:
+        elif status == 'CONT':
             iv_save(curve, state) # saves IV curve as pickle object
-    curvew.close()
-    return 'CONT'
+        curvew.close()
+    return status
         
 def restart_services(state):
     """
