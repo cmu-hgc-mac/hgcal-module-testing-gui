@@ -363,7 +363,7 @@ class ScriptProcess:
         self.command = command
         self.scriptname = scriptname
 
-        print(f' >> CentosPC: Running {self.scriptname}.py with config {self.pc.config}...')
+        print(f' >> ExternalPC: Running {self.scriptname}.py with config {self.pc.config}...')
 
         self.proc = subprocess.Popen(self.command, shell=True, executable="/bin/bash")
 
@@ -376,7 +376,7 @@ class ScriptProcess:
         elif isfin == 0:
             return True
         else:
-            print(f' >> CentosPC: Issue encountered in test. Ending test sequence...')
+            print(f' >> ExternalPC: Issue encountered in test. Ending test sequence...')
             raise RuntimeError
 
     def end_test(self):
@@ -390,14 +390,14 @@ class ScriptProcess:
         runs.sort()
 
         try:
-            print(f' >> CentosPC: Output of {self.scriptname}.py located in {runs[-1]}')
+            print(f' >> ExternalPC: Output of {self.scriptname}.py located in {runs[-1]}')
             self.pc.initiated = True
         except:
-            print(f' >> CentosPC: Did not find output of test. Maybe it crashed? Continuing')
+            print(f' >> ExternalPC: Did not find output of test. Maybe it crashed? Continuing')
             return ''
 
         if self.scriptname in self.pc.outyaml.keys() and not terminated:
-            print(f' >> CentosPC: Updating configuration file with {runs[-1]}/{self.pc.outyaml[self.scriptname]}')
+            print(f' >> ExternalPC: Updating configuration file with {runs[-1]}/{self.pc.outyaml[self.scriptname]}')
             updateconf(self.pc.config, runs[-1]+'/'+self.pc.outyaml[self.scriptname])
 
 	thisrun = runs[-1].split('/')[-1]
