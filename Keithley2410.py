@@ -517,9 +517,13 @@ class Keithley2410:
                     err_string += err
                 else:
                     break
+        err = self._query('SYSTem:ERRor?')
+        if (err[0:3] != '+0,' and err[0:2] != '0,'):
+            err_string += err
         if err_string != '':
             print(' >> Keithley2410: found error: {}'.format(err_string))
-            raise ValueError(err_string)
+            #raise ValueError(err_string)
+        self._write(':STATus:QUEue:CLEar')
 
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
@@ -568,3 +572,63 @@ class Keithley2410:
         self.outputOff()
 
         return datadict
+
+    # Take IV curve - now using internal voltage sweep function on Keithley
+    # Storing/plotting curve handled elsewhere
+    def takeIVproc(self, curve, maxV, stepV, RH, Temp, errcheck_step=5):
+
+        self.setVoltage(0.)
+        self.outputOn()
+
+        ln = int(maxV//stepV)+1
+        data = [] # append measurements to this list as rows                                                                                                                           
+
+        self.display_string('Looping...')
+        print(f' >> Keithley2410: Looping to {maxV}V in steps of {stepV}V')
+        sleep(5)
+
+        # Record date
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+        time = current_date.isoformat().split('T')[1].split('.')[0]
+
+        # Count the number of measurements that hit current compliance
+        # Break the loop after the second to save time
+        compl_ctr = 0
+        for i in range(0, ln):
+            if i % errcheck_step == 0:
+                self.check_for_errors(1) # Periodically check Keithley error cache
+
+            vltg = i*stepV
+            self.setVoltage(vltg)
+            # Delay here doesn't work for some reason
+            # maybe because the Keithley isn't in measure mode?
+            _, current, _ = self.measureCurrentLoop()
+            voltage, _, _ = self.measureVoltage()
+            resistance = voltage / current
+
+            data.append([vltg, voltage, np.abs(current), resistance])
+
+        self.display_string('Loop finished.')
+        print(' >> Keithley2410: Loop finished')
+
+        # Make output dictionary and return                                                                                                                                            
+        #curve = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}                                                                
+        curve['RH'] = RH
+        curve['Temp'] = Temp
+        curve['data'] = np.array(data)
+        curve['date'] = date
+        curve['time'] = time
+        curve['datetime'] = current_date
+        curve['RH'] = RH
+        curve['Temp'] = Temp
+        curve['data'] = np.array(data)
+        curve['date'] = date
+        curve['time'] = time
+        curve['datetime'] = current_date
+        print(curve)
+        self.IVdata.append(curve)
+        print(self.IVdata)
+        print(' >> Keithley2410: Disabling output')
+        self.setVoltage(0.)
+        self.outputOff()
