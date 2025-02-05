@@ -591,9 +591,16 @@ def run_pedestals(state, BV):
     Runs pedestals via the PC and then makes hexmap plots. If the module is live, sets the bias voltage 
     according to the BV argument.
     """
-    
-    pedestals = waiting_window(f"Running Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...]')
-    
+
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Running Pedestals (BV={BV})...", font=lgfont)],
+              [sg.Text('python3 pedestal_run.py [options...]')],
+              [sg.Button('Terminate Test')]]
+    pedestals = sg.Window(f"Module Test: Running Pedestals (BV={BV})", layout, margins=(200,100))
+
+    event, values = pedestals.read(timeout=100)
+
     if state['-Debug-Mode-']:
         sleep(5)
         hexpath = ''
@@ -604,8 +611,22 @@ def run_pedestals(state, BV):
                 update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
 
-        pedestalpath = state['pc'].pedestal_run(BV=BV)
+        #pedestalpath = state['pc'].pedestal_run(BV=BV)
+        # testing this detached test run
+        proc = state['pc'].pedestal_proc(BV=BV)
+        while not proc.is_finished():
+            event, values = pedestals.read(timeout=1)
+            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on run_pedestals at user request')
+                status = 'TERM'
+                break
 
+        pedestalpath = proc.end_test()
+        if status == 'RUN':
+            status = 'CONT'
+        del proc
+
+        
         if state['-Live-Module-'] and BV is not None:
             _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
@@ -624,21 +645,24 @@ def run_pedestals(state, BV):
             print(' -- InteractionGUI: pedestal run renaming failed')
             print(f'    attempted: mv {pedestalpath} {pedestalpath}_{testtag}')
 
-        if configuration['HasLocalDB']:
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 pedestal_upload(state) # uploads pedestals to database
             except Exception:
                 print('  -- Pedestal upload exception:', traceback.format_exc())
 
-        hexpath = state['pc'].make_hexmaps(tag=testtag)
-        if configuration['HasLocalDB']:
+        if status == 'CONT':
+            hexpath = state['pc'].make_hexmaps(tag=testtag)
+        else:
+            hexpath = ''
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 plots_upload(state) # uploads pedestal plots to database
             except Exception:
                 print('  -- Plots upload exception:', traceback.format_exc())
 
     pedestals.close()
-    return hexpath
+    return hexpath, status
 
 def multi_run_pedestals(state, BV_list):
     """
@@ -647,15 +671,28 @@ def multi_run_pedestals(state, BV_list):
 
     hexpath = ''
     for BV in BV_list:
-        hexpath = run_pedestals(state, BV)
+        hexpath, status = run_pedestals(state, BV)
+        if status != 'CONT':
+            break
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
         os.system(f'gio open {hexpath}_adc_mean.png')
         os.system(f'gio open {hexpath}_adc_stdd.png')
 
+    return status
+        
 def trim_pedestals(state, BV):
     """
     """
-    trimming = waiting_window(f"Trimming Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
+
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Trimming Pedestals (BV={BV})...", font=lgfont)],
+              [sg.Text('python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')],
+              [sg.Button('Terminate Trimming')]]
+    trimming = sg.Window(f"Module Test: Trimming Pedestals (BV={BV})", layout, margins=(200,100))
+
+    event, values = trimming.read(timeout=100)
+
     
     if state['-Debug-Mode-']:
         sleep(5)
@@ -664,27 +701,86 @@ def trim_pedestals(state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
-            
-        state['pc'].pedestal_run()
-        state['pc'].pedestal_scan()
-        state['pc'].vrefnoinv_scan()
-        state['pc'].vrefinv_scan()
 
-        if state['-Live-Module-'] and BV is not None:
-            _, current, _ = state['ps'].measureCurrentLoop()
-            state['-Leakage-Current-'] = current
+        proc = state['pc'].create_proc('pedestal_run')
+	while not proc.is_finished():
+            event, values = trimming.read(timeout=1)
+            if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                status = 'TERM'
+                break
 
-        if BV is None:
-            state['-Pedestals-Trimmed-'] = True
-        else:
-            state['-Pedestals-Trimmed-'] = BV
+        proc.end_test()
+	del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('pedestal_scan')
+            while not proc.is_finished():
+		event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+	    del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('vrefnoinv_scan')
+	    while not proc.is_finished():
+	        event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+            del proc
+
+	if status == 'RUN':
+            proc = state['pc'].create_proc('vrefinv_scan')
+            while not proc.is_finished():
+		event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+	    del proc
+
+        if status == 'RUN':
+            status = 'CONT'
+
+        #state['pc'].pedestal_run()
+        #state['pc'].pedestal_scan()
+        #state['pc'].vrefnoinv_scan()
+        #state['pc'].vrefinv_scan()
+
+        if not status == 'TERM':
+            if state['-Live-Module-'] and BV is not None:
+	        _, current, _ = state['ps'].measureCurrentLoop()
+                state['-Leakage-Current-'] = current
+
+            if BV is None:
+                state['-Pedestals-Trimmed-'] = True
+            else:
+                state['-Pedestals-Trimmed-'] = BV
 
     trimming.close()
-
+    return status
+    
 def run_other_script(script, state, BV):
     """
     """
-    running = waiting_window(f"Running {script}.py (BV={BV})...", description=f'python3 {script}.py [options...]')
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Running Script {script} (BV={BV})...", font=lgfont)],
+              [sg.Text(f'python3 {script}.py [options...]')],
+              [sg.Button('Terminate Test')]]
+    scriptrun = sg.Window(f"Module Test: Running Script {script} (BV={BV})", layout, margins=(200,100))
+
+    event, values = scriptrun.read(timeout=100)
 
     if state['-Debug-Mode-']:
         sleep(5)
@@ -693,7 +789,19 @@ def run_other_script(script, state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
-        state['pc']._run_script(script)
+
+        proc = state['pc'].script_proc(script, BV=BV)
+        while not proc.is_finished():
+            event, values = scriptrun.read(timeout=1)
+            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on run_other_script at user request')
+                status = 'TERM'
+                break
+
+        scriptpath = proc.end_test()
+        if status == 'RUN':
+            status = 'CONT'
+        del proc
 
         if state['-Live-Module-'] and BV is not None:
             _, current, _ = state['ps'].measureCurrentLoop()
@@ -705,8 +813,8 @@ def run_other_script(script, state, BV):
             except Exception:
                 print('  -- Other test upload exception:', traceback.format_exc())
 
-
-    running.close()
+    scriptrun.close()
+    return status
 
 def scan_pedestals(state, BV):
     """
