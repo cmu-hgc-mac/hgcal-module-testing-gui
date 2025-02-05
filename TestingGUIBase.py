@@ -951,7 +951,7 @@ while True:
                     BVs.append(None)
 
             if (nBVs < nPedestals and values['-IsLive-']):
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
@@ -965,7 +965,7 @@ while True:
         if values['-Other-Script-']:
             osbv = values['-Bias-Voltage-Other-'].rstrip()
             if (osbv == '' or not osbv.isnumeric()) and values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
             
