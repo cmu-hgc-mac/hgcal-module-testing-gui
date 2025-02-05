@@ -214,8 +214,8 @@ class ExternalPC: # no longer Centos7
         else:
             command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {self.config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1'
 
-	proc = ScriptProcess(scriptname, command, self)
-	return proc
+        proc = ScriptProcess(scriptname, command, self)
+        return proc
 
     def pedestal_proc(self, BV=None):
 
@@ -400,7 +400,7 @@ class ScriptProcess:
             print(f' >> ExternalPC: Updating configuration file with {runs[-1]}/{self.pc.outyaml[self.scriptname]}')
             updateconf(self.pc.config, runs[-1]+'/'+self.pc.outyaml[self.scriptname])
 
-	thisrun = runs[-1].split('/')[-1]
+        thisrun = runs[-1].split('/')[-1]
         #return f'{scriptname}/{thisrun}'
         return runs[-1]
 
