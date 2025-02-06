@@ -634,7 +634,7 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and not (values['-Full-'] or values['-Bottom-'])) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
             continue
 
@@ -642,8 +642,8 @@ while True:
             if (rocvers == '2' or rocvers == 'B' or rocvers == '4'):
                 if majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
                     pass # allow V3b ROC testing for LD full, left, right
-                elif majortype[1] == 'H' and minortype[0] == 'F':
-                    pass # allow V3b ROC testing for HD Full
+                elif majortype[1] == 'H' and minortype[0] in ['F', 'T', 'L']:
+                    pass # allow V3b ROC testing for HD Full, Top, Left
             elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
                 pass # catch older hexaboard serial format
             else:
@@ -712,7 +712,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
             show_string("Not Implemented")
             continue
         

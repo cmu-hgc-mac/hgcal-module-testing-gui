@@ -104,7 +104,7 @@ def end_session(state):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B']:
+        if shape not in ['F', 'B', 'L', 'T']:
             raise NotImplementedError
                             
     ending = waiting_window("Ending session...")
@@ -219,7 +219,7 @@ def initial_module_checks(state):
             raise NotImplementedError # B
     elif density == 'H':
         if shape not in ['F', 'B', 'T', 'L', 'R']:
-            raise NotImplementedError # 5
+            raise NotImplementedError 
 
     # check hexactrl-sw location now
     try:
@@ -494,7 +494,7 @@ def configure_test_stand(state, fpgahostname):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B']:
+        if shape not in ['F', 'B', 'T', 'L']:
             raise NotImplementedError
     else:
         raise NotImplementedError

@@ -84,7 +84,8 @@ class ExternalPC: # no longer Centos7
             elif shape == '5':
                 if rocvers == 'X':
                     raise NotImplementedError
-                self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
+                elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
         elif density == 'H':
             if shape == 'F':
                 if rocvers == '2' or rocvers == 'B' or rocvers == '4':
