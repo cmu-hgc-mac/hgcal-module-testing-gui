@@ -111,6 +111,8 @@ def add_mapping(df, hb_type = "LF"):
 
     #uncon = df_data['channeltype'] == 0 & df_data['pad'] == 0
     print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['channeltype'] != 0)])
+    print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['pad'] == 0)])
+    print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['pad'] < 0)])
     
     return df_data
 
@@ -336,9 +338,49 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
         # list of chip labels 
         chip_labels = ['chip0', 'chip1', 'chip3', 'chip2', 'chip5', 'chip4']
 
+    elif hb_type == "HL":
+        ########################
+        # HL board geometry and
+        #    chip positions
+        #        ___
+        #       / 1|
+        #      /___|
+        #      \  0|
+        #       \__|
+        #
+        #########################
+
+        # endpoints of line dividing chips 0 and 1
+        x_01 = [-4.4, 0.2]  
+        y_01 = [0., 0.]
+
+        # list of divider lines' endpoints
+        line_co = [(x_01, y_01)]
+
+        # marker posisition, angle and annotation position, angle for chip0
+        chip0_pos = (-2., -1.4)      
+        chip0_angle = 0.
+        chip0_anno_pos = (-3.85, -3.)    
+        chip0_anno_angle = 120.
+
+        # marker posisition, angle and annotation position, angle for chip1
+        chip1_pos = (-1.9, 1.6)
+        chip1_angle = 0.
+        chip1_anno_pos = (-3.8, 2)    
+        chip1_anno_angle = 60.
+
+        # lists of chip positions, angles and annotation positions, angles
+        chip_pos = [chip0_pos, chip1_pos]
+        chip_angles = [chip0_angle, chip1_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
+
+        # list of chip labels 
+        chip_labels = ['chip0', 'chip1']
+
     elif hb_type == "HT":
         ########################
-        # HF board geometry and
+        # HT board geometry and
         #    chip positions
         #        ______
         #       /  /_1_\
