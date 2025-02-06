@@ -606,7 +606,6 @@ while True:
     if values['-HD-']:
         basewindow['-Five-'].update(visible=False)
         basewindow['-Five-'].update(value=False)
-        basewindow['-Full-'].update(value=True)
     else:
         basewindow['-Five-'].update(visible=True)
         
