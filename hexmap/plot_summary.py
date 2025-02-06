@@ -63,7 +63,7 @@ def create_patches(df, mask, data_type, hb_type = "LF"):
     patches = []
     local_mask = mask.copy()
     r = 0.43
-    if hb_type == "HF" or hb_type == "HB": 
+    if hb_type in ['HF', 'HB', 'HT', 'HL', 'HR']: 
         r = 0.28
     for x, y in df.loc[local_mask, ["x", "y"]].values:
         angle = 0
@@ -131,7 +131,7 @@ def add_channel_legend(axes, hb_type = "LF"):
     pentagon = RegularPolygon((0.5, 0.5), numVertices = 5, radius = 10, orientation = 0)
     square = RegularPolygon((0.5, 0.5), numVertices = 4, radius = 10, orientation = np.radians(45))
     circle = RegularPolygon((0.5, 0.5), numVertices = 100, radius = 10, orientation = 0)
-    if hb_type == "LF" or hb_type == 'LR' or hb_type == 'LL' or hb_type == "HB":
+    if hb_type in ['LF', 'LR', 'LL', 'HB', 'HL', 'HR', 'HT']:
         handles = [hexagon, pentagon, square, circle]
         labels = ['calib', 'CM0', 'CM1', 'NC']
     elif hb_type == "HF":
@@ -207,6 +207,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality
         # but will still print channel numbers
+        #uncon = df_data[column] > 0
         
         # if actual channels have significantly higher noise than normal channels, label
         med_norm = df_data[column][norm_mask].median()
@@ -220,6 +221,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             highval = df_data[column] > noisy_limit
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
+        #for index, row in df_data.iterrows():
+        #    print(index, int(row['pad']), int(row['chip']), int(row['channel']), row['adc_stdd'])
+        
         # pick out channels with corrupted readout
         corrupted = df_data['corruption'] == 1
         
@@ -234,6 +238,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
 
+            for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
+                #print(x, y, pad)
+                ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             if len(df_data[column][nc_mask]) > 0:
                 for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                     ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
@@ -480,7 +487,8 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-    livemod = 'ML' in fname or 'MH' in fname
+    #livemod = 'ML' in fname or 'MH' in fname
+    livemod = True
             
     # fix figdir
     if figdir == None:
