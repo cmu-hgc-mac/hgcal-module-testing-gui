@@ -109,11 +109,6 @@ def add_mapping(df, hb_type = "LF"):
     df_data["x"] = df_data["pad"].map(d_pad_map["xposition"])
     df_data["y"] = df_data["pad"].map(d_pad_map["yposition"])
 
-    #uncon = df_data['channeltype'] == 0 & df_data['pad'] == 0
-    print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['channeltype'] != 0)])
-    print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['pad'] == 0)])
-    print(df_data[['pad', 'chip', 'channel', 'channeltype', 'adc_stdd']][(df_data['pad'] < 0)])
-    
     return df_data
 
 

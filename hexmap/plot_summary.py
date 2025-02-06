@@ -204,10 +204,9 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # but only label if in low-BV pedestal run
         if len(df_data[column][nc_mask]) > 0:
             med_nc = df_data[column][nc_mask].median()
-            uncon = np.abs(df_data[column] - med_nc) < upplim/40. - 8
+            uncon = np.abs(df_data[column] - med_nc) < upplim/40. 
         # not using for the moment because I'm unhappy with functionality
         # but will still print channel numbers
-        #uncon = df_data[column] > 0
         
         # if actual channels have significantly higher noise than normal channels, label
         med_norm = df_data[column][norm_mask].median()
@@ -221,9 +220,6 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             highval = df_data[column] > noisy_limit
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
-        #for index, row in df_data.iterrows():
-        #    print(index, int(row['pad']), int(row['chip']), int(row['channel']), row['adc_stdd'])
-        
         # pick out channels with corrupted readout
         corrupted = df_data['corruption'] == 1
         
@@ -237,10 +233,6 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         for x, y, pad in df.loc[(zeros | maxes) & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
-
-            for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
-                #print(x, y, pad)
-                ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
             if len(df_data[column][nc_mask]) > 0:
                 for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
                     ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
@@ -487,9 +479,8 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-    #livemod = 'ML' in fname or 'MH' in fname
-    livemod = True
-            
+    livemod = 'ML' in fname or 'MH' in fname
+                
     # fix figdir
     if figdir == None:
         figdir = os.path.dirname(fname)
