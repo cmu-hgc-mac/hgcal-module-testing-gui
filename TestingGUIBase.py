@@ -603,6 +603,13 @@ while True:
         elif values['-IsHB-']:
             moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{vendorid}-{moduleindex}'
 
+    if values['-HD-']:
+        basewindow['-Five-'].update(visible=False)
+        basewindow['-Five-'].update(value=False)
+        basewindow['-Full-'].update(value=True)
+    else:
+        basewindow['-Five-'].update(visible=True)
+        
     basewindow['-Module-Serial-'].update(value=moduleserial)
     if values['-Inspector-'] != '':
         inspector = values['-Inspector-']
