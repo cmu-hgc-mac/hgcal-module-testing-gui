@@ -54,3 +54,6 @@ docs/_build/
 
 # Configuration file
 *.yaml
+
+# root files
+.root
