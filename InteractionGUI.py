@@ -217,8 +217,8 @@ def initial_module_checks(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R', 'T', '5']:
-            raise NotImplementedError # B
+        if shape not in ['F', 'L', 'R', 'T', '5', 'B']:
+            raise NotImplementedError
     elif density == 'H':
         if shape not in ['F', 'B', 'T', 'L', 'R']:
             raise NotImplementedError 
@@ -247,7 +247,7 @@ def initial_module_checks(state):
     if density == 'L':
         if shape == 'F':
             thesepads = pads_LF
-        elif shape == 'R' or shape == 'L' or shape == 'T' or shape == '5':
+        elif shape in ['R', 'L', 'T', 'B', '5']:
             thesepads = pads_LR_LL
     if density == 'H':
         if shape == 'F':
@@ -495,7 +495,7 @@ def configure_test_stand(state, fpgahostname):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
+        if shape not in ['F', 'L', 'R', 'T', 'B']:
             raise NotImplementedError
     elif density == 'H':
         if shape not in ['F', 'B']: #, 'T', 'L']: TLR: waiting on listdevice, R: waiting on channel mapping

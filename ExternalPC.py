@@ -76,11 +76,16 @@ class ExternalPC: # no longer Centos7
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
                 elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
-            elif shape == 'L' or shape == 'R' or shape == 'T' or shape == 'B':
+            elif shape == 'L' or shape == 'R' or shape == 'T':
                 if rocvers == '2' or rocvers == 'B' or rocvers == '4':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
                 elif rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
+            elif shape == 'B':
+                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                    self.config = f'{self.scriptloc}etc/configs/initLD-bottom-3b.yaml'
+                elif rocvers == 'X':
+                    raise NotImplementedError
             elif shape == '5':
                 if rocvers == 'X':
                     raise NotImplementedError

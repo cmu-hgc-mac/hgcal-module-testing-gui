@@ -50,7 +50,8 @@ def add_mapping(df, hb_type = "LF"):
     lr_board_geo = s + "geometries/hex_positions_HPK_LR_8inch_edge_ring_testcap.txt"    # ld right   
     ll_board_geo = s + "geometries/hex_positions_HPK_LL_8inch_edge_ring_testcap.txt"    # ld left  
     l5_board_geo = s + "geometries/hex_positions_HPK_L5_8inch_edge_ring_testcap.txt"    # ld five  
-    l5_board_geo = s + "geometries/hex_positions_HPK_LT_8inch_edge_ring_testcap.txt"    # ld top  
+    lt_board_geo = s + "geometries/hex_positions_HPK_LT_8inch_edge_ring_testcap.txt"    # ld top  
+    lb_board_geo = s + "geometries/hex_positions_HPK_LB_8inch_edge_ring_testcap.txt"    # ld bottom
     hd_board_geo = s + "geometries/hex_positions_HPK_432ch_8inch_edge_ring_testcap.txt" # hd full
     hb_board_geo = s + "geometries/hex_positions_HPK_HB_8inch_edge_ring_testcap.txt"    # hd bottom
     hl_board_geo = s + "geometries/hex_positions_HPK_HL_8inch_edge_ring_testcap.txt"    # hd left
@@ -62,8 +63,8 @@ def add_mapping(df, hb_type = "LF"):
     lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping_Nov2024.csv" # ld right 
     ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping_Nov2024.csv" # ld left 
     l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld five 
-    lt_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld top
-    lb_board_chan = s + "channel_maps/lb_pad_to_channel_mapping_Jan2025.csv" # ld bottom 
+    lt_board_chan = s + "channel_maps/lt_pad_to_channel_mapping_Nov2024.csv" # ld top
+    lb_board_chan = s + "channel_maps/lb_pad_to_channel_mapping_BAD.csv" # ld bottom 
     hd_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"    # hd full
     hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv" # hd bottom
     hl_board_chan = s + "channel_maps/hl_pad_to_channel_mapping_Nov2024.csv" # hd left
@@ -86,6 +87,9 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "LB":
         chan_map_fname = lb_board_chan
         geo_fname = lb_board_geo
+    elif hb_type == "LT":
+        chan_map_fname = lt_board_chan
+        geo_fname = lt_board_geo
     elif hb_type == "L5":
         chan_map_fname = l5_board_chan
         geo_fname = l5_board_geo
@@ -101,7 +105,8 @@ def add_mapping(df, hb_type = "LF"):
     elif hb_type == "HR":
         chan_map_fname = hr_board_chan
         geo_fname = hr_board_geo
-            
+        
+    print(chan_map_fname, geo_fname)
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
 
@@ -251,6 +256,82 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
 
         # list of chip labels
         chip_labels = ['chip0', 'chip1', 'chip2']
+
+    elif hb_type == "LB":
+        #########################
+        # LD Full board geometry and
+        #    chip positions
+        #       __________
+        #       \  0  \ 1/
+        #        \_____\/
+        #
+        ##########################
+
+        # endpoints of line dividing chips 0 and 1
+        x_01 = [0., 3.]     
+        y_01 = [0., -5.6]
+
+        # list of divider lines' endpoints
+        line_co = [(x_01, y_01)]
+
+        # marker posisition, angle and annotation position, angle for chip0
+        chip0_pos = (-0.7, -3.4)
+        chip0_angle = 90.
+        chip0_anno_pos = (-5.3, -3.9)    
+        chip0_anno_angle = -60
+
+        # marker posisition, angle and annotation position, angle for chip1
+        chip1_pos = (2.4, -0.6)
+        chip1_angle = 210.
+        chip1_anno_pos = (4.4, -4.)
+        chip1_anno_angle = 60
+
+        # lists of chip positions, angles and annotation positions, angles
+        chip_pos = [chip0_pos, chip1_pos]
+        chip_angles = [chip0_angle, chip1_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
+
+        # list of chip labels
+        chip_labels = ['chip0', 'chip1', 'chip2']
+
+    elif hb_type == "LT":
+        #########################
+        # LD Full board geometry and
+        #    chip positions
+        #         ______
+        #        /  0 /1\
+        #       /____/___\
+        #
+        ##########################
+
+        # endpoints of line dividing chips 0 and 1
+        x_01 = [0., 3.]     
+        y_01 = [0., 5.]
+
+        # list of divider lines' endpoints
+        line_co = [(x_01, y_01)]
+
+        # marker posisition, angle and annotation position, angle for chip0
+        chip0_pos = (-1.5, 2.1)      
+        chip0_angle = 90.
+        chip0_anno_pos = (-4.9, 2.8)    
+        chip0_anno_angle = 63
+
+        # marker posisition, angle and annotation position, angle for chip1
+        chip1_pos = (2.3, 2.1)
+        chip1_angle = 90.
+        chip1_anno_pos = (4.15, 2.6)
+        chip1_anno_angle = -58
+
+        # lists of chip positions, angles and annotation positions, angles
+        chip_pos = [chip0_pos, chip1_pos]
+        chip_angles = [chip0_angle, chip1_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
+
+        # list of chip labels
+        chip_labels = ['chip0', 'chip1']
 
     elif hb_type == "HF":
         ########################
