@@ -204,7 +204,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # but only label if in low-BV pedestal run
         if len(df_data[column][nc_mask]) > 0:
             med_nc = df_data[column][nc_mask].median()
-            uncon = np.abs(df_data[column] - med_nc) < upplim/40. 
+            uncon = np.abs(df_data[column] - med_nc) < upplim/40.
         # not using for the moment because I'm unhappy with functionality
         # but will still print channel numbers
         
@@ -232,6 +232,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # label pads if on HB (pad is <0 if it's a common mode or non-connected channel)
         for x, y, pad in df.loc[(zeros | maxes) & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
             ax.text(x-0.3, y-0.15, str(int(pad)), fontsize='small')
+
         if live and (column == 'adc_stdd' or column == 'adc_iqr'):
             if len(df_data[column][nc_mask]) > 0:
                 for x, y, pad in df.loc[uncon & (df_data['pad'] > 0) & ~(calib_mask), ["x", "y", "pad"]].values:
@@ -480,7 +481,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         hb_type = density+shape
 
     livemod = 'ML' in fname or 'MH' in fname
-                
+    
     # fix figdir
     if figdir == None:
         figdir = os.path.dirname(fname)
