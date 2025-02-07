@@ -955,7 +955,7 @@ def take_IV_curve(state, step=10, maxV=500):
         sleep(2)
         curve_proc.close()
 
-	if status == 'RUN':
+        if status == 'RUN':
             status = 'CONT'
         else:
             #for i in range(5):
@@ -963,14 +963,20 @@ def take_IV_curve(state, step=10, maxV=500):
             #    print(a)
             #voltage, _, _ = state['ps'].measureVoltage()
             #print('voltage', voltage)
-            state['ps']._write(":ABORt")
-            state['ps']._write(":TRIGger:CLEar")
-            state['ps']._write(":TRACe:CLEar")
-            state['ps']._write(":CALCulate2:CLIMits:CLEar")
+           
+           
+           
+                       
             a = state['ps']._query("OUTPut?")
             print('a', a)
+
+            state['ps']._write("OUTput1:ENABle:STATe 1 ")
+            
+            b = state['ps']._query("OUTPut?")
+            print('b', b)
+            
             state['ps'].setVoltage(0)
-            state['ps'].outputOff()
+           # state['ps'].outputOff()
             
         update_state(state, '-HV-Output-On-', False, 'black')
 
