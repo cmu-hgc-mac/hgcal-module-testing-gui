@@ -101,11 +101,13 @@ def end_session(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
+        if shape not in ['F', 'L', 'R', 'T', 'B', '5']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B', 'L', 'T']:
+        if shape not in ['F', 'B', 'L', 'T', 'R']:
             raise NotImplementedError
+    # enabled for all because nothing in this function is shape or geometry dependent
+    # beside dcdc for LF
                             
     ending = waiting_window("Ending session...")
     sleep(2)
@@ -256,6 +258,8 @@ def initial_module_checks(state):
             thesepads = pads_HT
         elif shape == 'L':
             thesepads = pads_HL
+        elif shape == 'R':
+            thesepads = pads_HR
             
     if not state['-Skip-Checks-']:
         layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
@@ -312,7 +316,7 @@ def initial_module_checks(state):
         colright = []
         idx = 2
         for pad in thesepads:
-            expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
+            expect = '1.18-1.25V' if '1V2' in pad else '1.47-1.5V'
             colleft.append([sg.Text(f"{pad}:")])
             colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
             idx += 1
@@ -494,7 +498,7 @@ def configure_test_stand(state, fpgahostname):
         if shape not in ['F', 'L', 'R']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B', 'T', 'L']:
+        if shape not in ['F', 'B']: #, 'T', 'L']: TLR: waiting on listdevice, R: waiting on channel mapping
             raise NotImplementedError
     else:
         raise NotImplementedError

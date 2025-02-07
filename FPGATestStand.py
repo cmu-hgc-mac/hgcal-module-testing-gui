@@ -84,7 +84,14 @@ class FPGATestStand:
                 self.fw = 'hexaboard-hd-tester-v2p0-trophy-v2'
 
         self.hbtype = density+shape
-            
+
+        if density == 'L':
+            if shape not in ['F', 'L', 'R']:
+                raise NotImplementedError
+        elif density == 'H':
+            if shape not in ['F', 'B']: #, 'T', 'L']: TLR: waiting on listdevice, R: waiting on channel mapping
+                raise NotImplementedError
+        
     def _runcmd(self, cmd):
         """
         Class to run an arbitrary bash command over ssh. Currently sleeps for three seconds to ensure safety.
