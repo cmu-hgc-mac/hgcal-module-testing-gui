@@ -29,6 +29,8 @@ listeddevices = {'LF': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', 
                         ['60: -- -- -- -- -- -- -- -- 68 69 6a 6b 6c 6d 6e 6f', '60: -- -- -- -- -- -- -- 67 68 69 6a 6b 6c 6d 6e 6f']],
                  'HL': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', '00: -- -- -- -- -- -- -- 07 08 09 0a 0b 0c 0d 0e 0f'],
                         ['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f']],
+                 'HR': [['00: -- -- -- -- -- -- -- -- 08 09 0a 0b 0c 0d 0e 0f', '00: -- -- -- -- -- -- -- 07 08 09 0a 0b 0c 0d 0e 0f'],
+                        ['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f']],
                  'HT': [['10: -- -- -- -- -- -- -- -- 18 19 1a 1b 1c 1d 1e 1f', '10: -- -- -- -- -- -- -- 17 18 19 1a 1b 1c 1d 1e 1f'],
                         ['20: -- -- -- -- -- -- -- -- 28 29 2a 2b 2c 2d 2e 2f', '20: -- -- -- -- -- -- -- 27 28 29 2a 2b 2c 2d 2e 2f'],
                         ['50: -- -- -- -- -- -- -- -- 58 59 5a 5b 5c 5d 5e 5f', '50: -- -- -- -- -- -- -- 57 58 59 5a 5b 5c 5d 5e 5f']],
@@ -98,7 +100,7 @@ class FPGATestStand:
             if shape not in ['F', 'L', 'R', 'T', 'B']:
                 raise NotImplementedError
         elif density == 'H':
-            if shape not in ['F', 'B', 'T', 'L']: # R: waiting on listdevice, channel mapping
+            if shape not in ['F', 'B', 'T', 'L', 'R']: # R waiting on channel mapping but allow for now
                 raise NotImplementedError
         
     def _runcmd(self, cmd):
