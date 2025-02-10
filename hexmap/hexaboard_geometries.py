@@ -333,6 +333,60 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
         # list of chip labels
         chip_labels = ['chip0', 'chip1']
 
+    elif hb_type == "L5":
+        #########################
+        # LD Full board geometry and
+        #    chip positions
+        #         ______
+        #        /  0 / |
+        #       /____/ 1|
+        #       \  2 \  |
+        #        \____\_|
+        #
+        ##########################
+
+        # endpoints of line dividing chips 0 and 1
+        x_01 = [0., 3.]     
+        y_01 = [0., 5.]
+
+        # endpoints of line dividing chips 0 and 2
+        x_02 = [-5.5, 0.]
+        y_02 = [0., 0.]
+
+        # endpoints of line dividing chips 1 and 2
+        x_12 = [0., 3.]     
+        y_12 = [0., -5.6]
+
+        # list of divider lines' endpoints
+        line_co = [(x_01, y_01), (x_02, y_02), (x_12, y_12)]
+
+        # marker posisition, angle and annotation position, angle for chip0
+        chip0_pos = (-2., 1.5)      
+        chip0_angle = 90.
+        chip0_anno_pos = (-4.9, 2.8)    
+        chip0_anno_angle = 63
+
+        # marker posisition, angle and annotation position, angle for chip1
+        chip1_pos = (0.6, -0.5)
+        chip1_angle = 0.
+        chip1_anno_pos = (3.6, 0.)
+        chip1_anno_angle = -90
+
+        # marker posisition, angle and annotation position, angle for chip2
+        chip2_pos = (-1.6, -2.7)
+        chip2_angle = 90.
+        chip2_anno_pos = (-0.7, -5.95)
+        chip2_anno_angle = 0.0
+
+        # lists of chip positions, angles and annotation positions, angles
+        chip_pos = [chip0_pos, chip1_pos, chip2_pos]
+        chip_angles = [chip0_angle, chip1_angle, chip2_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos, chip2_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
+
+        # list of chip labels
+        chip_labels = ['chip0', 'chip1', 'chip2']
+
     elif hb_type == "HF":
         ########################
         # HF board geometry and
