@@ -640,22 +640,30 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Right-'] or values['-Left-'] or values['-Top-'] or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
 
-        if rocvers != 'X':
-            if (rocvers == '2' or rocvers == 'B' or rocvers == '4'):
-                if majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
-                    pass # allow V3b ROC testing for LD full, left, right
-                elif majortype[1] == 'H' and minortype[0] in ['F', 'T', 'L']:
-                    pass # allow V3b ROC testing for HD Full, Top, Left
-            elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
-                pass # catch older hexaboard serial format
+        # catch ROC versions and geometries
+        hbtype = majortype[1]+minortype[0]
+        if rocvers == 'X':
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'HF', 'HB']:
+                pass # V3a ROC testing
             else:
                 show_string("Not Implemented")
                 continue
-            
+        elif rocvers in ['2', 'B', '4']:
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL']:
+                pass # V3b ROC testing
+            else:
+                show_string("Not Implemented")
+                continue
+        elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
+            pass # catch older hexaboard serial format
+        else:
+            show_string("Not Implemented")
+            continue
+
         fpgahostname = values['-FPGAHostname-'].rstrip()
         
         # Initialize test stand state dictionary
@@ -718,7 +726,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Right-'] or values['-Left-'] or values['-Top-']or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
         
