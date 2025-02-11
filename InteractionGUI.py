@@ -1,13 +1,18 @@
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
-from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC, check_hexactrl_sw
+from FPGATestStand import FPGATestStand
+from ExternalPC import ExternalPC, check_hexactrl_sw
 from Keithley2410 import Keithley2410
-from time import sleep
+from time import sleep, time
 import os
 import traceback
 from datetime import datetime
+
+mpl.rcParams.update(mpl.rcParamsDefault)
+font = {"size": 20}
+mpl.rc("font", **font)
 
 import yaml
 configuration = {}
@@ -87,8 +92,8 @@ def end_session(state):
     system. In general, shutting it down broadly follows five steps:
         - Disabling the HV power
         - De-powering the DCDC or Low Voltage Supply
-        - Shutting down the Trenz
-        - De-powering the Trenz
+        - Shutting down the FPGA
+        - De-powering the FPGA
         - Disconnecting all of the parts and the module
     """
 
@@ -96,11 +101,13 @@ def end_session(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
+        if shape not in ['F', 'L', 'R', 'T', 'B', '5']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B']:
+        if shape not in ['F', 'B', 'L', 'T', 'R']:
             raise NotImplementedError
+    # enabled for all because nothing in this function is shape or geometry dependent
+    # beside dcdc for LF
                             
     ending = waiting_window("Ending session...")
     sleep(2)
@@ -133,6 +140,13 @@ def end_session(state):
                         update_state(state, '-DAQ-Server-', False, 'black')
                         update_state(state, '-I2C-Server-', False, 'black')
                         update_state(state, '-Hexactrl-Accessed-', False, 'black')
+
+                    # new open_box call b/c for the kria have to open box to flip switch
+                    open_box(state)
+
+                    if state['-FPGA-Type-'] == 'Kria':
+                        do_something_window("Turn off Kria hexacontroller power switch", "Switched Off")
+                        update_state(state, '-Hexactrl-Powered-', False, 'black')
                         
                     do_something_window("Disconnect hexacontroller power"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Disconnected")
                     update_state(state, '-Hexactrl-Powered-', False, 'black')
@@ -203,15 +217,16 @@ def initial_module_checks(state):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R', 'T', '5']:
-            raise NotImplementedError # B
+        if shape not in ['F', 'L', 'R', 'T', '5', 'B']:
+            raise NotImplementedError
     elif density == 'H':
         if shape not in ['F', 'B', 'T', 'L', 'R']:
-            raise NotImplementedError # 5
+            raise NotImplementedError 
 
     # check hexactrl-sw location now
     try:
-        check_hexactrl_sw()
+        if not state['-Debug-Mode-']:
+            check_hexactrl_sw()
     except AssertionError:
         ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
         sleep(2)
@@ -232,7 +247,7 @@ def initial_module_checks(state):
     if density == 'L':
         if shape == 'F':
             thesepads = pads_LF
-        elif shape == 'R' or shape == 'L' or shape == 'T' or shape == '5':
+        elif shape in ['R', 'L', 'T', 'B', '5']:
             thesepads = pads_LR_LL
     if density == 'H':
         if shape == 'F':
@@ -243,6 +258,8 @@ def initial_module_checks(state):
             thesepads = pads_HT
         elif shape == 'L':
             thesepads = pads_HL
+        elif shape == 'R':
+            thesepads = pads_HR
             
     if not state['-Skip-Checks-']:
         layout = [[sg.Text("Use multimeter to check hexaboard resistances for shorts", font="Any 15")]]
@@ -299,7 +316,7 @@ def initial_module_checks(state):
         colright = []
         idx = 2
         for pad in thesepads:
-            expect = '1.2-1.25V' if '1V2' in pad else '1.47-1.5V'
+            expect = '1.18-1.25V' if '1V2' in pad else '1.47-1.5V'
             colleft.append([sg.Text(f"{pad}:")])
             colright.append([sg.Text(f"(expect {expect})"), sg.Radio('Correct', idx, key=f"-{pad}-corr-"), sg.Radio('Incorrect', idx, key=f"-{pad}-incorr-")])
             idx += 1
@@ -465,11 +482,11 @@ def check_leakage_current(state):
         window.close()
     return 'CONT'
 
-def configure_test_stand(state, trenzhostname):
+def configure_test_stand(state, fpgahostname):
     """
     Guides the user through connecting the various boards and then handles the startup of the testing system. At
-    the moment, it assumes the DCDC has already been connected but is not powered. The Trenz test stand is added to
-    the `state` dictionary under the field 'ts' and the Centos PC object is added under the field 'pc'. If the objects
+    the moment, it assumes the DCDC has already been connected but is not powered. The FPGA test stand is added to
+    the `state` dictionary under the field 'ts' and the External PC object is added under the field 'pc'. If the objects
     detect errors in the firmware or services, the function returns 'END' after ending the sesion; if all succeed, 
     it returns 'CONT'.
     """
@@ -478,10 +495,10 @@ def configure_test_stand(state, trenzhostname):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R']:
+        if shape not in ['F', 'L', 'R', 'T', 'B']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B']:
+        if shape not in ['F', 'B', 'T', 'L', 'R']:
             raise NotImplementedError
     else:
         raise NotImplementedError
@@ -493,17 +510,25 @@ def configure_test_stand(state, trenzhostname):
     do_something_window("Ensure NOTHING is powered", "No power")
     do_something_window("Connect trophy board and hexacontroller", "Connected", title='Connect Hexacontroller')
     update_state(state, '-Hexactrl-Connected-', True, 'green')
-    if state['-Live-Module-']:
-        close_box(state)
+
     do_something_window("Connect hexacontroller power cable"+(" (blue)" if configuration['MACSerial'] == 'CM' else ''), "Powered", title='Power Hexacontroller')
     update_state(state, '-Hexactrl-Powered-', True, 'green')
-    
-    connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{trenzhostname}')
+
+    if state['-FPGA-Type-'] == 'Kria':
+        update_state(state, '-Hexactrl-Powered-', False, 'black')
+        do_something_window("Turn on Kria hexacontroller power switch", "Powered", title='Switch On Hexacontroller')
+        update_state(state, '-Hexactrl-Powered-', True, 'green')
+
+    # now have close box after powering on test stand b/c kria has a switch
+    if state['-Live-Module-']:
+        close_box(state)
+
+    connecting = waiting_window("Connecting to hexacontroller...", description=f'ssh root@{fpgahostname}')
     if state['-Debug-Mode-']:
         sleep(5)
         ts = None
     else:
-        ts = TrenzTestStand(trenzhostname, state['-Module-Serial-']) # will take some time if the Trenz was just powered
+        ts = FPGATestStand(fpgahostname, state['-Module-Serial-'], fpgatype=state['-FPGA-Type-']) # will take some time if the FPGA was just powered
     connecting.close()
     update_state(state, '-Hexactrl-Accessed-', True, 'green')
     update_state(state, 'ts', ts)
@@ -536,7 +561,7 @@ def configure_test_stand(state, trenzhostname):
     update_state(state, '-DAQ-Server-', services, 'green' if services else 'red')
     update_state(state, '-I2C-Server-', services, 'green' if services else 'red')
     if not services:
-        ending = waiting_window("Error in Trenz services. Exiting...", title="Error in Services")
+        ending = waiting_window("Error in FPGA services. Exiting...", title="Error in Services")
         sleep(2)
         ending.close()
         end_session(state)
@@ -548,7 +573,7 @@ def configure_test_stand(state, trenzhostname):
         sleep(5)
     else:
         try:
-            pc = CentosPC(trenzhostname, state) # automatically starts daq client
+            pc = ExternalPC(fpgahostname, state) # automatically starts daq client
         except AssertionError:
             ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
             sleep(2)
@@ -570,9 +595,16 @@ def run_pedestals(state, BV):
     Runs pedestals via the PC and then makes hexmap plots. If the module is live, sets the bias voltage 
     according to the BV argument.
     """
-    
-    pedestals = waiting_window(f"Running Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...]')
-    
+
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Running Pedestals (BV={BV})...", font=lgfont)],
+              [sg.Text('python3 pedestal_run.py [options...]')],
+              [sg.Button('Terminate Test')]]
+    pedestals = sg.Window(f"Module Test: Running Pedestals (BV={BV})", layout, margins=(200,100))
+
+    event, values = pedestals.read(timeout=100)
+
     if state['-Debug-Mode-']:
         sleep(5)
         hexpath = ''
@@ -583,8 +615,22 @@ def run_pedestals(state, BV):
                 update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
 
-        pedestalpath = state['pc'].pedestal_run(BV=BV)
+        #pedestalpath = state['pc'].pedestal_run(BV=BV)
+        # testing this detached test run
+        proc = state['pc'].pedestal_proc(BV=BV)
+        while not proc.is_finished():
+            event, values = pedestals.read(timeout=1)
+            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on run_pedestals at user request')
+                status = 'TERM'
+                break
 
+        pedestalpath = proc.end_test()
+        if status == 'RUN':
+            status = 'CONT'
+        del proc
+
+        
         if state['-Live-Module-'] and BV is not None:
             _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
@@ -601,22 +647,26 @@ def run_pedestals(state, BV):
             os.system(f'mv {pedestalpath} {pedestalpath}_{testtag}')
         except:
             print(' -- InteractionGUI: pedestal run renaming failed')
+            print(f'    attempted: mv {pedestalpath} {pedestalpath}_{testtag}')
 
-        if configuration['HasLocalDB']:
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 pedestal_upload(state) # uploads pedestals to database
             except Exception:
                 print('  -- Pedestal upload exception:', traceback.format_exc())
 
-        hexpath = state['pc'].make_hexmaps(tag=testtag)
-        if configuration['HasLocalDB']:
+        if status == 'CONT':
+            hexpath = state['pc'].make_hexmaps(tag=testtag)
+        else:
+            hexpath = ''
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 plots_upload(state) # uploads pedestal plots to database
             except Exception:
                 print('  -- Plots upload exception:', traceback.format_exc())
 
     pedestals.close()
-    return hexpath
+    return hexpath, status
 
 def multi_run_pedestals(state, BV_list):
     """
@@ -625,15 +675,28 @@ def multi_run_pedestals(state, BV_list):
 
     hexpath = ''
     for BV in BV_list:
-        hexpath = run_pedestals(state, BV)
+        hexpath, status = run_pedestals(state, BV)
+        if status != 'CONT':
+            break
     if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
         os.system(f'gio open {hexpath}_adc_mean.png')
         os.system(f'gio open {hexpath}_adc_stdd.png')
 
+    return status
+        
 def trim_pedestals(state, BV):
     """
     """
-    trimming = waiting_window(f"Trimming Pedestals (BV={BV})...", description='python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')
+
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Trimming Pedestals (BV={BV})...", font=lgfont)],
+              [sg.Text('python3 pedestal_run.py [options...] && python3 pedestal_scan.py [options...] &&\npython3 vrefnoinv_scan.py [options...] && python3 vrefinv_scan.py [options...]')],
+              [sg.Button('Terminate Trimming')]]
+    trimming = sg.Window(f"Module Test: Trimming Pedestals (BV={BV})", layout, margins=(200,100))
+
+    event, values = trimming.read(timeout=100)
+
     
     if state['-Debug-Mode-']:
         sleep(5)
@@ -642,27 +705,86 @@ def trim_pedestals(state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
-            
-        state['pc'].pedestal_run()
-        state['pc'].pedestal_scan()
-        state['pc'].vrefnoinv_scan()
-        state['pc'].vrefinv_scan()
 
-        if state['-Live-Module-'] and BV is not None:
-            _, current, _ = state['ps'].measureCurrentLoop()
-            state['-Leakage-Current-'] = current
+        proc = state['pc'].create_proc('pedestal_run')
+        while not proc.is_finished():
+            event, values = trimming.read(timeout=1)
+            if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                status = 'TERM'
+                break
 
-        if BV is None:
-            state['-Pedestals-Trimmed-'] = True
-        else:
-            state['-Pedestals-Trimmed-'] = BV
+        proc.end_test()
+        del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('pedestal_scan')
+            while not proc.is_finished():
+                event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+            del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('vrefnoinv_scan')
+            while not proc.is_finished():
+                event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+            del proc
+
+        if status == 'RUN':
+            proc = state['pc'].create_proc('vrefinv_scan')
+            while not proc.is_finished():
+                event, values = trimming.read(timeout=1)
+                if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
+                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+
+            proc.end_test()
+            del proc
+
+        if status == 'RUN':
+            status = 'CONT'
+
+        #state['pc'].pedestal_run()
+        #state['pc'].pedestal_scan()
+        #state['pc'].vrefnoinv_scan()
+        #state['pc'].vrefinv_scan()
+
+        if not status == 'TERM':
+            if state['-Live-Module-'] and BV is not None:
+                _, current, _ = state['ps'].measureCurrentLoop()
+                state['-Leakage-Current-'] = current
+
+            if BV is None:
+                state['-Pedestals-Trimmed-'] = True
+            else:
+                state['-Pedestals-Trimmed-'] = BV
 
     trimming.close()
-
+    return status
+    
 def run_other_script(script, state, BV):
     """
     """
-    running = waiting_window(f"Running {script}.py (BV={BV})...", description=f'python3 {script}.py [options...]')
+    status = 'RUN'
+
+    layout = [[sg.Text(f"Running Script {script} (BV={BV})...", font=lgfont)],
+              [sg.Text(f'python3 {script}.py [options...]')],
+              [sg.Button('Terminate Test')]]
+    scriptrun = sg.Window(f"Module Test: Running Script {script} (BV={BV})", layout, margins=(200,100))
+
+    event, values = scriptrun.read(timeout=100)
 
     if state['-Debug-Mode-']:
         sleep(5)
@@ -671,20 +793,32 @@ def run_other_script(script, state, BV):
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
             state['ps'].setVoltage(float(BV))
-        state['pc']._run_script(script)
+
+        proc = state['pc'].script_proc(script, BV=BV)
+        while not proc.is_finished():
+            event, values = scriptrun.read(timeout=1)
+            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                print(' >> InteractionGUI: calling TERMINATE on run_other_script at user request')
+                status = 'TERM'
+                break
+
+        scriptpath = proc.end_test()
+        if status == 'RUN':
+            status = 'CONT'
+        del proc
 
         if state['-Live-Module-'] and BV is not None:
             _, current, _ = state['ps'].measureCurrentLoop()
             state['-Leakage-Current-'] = current
         
-        if configuration['HasLocalDB']:
+        if configuration['HasLocalDB'] and status == 'CONT':
             try:
                 other_test_upload(state, script, BV)            
             except Exception:
                 print('  -- Other test upload exception:', traceback.format_exc())
 
-
-    running.close()
+    scriptrun.close()
+    return status
 
 def scan_pedestals(state, BV):
     """
@@ -725,7 +859,7 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-def take_IV_curve(state, step=10):
+def take_IV_curve(state, step=10, maxV=900):
     """
     Takes an IV curve automatically using the power supply object. The range is assumed to be 0-900V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
@@ -746,9 +880,11 @@ def take_IV_curve(state, step=10):
             print(' >> HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
-        maxV = 900 if configuration['HVWiresPolarization'] == 'Reverse' else -900
+
         if configuration['HVWiresPolarization'] == 'Forward':
+            maxV = -maxV
             step = -step
+            
         curve = state['ps'].takeIVnew(maxV, step, RH, Temp) # IV curve is stored in the ps object so all curves can be plotted together
         update_state(state, '-HV-Output-On-', False, 'black')
 
@@ -840,6 +976,18 @@ def plot_IV_curves(state):
         ax.set_xlim(0, 900)
         ax.legend()
 
+        # add grading info to plot
+        try:
+            v = data[:,0]
+            i600 = data[np.argwhere(v==600.),2]*10**6
+            i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
+            grade = 'A' if (i600 < 100. and i850600 < 2.5) else ('B' if (i600 < 200. and i850600 < 5.) else 'C')
+            ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
+            ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
+            ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
+        except Exception:
+            print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
+            
         # dynamically name file to avoid overwriting plots
         filepath = f'{configuration["DataLoc"]}/{outdir}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
         filepath += '{}.png'
@@ -859,7 +1007,7 @@ def grade_module_window(moduleserial, qc_summary):
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
               [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
               [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
-              [sg.Text(f'{qc_summary["count_bad_cells"]} bad cells; grounded {len(qc_summary["list_cells_grounded"])} cells')],
+              [sg.Text(f'{len(qc_summary["list_dead_cells"])} dead; {len(qc_summary["list_cells_unbonded"])} unbonded; {len(qc_summary["list_noisy_cells"])} noisy; {len(qc_summary["list_cells_grounded"])} grounded; {qc_summary["count_bad_cells"]} total bad cells')],
               [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
               [sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
               [sg.Text(f'Protomodule Assembly Grade: {qc_summary["proto_grade"]}')],

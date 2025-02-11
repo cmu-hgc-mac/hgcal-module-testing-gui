@@ -104,23 +104,23 @@ def get_query_read(table_name, part_name = None):
 
     # define queries
     if table_name == 'module_pedestal_test':
-        query = f"""SELECT module_name, rel_hum, temp_c, bias_vol, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, rel_hum, temp_c, bias_vol, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'hxb_pedestal_test':
-        query = f"""SELECT hxb_name, rel_hum, temp_c, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(hxb_name,'-','') as hxb_name, rel_hum, temp_c, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_iv_test':
-        query = f"""SELECT module_name, rel_hum, temp_c, meas_i, date_test, time_test, inspector, comment
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, rel_hum, temp_c, meas_i, date_test, time_test, inspector, comment
             FROM {table_name}
             ORDER BY date_test DESC, time_test DESC LIMIT 10;"""
     elif table_name == 'module_pedestal_plots' and part_name is not None:
         query = f"""SELECT adc_mean_hexmap                                                                                           
             FROM {table_name}   
-            WHERE module_name = '{part_name}';"""
+            WHERE REPLACE(module_name,'-','') = '{part_name}';"""
     elif table_name == 'module_pedestal_plots':
-        query = f"""SELECT module_name, inspector, comment_plot_test                                                                                           
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                                                                           
             FROM {table_name}                                                                                                                                                                                
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
@@ -160,25 +160,25 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
     if table_name == 'module_pedestal_test' or table_name == 'module_iv_test':
         query = f"""SELECT *
             FROM {table_name}
-            WHERE module_name = '{part_name}'
+            WHERE REPLACE(module_name,'-','') = '{part_name}'
             ORDER BY date_test, time_test;""" 
                     
     elif table_name == 'module_inspect':
         query = f"""SELECT *
             FROM {table_name}
-            WHERE module_name = '{part_name}'
+            WHERE REPLACE(module_name,'-','') = '{part_name}'
             ORDER BY date_inspect, time_inspect;""" 
 
     elif table_name == 'proto_inspect':
         query = f"""SELECT *
             FROM {table_name}
-            WHERE proto_name = '{part_name}'
+            WHERE REPLACE(proto_name,'-','') = '{part_name}'
             ORDER BY date_inspect, time_inspect;""" 
 
     elif table_name == 'back_wirebond' or table_name == 'front_wirebond':
         query = f"""SELECT *
             FROM {table_name}
-            WHERE module_name = '{part_name}'
+            WHERE REPLACE(module_name,'-','') = '{part_name}'
             ORDER BY date_bond, time_bond;""" 
                     
     # fetch and return

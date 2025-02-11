@@ -1,9 +1,7 @@
 import sys
 import PySimpleGUI as sg
-from TrenzTestStand import TrenzTestStand
-from CentosPC import CentosPC
 from Keithley2410 import Keithley2410
-import time
+from time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
@@ -18,7 +16,11 @@ interaction with the layout.
 configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
+if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration.keys():
+    configuration['FPGAHostname'] = configuration['TrenzHostname']
+    configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
+    
 from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
     
 # Create theme
@@ -68,18 +70,25 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                   [sg.Text('Baseplate Type: '),
                    sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
-                   sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)],
-                  [sg.Text('ROC Version: '),
-                   sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                   sg.Radio('V3b SU02', 7, key='-V3b-2-', enable_events=True),
-                   sg.Radio('V3b SU04', 7, key='-V3b-4-', enable_events=True),
-                   sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
+                   sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)]]
+                  #[sg.Text('ROC Version: '),
+                  # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                  # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                  # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                  # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                  # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
                   #[sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
 
 # Module Setup fields for hexaboards only
 # for now, including Hexaboard/ROC version as input for backwards compatibility -
 # will hopfully change to radio buttons once `F03` format is obsolete
-hexaboardonly = [[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
+hexaboardonly = [#[sg.Text('ROC Version: '),
+                 # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                 # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                 # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                 # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                 # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
+                 #[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
                  [sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
 
 # Module Setup section which has both live module and hexaboard fields from above but initially hides them
@@ -89,11 +98,17 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                 sg.Radio("Bottom", 3, enable_events=True, key='-Bottom-'), sg.Radio("Left", 3, enable_events=True, key='-Left-'),
                 sg.Radio("Right", 3, enable_events=True, key='-Right-'), sg.Radio("Five", 3, enable_events=True, key='-Five-')],
                [sg.pin(sg.Column(livemoduleonly, key='-LM-Menu-', visible=False))],
+               [sg.Text('ROC Version: '),
+                sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
+                sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
+                sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
+                sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
+                sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
                [sg.pin(sg.Column(hexaboardonly, key='-HB-Menu-', visible=False))],
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
-               [sg.Text("Test Stand IP: "), sg.Combo(configuration['TrenzHostname'], default_value=configuration['TrenzHostname'][0], key="-TrenzHostname-")],
+               [sg.Text("Test Stand IP: "), sg.Combo(configuration['FPGAHostname'], default_value=configuration['FPGAHostname'][0], key="-FPGAHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
                [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
                [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
@@ -114,9 +129,10 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
-             [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-')],
+             [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-'), sg.Text(' Max V:'), sg.Input(s=5,key='-AmbIV-MaxV-')],
              [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
-             [sg.Text('Wait Periods (per run - minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-')],
+             [sg.Text('Wait Periods (minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-'),
+              sg.Text(' Max V:'), sg.Input(s=5,key='-DryIV-MaxV-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
 
 # Status Bar version 2
@@ -176,7 +192,7 @@ SetLED(basewindow, '-Debug-Mode-', 'green' if DEBUG_MODE else 'red')
 # Functions for enabling/disabling module setup fields
 def toggle_module_setup(enabled):
     keys = ['-DEBUG-MODE-', '-IsLive-', '-IsHB-', '-LD-', '-HD-', '-Full-', '-Top-', '-Bottom-', '-Left-', '-Right-', '-Five-', '-120-', '-200-', '-300-',
-            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-4-', '-V3c-', '-HB-ROC-Version-', '-HB-Manufacturer-', '-Module-Index-', '-TrenzHostname-', 'Configure Test Stand',
+            '-Ti-', '-CF-', '-CuW-', '-Preseries-', '-V3b-2-', '-V3b-B-', '-V3b-4-', '-V3c-', '-HB-Manufacturer-', '-Module-Index-', '-FPGAHostname-', 'Configure Test Stand',
             'Only IV Test', '-Inspector-', '-Module-Status-', '-Skip-Checks-', 'Close GUI']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
@@ -203,7 +219,7 @@ def disable_ts_tests():
     toggle_ts_tests(False)
 
 def toggle_iv_tests(enabled):
-    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-',]
+    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
         
@@ -222,9 +238,28 @@ def clear_tests():
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
-        
+    basewindow['-DryIV-MaxV-'].update(value='900')
+    basewindow['-AmbIV-MaxV-'].update(value='900')
+
+def exit_tests():
+
+    # After tests run, check status of services
+    if current_state['-Hexactrl-Accessed-']:
+        check_services(current_state)
+
+    # Reset test values
+    clear_tests()
+
+    # Turn off HV output if live module
+    if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
+        current_state['ps'].outputOff()
+        update_state(current_state, '-HV-Output-On-', False, 'black')
+
+    basewindow['Run Tests'].update(disabled=False)
+
+    
 # Variables that will be set by the user and then used to create the module serial number
-trenzhostname = ''
+fpgahostname = ''
 livemodule = None
 
 ivonly_skip = False
@@ -240,7 +275,8 @@ inspector = ''
 modulestatus = ''
 
 hxb_statuses = ['Untaped', 'Taped']
-mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated', 'Bolted']
+#mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Frontside Bonded', 'Bonds Reworked', 'Frontside Encapsulated', 'Bolted']
+mod_statuses = ['Assembled', 'Backside Bonded', 'Backside Encapsulated', 'Completely Bonded', 'Bonds Reworked', 'Completely Encapsulated', 'Bolted']
 
 # Function to clear the values entered into the Module Setup section
 def clear_setup():
@@ -293,7 +329,7 @@ def show_string(string, field='Left'):
     basewindow[f'-Display-Str-{field}-'].update(string)
     basewindow[f'-Display-Str-{field}-'].update(visible=True)
     basewindow.refresh()
-    time.sleep(2)
+    sleep(2)
     basewindow[f'-Display-Str-{field}-'].update(visible=False)
     basewindow.refresh()
 
@@ -323,7 +359,12 @@ while True:
     if values['-Scanned-QR-Code-'] != '':
         scannedcode = values['-Scanned-QR-Code-'].rstrip()
         if '-' not in scannedcode:
-            moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:9]+'-'+scannedcode[9:11]+'-'+scannedcode[11:]
+            if len(scannedcode) >= 4:
+                if scannedcode[3] == 'M':
+                    moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:9]+'-'+scannedcode[9:11]+'-'+scannedcode[11:]
+                elif scannedcode[3] == 'X':
+                    moduleserial = scannedcode[0:3]+'-'+scannedcode[3:5]+'-'+scannedcode[5:8]+'-'+scannedcode[8:10]+'-'+scannedcode[10:]
+
         else:
             moduleserial = scannedcode
 
@@ -394,6 +435,7 @@ while True:
             if len(serialsections[2]) == 4:
                 if serialsections[2][3] == 'X': basewindow['-Preseries-'].update(value=True)
                 elif serialsections[2][3] == '2': basewindow['-V3b-2-'].update(value=True)
+                elif serialsections[2][3] == 'B': basewindow['-V3b-B-'].update(value=True)
                 elif serialsections[2][3] == '4': basewindow['-V3b-4-'].update(value=True)
                 elif serialsections[2][3] == 'C': basewindow['-V3c-'].update(value=True)
                 #else:
@@ -404,11 +446,20 @@ while True:
             if not values['-IsLive-']:
                 basewindow.write_event_value('-IsLive-', True)
         elif values['-IsHB-']:
-            basewindow['-HB-ROC-Version-'].update(value=serialsections[2][1:3])
-            #if serialsections[2][1:3] == '03':
-            #    basewindow['-V3-'].update(value=True)
-            #elif serialsections[2][1:3] == '10':
-            #    basewindow['-Prod-'].update(value=True)
+            #basewindow['-HB-ROC-Version-'].update(value=serialsections[2][1:3])
+            if serialsections[2][1:3] == '03':
+                basewindow['-Preseries-'].update(value=True)
+            elif serialsections[2][1] == '4':
+                if serialsections[2][2] == 'X':
+                    basewindow['-Preseries-'].update(value=True)
+                elif serialsections[2][2] == '2':
+                    basewindow['-V3b-2-'].update(value=True)
+                elif serialsections[2][2] == 'B':
+                    basewindow['-V3b-B-'].update(value=True)
+                elif serialsections[2][2] == '4':
+                    basewindow['-V3b-4-'].update(value=True)
+                elif serialsections[2][2] == 'C':
+                    basewindow['-V3c-'].update(value=True)
             #else:
             #    basewindow['-Scanned-QR-Code-'].update(value='')
             #    continue
@@ -481,6 +532,7 @@ while True:
     
         if values['-Preseries-']: minortype[3] = 'X'
         elif values['-V3b-2-']: minortype[3] = '2'
+        elif values['-V3b-B-']: minortype[3] = 'B'
         elif values['-V3b-4-']: minortype[3] = '4'
         elif values['-V3c-']: minortype[3] = 'C'
         #if not values['-Preseries-']: minortype[3] = ''
@@ -488,9 +540,24 @@ while True:
         rocvers = minortype[3]
         
     elif values['-IsHB-']:
-        if len(values['-HB-ROC-Version-']) == 2:
-            minortype[1] = values['-HB-ROC-Version-'][0]
-            minortype[2] = values['-HB-ROC-Version-'][1]
+        if values['-Preseries-']:
+            minortype[1] = '0'
+            minortype[2] = '3'
+        elif values['-V3b-2-']:
+            minortype[1] = '4'
+            minortype[2] = '2'
+        elif values['-V3b-B-']:
+            minortype[1] = '4'
+            minortype[2] = 'B'
+        elif values['-V3b-4-']:
+            minortype[1] = '4'
+            minortype[2] = '4'
+        elif values['-V3c-']:
+            minortype[1] = '4'
+            minortype[2] = 'C'
+        #if len(values['-HB-ROC-Version-']) == 2:
+        #    minortype[1] = values['-HB-ROC-Version-'][0]
+        #    minortype[2] = values['-HB-ROC-Version-'][1]
         #if values['-V3-']: minortype[1] = '0'
         #if values['-V3-']: minortype[2] = '3'
         #if values['-Prod-']: minortype[1] = '1'
@@ -499,6 +566,9 @@ while True:
 
         hbvers = minortype[1]
         rocvers = minortype[2]
+
+        if rocvers == '3':
+            rocvers = 'X'
         
         vendorid = values['-HB-Manufacturer-'].rstrip().upper()
 
@@ -533,6 +603,11 @@ while True:
         elif values['-IsHB-']:
             moduleserial = f'320-{empty.join(majortype)}-{empty.join(minortype)}-{vendorid}-{moduleindex}'
 
+    if values['-HD-']:
+        basewindow['-Five-'].update(visible=False)
+        basewindow['-Five-'].update(value=False)
+    else:
+        basewindow['-Five-'].update(visible=True)
         
     basewindow['-Module-Serial-'].update(value=moduleserial)
     if values['-Inspector-'] != '':
@@ -540,7 +615,7 @@ while True:
     modulestatus = values['-Module-Status-']
         
     # Now, check for button presses
-    # Configure test stand starts the Trenz assembly and startup process
+    # Configure test stand starts the FPGA assembly and startup process
     if event == "Configure Test Stand":
 
         # If live module or hexaboard isn't selected, skip
@@ -554,7 +629,7 @@ while True:
             continue
             
         # If module serial isn't defined well, skip
-        if moduleindex == '' or values['-TrenzHostname-'].rstrip() == '':
+        if moduleindex == '' or values['-FPGAHostname-'].rstrip() == '':
             show_string("Invalid Setup")
             continue
         if values['-IsHB-'] and vendorid == '':
@@ -565,20 +640,31 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and not (values['-Full-'] or values['-Bottom-'])) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
 
-        if rocvers != 'X':
-            if (rocvers == '2' or rocvers == '4') and majortype[1] == 'L' and (minortype[0] == 'F' or minortype[0] == 'R' or minortype[0] == 'L'):
-                pass # only allow V3b ROC testing for LD full, left, right
-            elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
-                pass # catch older hexaboard serial format
+        # catch ROC versions and geometries
+        hbtype = majortype[1]+minortype[0]
+        if rocvers == 'X':
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'HF', 'HB']:
+                pass # V3a ROC testing
             else:
                 show_string("Not Implemented")
                 continue
-            
-        trenzhostname = values['-TrenzHostname-'].rstrip()
+        elif rocvers in ['2', 'B', '4']:
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL', 'HR']:
+                pass # V3b ROC testing
+            else:
+                show_string("Not Implemented")
+                continue
+        elif values['-IsHB-'] and hbvers == '0' and rocvers == '3':
+            pass # catch older hexaboard serial format
+        else:
+            show_string("Not Implemented")
+            continue
+
+        fpgahostname = values['-FPGAHostname-'].rstrip()
         
         # Initialize test stand state dictionary
         init_state()
@@ -592,9 +678,15 @@ while True:
         
         if outcode == 'CONT':
 
+            # figure out FPGA type based on chosen hostname
+            for iN in range(len(configuration['FPGAHostname'])):
+                if configuration['FPGAHostname'][iN] == fpgahostname:
+                    fpgatype = configuration['FPGAType'][iN]
+            current_state['-FPGA-Type-'] = fpgatype
+                    
             # If checks are good, assemble the parts and configure the test stand
             # If there is an issue, the function handles the ending of the test session
-            outcode = configure_test_stand(current_state, trenzhostname)
+            outcode = configure_test_stand(current_state, fpgahostname)
             
             if outcode == 'CONT':
 
@@ -613,7 +705,7 @@ while True:
         elif outcode == 'END':
             enable_module_setup()
 
-    # Only perform tests that involve the power supply and do not use the Trenz
+    # Only perform tests that involve the power supply and do not use the FPGA
     if event == 'Only IV Test':
 
         # If no module status, skip
@@ -634,7 +726,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and not values['-Full-']) or (values['-LD-'] and (values['-Top-'] or values['-Bottom-'] or values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
         
@@ -755,23 +847,33 @@ while True:
 
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                multi_run_pedestals(current_state, [None, None])
-                trim_pedestals(current_state, None)
-                multi_run_pedestals(current_state, [None, None, None, None, None])
+                #multi_run_pedestals(current_state, [None, None])
+                status = trim_pedestals(current_state, None)
+                if status == 'CONT':
+                    status = multi_run_pedestals(current_state, [None, None, None, None, None, None])
+                exit_tests()
                 continue
             
             # trim and take pedestals
-            trim_pedestals(current_state, 300)
-            multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
+            status = trim_pedestals(current_state, 300)
+            if status == 'CONT':
+                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
+
+            if status != 'CONT':
+                exit_tests()
+                continue
             
             # take ambient IV curve - do we want?
-            take_IV_curve(current_state)
+            status = take_IV_curve(current_state)
+            if status != 'CONT':
+                exit_tests()
+                continue
             plot_IV_curves(current_state)
             
-            # open dry air valve manually or automatically                                                                                                                                              
+            # open dry air valve manually or automatically            
             if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
                 from InteractionGUI import do_something_window
                 do_something_window('Open dry air valve', 'Open')
@@ -790,37 +892,57 @@ while True:
             dry_date = datetime.now()
             finalIV_date = dry_date + timedelta(seconds=wait_time_s)
             finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
-                
-            from InteractionGUI import waiting_window
-            wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+
+            layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                      [sg.Button('Terminate Test')]]
+            waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+
+            event, values = waiting.read(timeout=100)
+
             print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
-            # sleep 20min and then take dry IV
-            time.sleep(wait_time_s)
-            wait.close()
-            
-            take_IV_curve(current_state)
+            while True:
+                event, values = waiting.read(timeout=1)
+                if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                    print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                    status = 'TERM'
+                    break
+                if datetime.now() >= finalIV_date:
+                    break
+
+            if status != 'CONT':
+                exit_tests()
+                continue
+
+            status = take_IV_curve(current_state)
+            if status != 'CONT':
+                exit_tests()
+                continue
             plot_IV_curves(current_state)
             
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
             if (tpbv == '' or not tpbv.isnumeric()) and values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
             if values['-IsLive-']:
-                trim_pedestals(current_state, tpbv)
+                status = trim_pedestals(current_state, tpbv)
             else:
-                trim_pedestals(current_state, None)
+                status = trim_pedestals(current_state, None)
+
+            if status != 'CONT':
+                exit_tests()
+                continue
 
         # If pedestal run, read settings and then run        
         if values['-Pedestal-Run-']:
 
             # Check to make sure number of runs is entered
             if values['-N-Pedestals-'].rstrip() == '' or not values['-N-Pedestals-'].rstrip().isnumeric():
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
@@ -843,33 +965,44 @@ while True:
                     BVs.append(None)
 
             if (nBVs < nPedestals and values['-IsLive-']):
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
 
             # Run
-            multi_run_pedestals(current_state, BVs)
+            status = multi_run_pedestals(current_state, BVs)
+            if status != 'CONT':
+                exit_tests()
+                continue
             
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Other-Script-']:
             osbv = values['-Bias-Voltage-Other-'].rstrip()
             if (osbv == '' or not osbv.isnumeric()) and values['-IsLive-']:
-                basewindow['Run Tests'].update(disabled=False)
+                exit_tests()
                 show_string("Invalid Instructions", field="Right")
                 continue
             
             script = values['-Other-Which-Script-']
             if values['-IsLive-']:
-                run_other_script(script, current_state, osbv)
+                status = run_other_script(script, current_state, osbv)
             else:
-                run_other_script(script, current_state, None)
+                status = run_other_script(script, current_state, None)
+
+            if status != 'CONT':
+                exit_tests()
+                continue
 
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            take_IV_curve(current_state)
-            plot_IV_curves(current_state)
-
+            status = take_IV_curve(current_state)
+            if status == 'CONT':
+                plot_IV_curves(current_state)
+            else:
+                exit_tests()
+                continue
+            
         # If taking IV curve at zero humidity, must wait some time for humidity to drop
         # Now allowing multiple sequential dry curves
         if values['-Dry-IV-']:
@@ -896,17 +1029,20 @@ while True:
                     time_to_wait = float(thiswait)
                 final_dry_time = 60*(time_to_wait)
 
-                time.sleep(1)
+                sleep(1)
                 
-                drytime = time.time()
+                drytime = time()
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=final_dry_time)
                 finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                time_to_wait = final_dry_time - (time() - drytime)
                 
                 # Wait until time passed, then run dry IV curve
-                time_to_wait = final_dry_time - (time.time() - drytime)
-                from InteractionGUI import waiting_window
-                wait = waiting_window(f'Waiting until {finalIV_time} to perform IV')
+                layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                          [sg.Button('Terminate Test')]]
+                waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+
+                event, values = waiting.read(timeout=100)
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
                 # module conditioning
@@ -919,37 +1055,40 @@ while True:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
                 
-                
-                time.sleep(time_to_wait)
+                while True:
+                    event, values = waiting.read(timeout=1)
+                    if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                        print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                        status = 'TERM'
+                        break
+                    if datetime.now() >= finalIV_date:
+                        break
 
                 if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
                     current_state['ps'].setVoltage(0.)
 
-                wait.close()
+                waiting.close()
 
-                take_IV_curve(current_state)
-                plot_IV_curves(current_state)
+                if status != 'CONT':
+                    exit_tests()
+                    continue
 
-        # After tests run, check status of services
-        if current_state['-Hexactrl-Accessed-']:
-            check_services(current_state)    
+                status = take_IV_curve(current_state)
+                if status == 'CONT':
+                    plot_IV_curves(current_state)
+                else:
+                    exit_tests()
+                    continue
 
-        # Reset test values
-        clear_tests()
-
-        # Turn off HV output if live module
-        if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
-            current_state['ps'].outputOff()
-            update_state(current_state, '-HV-Output-On-', False, 'black')
-            
-        basewindow['Run Tests'].update(disabled=False)
+        # check service status, clear test values, turn off HV, reset buttons        
+        exit_tests()
 
         from InteractionGUI import waiting_window
         outdir = current_state['-Output-Subdir-']
         wait = waiting_window(f'Output located in {configuration["DataLoc"]}/{outdir}')
-        time.sleep(2)
+        sleep(2)
         wait.close()
-        
+
     # Restart the services and check to ensure success
     if event == 'Restart Services':
         restart_services(current_state)
@@ -966,7 +1105,8 @@ while True:
         if not configuration['HasLocalDB']:
             show_string("Grading requires local db", field='Right')
             continue
-        
+
+        print(f' >> TestingGUIBase: Grading {moduleserial}')
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             i_600v, i_850v = iv_info(moduleserial)
@@ -991,16 +1131,16 @@ while True:
         else:
             readout_grade = 'C'
 
-        if pxoffset < 50 and pyoffset < 50 and pangoffset < 0.02:
+        if abs(pxoffset) < 50 and abs(pyoffset) < 50 and abs(pangoffset) < 0.02:
             proto_grade = 'A'
-        elif pxoffset < 100 and pyoffset < 100 and pangoffset < 0.05:
+        elif abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.05:
             proto_grade = 'B'
         else:
             proto_grade = 'C'
         
-        if mxoffset < 50 and myoffset < 50 and mangoffset < 0.02:
+        if abs(mxoffset) < 50 and abs(myoffset) < 50 and abs(mangoffset) < 0.02:
             module_grade = 'A'
-        elif mxoffset < 100 and myoffset < 100 and mangoffset < 0.05:
+        elif abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.05:
             module_grade = 'B'
         else:
             module_grade = 'C'
@@ -1019,13 +1159,13 @@ while True:
         qc_summary = {'module_name': moduleserial,
                       'final_grade': final_grade,
                       'proto_flatness': pflatness,
-                      'proto_thickness': pthickness,
+                      'proto_ave_thickness': pthickness,
                       'proto_x_offset': pxoffset,
                       'proto_y_offset': pyoffset,
                       'proto_ang_offset': pangoffset,
                       'proto_grade': proto_grade,
-                      'module_flatness': mthickness,
-                      'module_thickness': mflatness,
+                      'module_flatness': mflatness,
+                      'module_ave_thickness': mthickness,
                       'module_x_offset': mxoffset,
                       'module_y_offset': myoffset,
                       'module_ang_offset': mangoffset,
@@ -1039,14 +1179,13 @@ while True:
                       'i_at_600v': i_600v,
                       'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
-                      'grade_version': 'preproduction_1_2024-10-16', 
+                      #'grade_version': 'preproduction_1_2024-10-16', 
                       }
         
-        print(f' >> TestingGUIBase: grading module {moduleserial}: grade {final_grade}')
+        print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
         # comments added by pop-up window
         qc_summary = grade_module_window(moduleserial, qc_summary)
-        # not uploading to local db yet
-        #summary_upload(moduleserial, qc_summary)
+        summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
     # or press the 'Close GUI' button.
