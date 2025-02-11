@@ -498,7 +498,7 @@ def configure_test_stand(state, fpgahostname):
         if shape not in ['F', 'L', 'R', 'T', 'B']:
             raise NotImplementedError
     elif density == 'H':
-        if shape not in ['F', 'B', 'T', 'L', 'R']: # R waiting on channel mapping but enable for now
+        if shape not in ['F', 'B', 'T', 'L', 'R']:
             raise NotImplementedError
     else:
         raise NotImplementedError

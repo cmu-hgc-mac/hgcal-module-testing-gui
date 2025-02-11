@@ -100,7 +100,7 @@ class FPGATestStand:
             if shape not in ['F', 'L', 'R', 'T', 'B']:
                 raise NotImplementedError
         elif density == 'H':
-            if shape not in ['F', 'B', 'T', 'L', 'R']: # R waiting on channel mapping but allow for now
+            if shape not in ['F', 'B', 'T', 'L', 'R']:
                 raise NotImplementedError
         
     def _runcmd(self, cmd):

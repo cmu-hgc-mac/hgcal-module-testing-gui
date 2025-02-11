@@ -69,7 +69,7 @@ def add_mapping(df, hb_type = "LF"):
     hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv" # hd bottom
     hl_board_chan = s + "channel_maps/hl_pad_to_channel_mapping_Nov2024.csv" # hd left
     ht_board_chan = s + "channel_maps/ht_pad_to_channel_mapping_Jan2025.csv" # hd top
-    hr_board_chan = s + "channel_maps/hr_pad_to_channel_mapping_BAD.csv" # hd top
+    hr_board_chan = s + "channel_maps/hr_pad_to_channel_mapping_Feb2025.csv" # hd top
      
     #import mapping files to pandas dataFrames and transform to python dicts
     if hb_type == "LF":
