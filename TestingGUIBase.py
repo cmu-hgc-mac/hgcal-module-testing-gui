@@ -24,7 +24,7 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
 from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
     
 # Create theme
-lgfont = ('Arial', 40)
+lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
 cmured = '#C41230'
@@ -897,19 +897,21 @@ while True:
                       [sg.Button('Terminate Test')]]
             waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
 
-            event, values = waiting.read(timeout=100)
+            eventw, valuesw = waiting.read(timeout=100)
 
             print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
             while True:
-                event, values = waiting.read(timeout=1)
-                if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                eventw, valuesw = waiting.read(timeout=1)
+                if eventw == 'Terminate Test' or eventw == sg.WIN_CLOSED:
                     print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
                     status = 'TERM'
                     break
                 if datetime.now() >= finalIV_date:
                     break
 
+            waiting.close()
+                
             if status != 'CONT':
                 exit_tests()
                 continue
@@ -1042,7 +1044,7 @@ while True:
                           [sg.Button('Terminate Test')]]
                 waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
 
-                event, values = waiting.read(timeout=100)
+                eventw, valuesw = waiting.read(timeout=100)
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
                 # module conditioning
@@ -1056,8 +1058,8 @@ while True:
                         update_state(current_state, '-HV-Output-On-', False, 'black')
                 
                 while True:
-                    event, values = waiting.read(timeout=1)
-                    if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                    eventw, valuesw = waiting.read(timeout=1)
+                    if eventw == 'Terminate Test' or eventw == sg.WIN_CLOSED:
                         print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
                         status = 'TERM'
                         break
