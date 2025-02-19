@@ -256,9 +256,11 @@ def exit_tests():
     if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
         current_state['ps'].outputOff()
         update_state(current_state, '-HV-Output-On-', False, 'black')
-
+        
     basewindow['Run Tests'].update(disabled=False)
 
+    #Reset Keithley?
+   
     
 # Variables that will be set by the user and then used to create the module serial number
 fpgahostname = ''
