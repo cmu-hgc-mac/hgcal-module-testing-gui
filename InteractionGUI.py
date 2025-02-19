@@ -951,6 +951,7 @@ def take_IV_curve(state, step=10, maxV=500):
                 status = 'TERM'
                 break
 
+        sleep(1)
         curve_proc.terminate()
         sleep(2)
         curve_proc.close()
