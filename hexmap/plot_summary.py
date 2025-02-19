@@ -131,7 +131,7 @@ def add_channel_legend(axes, hb_type = "LF"):
     pentagon = RegularPolygon((0.5, 0.5), numVertices = 5, radius = 10, orientation = 0)
     square = RegularPolygon((0.5, 0.5), numVertices = 4, radius = 10, orientation = np.radians(45))
     circle = RegularPolygon((0.5, 0.5), numVertices = 100, radius = 10, orientation = 0)
-    if hb_type in ['LF', 'LR', 'LL', 'LB', 'LT', 'HB', 'HL', 'HR', 'HT']:
+    if hb_type in ['LF', 'LR', 'LL', 'LB', 'LT', 'L5', 'HB', 'HL', 'HR', 'HT']:
         handles = [hexagon, pentagon, square, circle]
         labels = ['calib', 'CM0', 'CM1', 'NC']
     elif hb_type == "HF":

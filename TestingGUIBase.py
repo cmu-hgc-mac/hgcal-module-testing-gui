@@ -640,7 +640,7 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
 
@@ -653,7 +653,7 @@ while True:
                 show_string("Not Implemented")
                 continue
         elif rocvers in ['2', 'B', '4']:
-            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL']:
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL', 'HR']:
                 pass # V3b ROC testing
             else:
                 show_string("Not Implemented")
@@ -726,7 +726,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Right-'] or values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
             show_string("Not Implemented")
             continue
         
