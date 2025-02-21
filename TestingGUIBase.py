@@ -259,7 +259,8 @@ def exit_tests():
         
     basewindow['Run Tests'].update(disabled=False)
 
-    #Reset Keithley?
+    # Reset Keithley?
+    
    
     
 # Variables that will be set by the user and then used to create the module serial number

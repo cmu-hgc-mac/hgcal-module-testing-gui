@@ -8,6 +8,7 @@ from Keithley2410 import Keithley2410
 from time import sleep, time
 import os
 import traceback
+import multiprocessing
 from multiprocessing import Process, Manager
 from datetime import datetime
 
@@ -483,6 +484,9 @@ def check_leakage_current(state):
         window.close()
     return 'CONT'
 
+
+    
+        
 def configure_test_stand(state, fpgahostname):
     """
     Guides the user through connecting the various boards and then handles the startup of the testing system. At
@@ -939,6 +943,7 @@ def take_IV_curve(state, step=10, maxV=500):
             
         # use multiprocessing to run IV curve in separate process
         # output dict is shared between main proc and IV proc
+        print(multiprocessing.active_children())
         manager = Manager()
         curve = manager.dict()
         curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp])
@@ -951,11 +956,32 @@ def take_IV_curve(state, step=10, maxV=500):
                 status = 'TERM'
                 break
 
-        sleep(1)
-        curve_proc.terminate()
+        print(multiprocessing.active_children())
+        #print(processes)
+        
         sleep(2)
-        curve_proc.close()
+        #print(curve_proc.exitcode)
 
+        #curve_proc.close()
+        
+        curve_proc.kill()        #instead of .terminate
+        #print(curve_proc.extitcode)
+        sleep(1)
+        print(multiprocessing.active_children())
+
+        curve_proc.close()
+        print(multiprocessing.active_children())
+
+        for processesewss in multiprocessing.active_children():
+            processesewss.kill()
+            processesewss.terminate()
+            sleep(1)
+            processesewss.close()
+
+        print(multiprocessing.active_children())
+        sleep(2)
+        print(multiprocessing.active_children())
+        
         if status == 'RUN':
             status = 'CONT'
         else:
@@ -977,7 +1003,7 @@ def take_IV_curve(state, step=10, maxV=500):
             print('b', b)
             
             state['ps'].setVoltage(0)
-           # state['ps'].outputOff()
+            state['ps'].outputOff()
             
         update_state(state, '-HV-Output-On-', False, 'black')
 
