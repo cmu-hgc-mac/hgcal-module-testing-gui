@@ -384,7 +384,8 @@ class ScriptProcess:
         else:
             print(f' >> ExternalPC: Issue encountered in test. Ending test sequence...')
             #raise RuntimeError
-
+            return True
+            
     def end_test(self):
 
         terminated = False
