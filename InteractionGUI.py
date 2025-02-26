@@ -9,7 +9,7 @@ from time import sleep, time
 import os
 import traceback
 import multiprocessing
-from multiprocessing import Process, Manager
+from multiprocessing import Process, Manager, active_children
 from datetime import datetime
 
 mpl.rcParams.update(mpl.rcParamsDefault)
@@ -943,7 +943,8 @@ def take_IV_curve(state, step=10, maxV=500):
             
         # use multiprocessing to run IV curve in separate process
         # output dict is shared between main proc and IV proc
-        print(multiprocessing.active_children())
+  
+        
         manager = Manager()
         curve = manager.dict()
         curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp])
@@ -951,37 +952,45 @@ def take_IV_curve(state, step=10, maxV=500):
 
         while curve_proc.is_alive():
             event, values = curvew.read(timeout=1)
-            if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+            if event == 'Terminate Test':
+            
                 print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
                 status = 'TERM'
                 break
-
-        print(multiprocessing.active_children())
-        #print(processes)
+            if  event == sg.WIN_CLOSED:
+                print('Closed window')
+                status = 'TERM'
+                break
+        
+        
         
         sleep(2)
         #print(curve_proc.exitcode)
 
-        #curve_proc.close()
+        
         
         curve_proc.kill()        #instead of .terminate
         #print(curve_proc.extitcode)
         sleep(1)
-        print(multiprocessing.active_children())
+ 
+ 
 
         curve_proc.close()
-        print(multiprocessing.active_children())
+#Supposed to kill all children processes
+#Might not need at all
+        '''active = active_children()
+        print(active)
 
-        for processesewss in multiprocessing.active_children():
-            processesewss.kill()
-            processesewss.terminate()
+        for child in active:
+            child.kill()
             sleep(1)
-            processesewss.close()
-
-        print(multiprocessing.active_children())
+            child.close()
+        active = active_children()
+        print(active)
         sleep(2)
-        print(multiprocessing.active_children())
-        
+        active = active_children()
+        print(active)'''
+             
         if status == 'RUN':
             status = 'CONT'
         else:
