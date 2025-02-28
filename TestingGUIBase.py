@@ -893,8 +893,12 @@ while True:
                 continue
             
             # take ambient IV curve - do we want?
+
             status = take_IV_curve(current_state, maxV=maxV)
+
             if status != 'CONT':
+                
+                sleep(2)
                 exit_tests()
                 continue
             plot_IV_curves(current_state)

@@ -8,7 +8,7 @@ from Keithley2410 import Keithley2410
 from time import sleep, time
 import os
 import traceback
-import multiprocessing
+import multiprocessing, signal
 from multiprocessing import Process, Manager, active_children
 from datetime import datetime
 
@@ -953,7 +953,7 @@ def take_IV_curve(state, step=10, maxV=500):
         while curve_proc.is_alive():
             event, values = curvew.read(timeout=1)
             if event == 'Terminate Test':
-            
+            #Broke up into 2 if statements, so we can tell what happens(closed window or terminate worked)
                 print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
                 status = 'TERM'
                 break
@@ -964,18 +964,32 @@ def take_IV_curve(state, step=10, maxV=500):
         
         
         
-        sleep(2)
-        #print(curve_proc.exitcode)
+        
+       
+       
+        
+       
+        #triggers = state['ps']._query("TRIGger:Count?")
 
-        
-        
-        curve_proc.kill()        #instead of .terminate
-        #print(curve_proc.extitcode)
+        #print("triggers", triggers)
+
+        if state['ps']._query("OUTPut?") == int:
+            
+            curve_proc.terminate()
+        else:
+            sleep(1)
+            curve_proc.terminate()
+            
+        sleep(0.5)
+        state['ps']._query("SYSTem:ERRor:ALL?")
+        print('Terminated')
         sleep(1)
  
  
 
         curve_proc.close()
+
+        
 #Supposed to kill all children processes
 #Might not need at all
         '''active = active_children()
@@ -1003,13 +1017,13 @@ def take_IV_curve(state, step=10, maxV=500):
            
            
                        
-            a = state['ps']._query("OUTPut?")
-            print('a', a)
+           # a = state['ps']._query("OUTPut?")
+           # print('a', a)
 
             state['ps']._write("OUTput1:ENABle:STATe 1 ")
             
-            b = state['ps']._query("OUTPut?")
-            print('b', b)
+            #b = state['ps']._query("OUTPut?")
+            #print('b', b)
             
             state['ps'].setVoltage(0)
             state['ps'].outputOff()

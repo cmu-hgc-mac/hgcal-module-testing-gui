@@ -596,8 +596,8 @@ class Keithley2410:
         # Break the loop after the second to save time
         compl_ctr = 0
         for i in range(0, ln):
-            if i % errcheck_step == 0:
-                self.check_for_errors(1) # Periodically check Keithley error cache
+           # if i % errcheck_step == 0:
+               # self.check_for_errors(1) # Periodically check Keithley error cache
 
             vltg = i*stepV
             self.setVoltage(vltg)
