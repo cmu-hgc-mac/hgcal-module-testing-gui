@@ -145,7 +145,7 @@ def pedestal_upload(state, ind=-1):
     med_norm = df_data[column][norm_mask].median()
     mean_norm = df_data[column][norm_mask].mean()
     std_norm = df_data[column][norm_mask].std()
-    if live:
+    if '320-M' in moduleserial: #this should be live module condition. please double check!
         noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
         highval = (df_data[column] - med_norm) > noisy_limit
     else:
