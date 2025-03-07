@@ -74,26 +74,26 @@ class ExternalPC: # no longer Centos7
             if shape == 'F':
                 if rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3.yaml'
-                elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                elif rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initLD-trophyV3-3b.yaml'
             elif shape == 'L' or shape == 'R' or shape == 'T':
-                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi-V3b.yaml'
                 elif rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initLD-semi.yaml'
             elif shape == 'B':
-                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initLD-bottom-3b.yaml'
                 elif rocvers == 'X':
                     raise NotImplementedError
             elif shape == '5':
                 if rocvers == 'X':
                     raise NotImplementedError
-                elif rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                elif rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initLD-five-3b.yaml'
         elif density == 'H':
             if shape == 'F':
-                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3-V3b.yaml'
                 elif rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initHD_trophyV3.yaml'
@@ -103,12 +103,12 @@ class ExternalPC: # no longer Centos7
                 else: # no V3b bottom yet
                     raise NotImplementedErro
             elif shape == 'R' or 'L':
-                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initHD-semi-V3b.yaml'
                 elif rocvers == 'X':
                     raise NotImplementedError
             elif shape == 'T':
-                if rocvers == '2' or rocvers == 'B' or rocvers == '4':
+                if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initHD-top-V3b.yaml'
                 elif rocvers == 'X':
                     raise NotImplementedError

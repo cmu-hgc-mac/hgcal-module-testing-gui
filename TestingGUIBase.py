@@ -238,8 +238,8 @@ def clear_tests():
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
-    basewindow['-DryIV-MaxV-'].update(value='900')
-    basewindow['-AmbIV-MaxV-'].update(value='900')
+    basewindow['-DryIV-MaxV-'].update(value='500')
+    basewindow['-AmbIV-MaxV-'].update(value='500')
 
 def exit_tests():
 
@@ -652,9 +652,9 @@ while True:
             else:
                 show_string("Not Implemented")
                 continue
-        elif rocvers in ['2', 'B', '4']:
+        elif rocvers in ['2', 'B', '4', 'C']:
             if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL', 'HR']:
-                pass # V3b ROC testing
+                pass # V3b/c ROC testing
             else:
                 show_string("Not Implemented")
                 continue

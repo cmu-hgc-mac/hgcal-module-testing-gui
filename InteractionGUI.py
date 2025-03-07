@@ -859,9 +859,9 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-def take_IV_curve(state, step=10, maxV=900):
+def take_IV_curve(state, step=10, maxV=500):
     """
-    Takes an IV curve automatically using the power supply object. The range is assumed to be 0-900V
+    Takes an IV curve automatically using the power supply object. The range is assumed to be 0-500V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
     humidity. We intend to query this automatically in the future but do not have the capability at the 
     moment.
