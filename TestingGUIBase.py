@@ -123,7 +123,7 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
                  'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
-             [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-')],
+             [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-'), sg.Text('IV Max Voltage:'), sg.Input(s=5,key='-StandardIV-MaxV-')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-', enable_events=True), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-', enable_events=True)],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
@@ -233,13 +233,13 @@ def disable_iv_tests():
 def clear_tests():
     for key in ['-Standard-Test-', '-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
         basewindow[key].update(False)
-    for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
-6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
+    for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
     basewindow['-DryIV-MaxV-'].update(value='500')
     basewindow['-AmbIV-MaxV-'].update(value='500')
+    basewindow['-StandardIV-MaxV-'].update(value='500')
 
 def exit_tests():
 
@@ -867,7 +867,7 @@ while True:
                 continue
             
             # take ambient IV curve - do we want?
-            status = take_IV_curve(current_state)
+            status = take_IV_curve(current_state, maxV=int(values['-StandardIV-MaxV-']))
             if status != 'CONT':
                 exit_tests()
                 continue
@@ -916,7 +916,7 @@ while True:
                 exit_tests()
                 continue
 
-            status = take_IV_curve(current_state)
+            status = take_IV_curve(current_state, maxV=int(values['-StandardIV-MaxV-']))
             if status != 'CONT':
                 exit_tests()
                 continue
@@ -998,7 +998,7 @@ while True:
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            status = take_IV_curve(current_state)
+            status = take_IV_curve(current_state, maxV=int(values['-AmbIV-MaxV-']))
             if status == 'CONT':
                 plot_IV_curves(current_state)
             else:
@@ -1042,7 +1042,7 @@ while True:
                 # Wait until time passed, then run dry IV curve
                 layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
                           [sg.Button('Terminate Test')]]
-                waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+                waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
                 eventw, valuesw = waiting.read(timeout=100)
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
@@ -1075,7 +1075,7 @@ while True:
                     exit_tests()
                     continue
 
-                status = take_IV_curve(current_state)
+                status = take_IV_curve(current_state, maxV=int(values['-DryIV-MaxV-']))
                 if status == 'CONT':
                     plot_IV_curves(current_state)
                 else:
