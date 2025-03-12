@@ -620,12 +620,6 @@ class Keithley2410:
         curve['date'] = date
         curve['time'] = time
         curve['datetime'] = current_date
-        curve['RH'] = RH
-        curve['Temp'] = Temp
-        curve['data'] = np.array(data)
-        curve['date'] = date
-        curve['time'] = time
-        curve['datetime'] = current_date
         print(curve)
         self.IVdata.append(curve)
         print(self.IVdata)

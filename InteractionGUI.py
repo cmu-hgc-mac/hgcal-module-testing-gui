@@ -1,4 +1,4 @@
-import numpy as np
+mport numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
@@ -963,12 +963,11 @@ def take_IV_curve(state, step=10, maxV=500):
                 break
         
         
-        
-        
-       
-       
+
         
        
+       
+        '''
         #triggers = state['ps']._query("TRIGger:Count?")
 
         #print("triggers", triggers)
@@ -984,26 +983,15 @@ def take_IV_curve(state, step=10, maxV=500):
         state['ps']._query("SYSTem:ERRor:ALL?")
         print('Terminated')
         sleep(1)
+        '''
  
- 
+        curve_proc.terminate()
+        sleep(0.5)
 
         curve_proc.close()
 
         
-#Supposed to kill all children processes
-#Might not need at all
-        '''active = active_children()
-        print(active)
 
-        for child in active:
-            child.kill()
-            sleep(1)
-            child.close()
-        active = active_children()
-        print(active)
-        sleep(2)
-        active = active_children()
-        print(active)'''
              
         if status == 'RUN':
             status = 'CONT'
@@ -1016,15 +1004,23 @@ def take_IV_curve(state, step=10, maxV=500):
            
            
            
-                       
-           # a = state['ps']._query("OUTPut?")
-           # print('a', a)
+            c = state['ps']._query("*ESR?")
+            print(c)
 
-            state['ps']._write("OUTput1:ENABle:STATe 1 ")
-            
-            #b = state['ps']._query("OUTPut?")
-            #print('b', b)
-            
+           # d = state['ps']._query("STAT:OPER?")
+            #print(d)
+            #e = state['ps']._query("STAT:MEAS?")
+            #print(e)
+            #f = state['ps']._query("STAT:QUES?")
+            #print(f)
+            a = state['ps']._query("OUTPut?")
+            print('a', a)
+
+            #state['ps']._write("OUTput1:ENABle:STATe 1 ")
+          
+            b = state['ps']._query("OUTPut?")
+            print('b', b)
+     
             state['ps'].setVoltage(0)
             state['ps'].outputOff()
             
