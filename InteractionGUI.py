@@ -1,4 +1,4 @@
-mport numpy as np
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
@@ -966,24 +966,8 @@ def take_IV_curve(state, step=10, maxV=500):
 
         
        
-       
-        '''
-        #triggers = state['ps']._query("TRIGger:Count?")
-
-        #print("triggers", triggers)
-
-        if state['ps']._query("OUTPut?") == int:
-            
-            curve_proc.terminate()
-        else:
-            sleep(1)
-            curve_proc.terminate()
-            
-        sleep(0.5)
-        state['ps']._query("SYSTem:ERRor:ALL?")
-        print('Terminated')
-        sleep(1)
-        '''
+        
+        
  
         curve_proc.terminate()
         sleep(0.5)
@@ -996,15 +980,12 @@ def take_IV_curve(state, step=10, maxV=500):
         if status == 'RUN':
             status = 'CONT'
         else:
-            #for i in range(5):
-            #    a = state['ps']._query("OUTPut?") # get value keithley was in process of sending back                                                                                  
-            #    print(a)
-            #voltage, _, _ = state['ps'].measureVoltage()
-            #print('voltage', voltage)
+                                                                                              
+            
            
            
            
-            c = state['ps']._query("*ESR?")
+            c = state['ps']._query("*ESR?")#Page 437 of user manual
             print(c)
 
            # d = state['ps']._query("STAT:OPER?")
