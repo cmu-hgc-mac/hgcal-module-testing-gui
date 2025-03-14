@@ -130,7 +130,7 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-'), sg.Text(' Max V:'), sg.Input(s=5,key='-AmbIV-MaxV-')],
-             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
+             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('500V Bias in Wait Period', key='-Dry-Wait-Bias-')],
              [sg.Text('Wait Periods (minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-'),
               sg.Text(' Max V:'), sg.Input(s=5,key='-DryIV-MaxV-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -847,17 +847,21 @@ while True:
 
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                #multi_run_pedestals(current_state, [None, None])
-                status = trim_pedestals(current_state, None)
+                status = multi_run_pedestals(current_state, [None, None])
                 if status == 'CONT':
-                    status = multi_run_pedestals(current_state, [None, None, None, None, None, None])
+                    status = trim_pedestals(current_state, None)
+                if status == 'CONT':
+                    status = multi_run_pedestals(current_state, [None, None, None, None, None])
                 exit_tests()
                 continue
             
+
             # trim and take pedestals
-            status = trim_pedestals(current_state, 300)
+            status = multi_run_pedestals(current_state, [300, 300]) # untrimmed
             if status == 'CONT':
-                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
+                status = trim_pedestals(current_state, 300)
+            if status == 'CONT':
+                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 500, 500])
 
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
@@ -883,10 +887,10 @@ while True:
                 for i in range(10):
                     ac.set_air_on()
                     
-            # bias at 800V during wait to improve curve consistency for modules with glue on guard ring
+            # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
             current_state['ps'].outputOn()
             update_state(current_state, '-HV-Output-On-', True, 'Green')
-            current_state['ps'].setVoltage(800.)
+            current_state['ps'].setVoltage(500.)
 
             wait_time_s = 20*60 # 20 min    
             dry_date = datetime.now()
@@ -1052,11 +1056,12 @@ while True:
                     if values['-Dry-Wait-Bias-']:
                         current_state['ps'].outputOn()
                         update_state(current_state, '-HV-Output-On-', True, 'Green')
-                        current_state['ps'].setVoltage(800.)
+                        current_state['ps'].setVoltage(500.)
                     else:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
-                
+
+                status = 'CONT'
                 while True:
                     eventw, valuesw = waiting.read(timeout=1)
                     if eventw == 'Terminate Test' or eventw == sg.WIN_CLOSED:
@@ -1071,6 +1076,7 @@ while True:
 
                 waiting.close()
 
+                
                 if status != 'CONT':
                     exit_tests()
                     continue
