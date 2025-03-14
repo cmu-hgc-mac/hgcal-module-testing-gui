@@ -936,6 +936,7 @@ while True:
                           [sg.Button('Terminate Test')]]
                 waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
+
                 eventw, valuesw = waiting.read(timeout=100)
                 
                 # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
@@ -943,6 +944,7 @@ while True:
                 if not current_state['-Debug-Mode-']:
                     current_state['ps'].outputOn()
                     update_state(current_state, '-HV-Output-On-', True, 'Green')
+
 
                     if configuration['HVWiresPolarization'] == 'Forward':
                         current_state['ps'].setVoltage(-maxV)

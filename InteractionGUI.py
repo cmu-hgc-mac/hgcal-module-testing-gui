@@ -985,11 +985,12 @@ def take_IV_curve(state, step=10, maxV=500):
            
            
            
-            c = state['ps']._query("*ESR?")#Page 437 of user manual
-            print(c)
+      
+        
+            state['ps']._write("STATus:PRESet")
 
-           # d = state['ps']._query("STAT:OPER?")
-            #print(d)
+      
+           # d = state['ps']._query("STAT:OPER?")#print(d)
             #e = state['ps']._query("STAT:MEAS?")
             #print(e)
             #f = state['ps']._query("STAT:QUES?")
