@@ -145,9 +145,15 @@ def pedestal_upload(state, ind=-1):
     med_norm = df_data[column][norm_mask].median()
     mean_norm = df_data[column][norm_mask].mean()
     std_norm = df_data[column][norm_mask].std()
-    noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
-    highval = (df_data[column] - med_norm) > noisy_limit
+    if '320-M' in moduleserial: #this should be live module condition. please double check!
+        noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+        highval = (df_data[column] - med_norm) > noisy_limit
+    else:
+        noisy_limit = (2 if column == 'adc_stdd' else 5000)
+        highval = df_data[column] > noisy_limit
     # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+
+
 
     count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
