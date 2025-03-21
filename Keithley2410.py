@@ -121,15 +121,43 @@ class Keithley2410:
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-        response = self._inst.query(queryStr, wait).strip("\r\n")
+            print('Waiting'))
+            response = self._inst.query(queryStr, wait).strip("\r\n")
+        print(' >> Keithley2410 Response:', response)
+        return response
+        
+    def _query_take_IV_curve(self, status, queryStr, wait = None):
+
+        #Copy of _query, but added if statement to check status for termination
+        #Only to be used in take_IV_curve function for now
+
+        """Query command returns most recent buffer
+        """
+        print(' >> Keithley2410 Query:', queryStr)
+        if wait is None:
+            wait = self._wait_time_s
+            print('Waiting')
+            if status == 'TERM':
+                curve_proc.kill()
+            response = self._inst.query(queryStr, wait).strip("\r\n")
         print(' >> Keithley2410 Response:', response)
         return response
 
     def _read(self):
         """Performs a read command and returns the parsed response
         """
+        
         response = self._query("READ?")
-        return self._parse_data(response)
+
+        response_array = self.parse_data(response)
+        return response_array
+       # if type(response_array) is int:
+       #     raise TypeError("Failed to call Terminate")
+       # try:
+       #    return response_array
+       # except ValueError:
+            
+            
 
     def set_elements(self, element_list):
         """Sets the elements returned in a read command
@@ -356,7 +384,7 @@ class Keithley2410:
         self._write("CONFigure:VOLTage:DC")
         measurement = self._query("READ?")
         return float(self._parse_data(measurement)[0]['voltage'])
-
+        
     def measureVoltage(self):
         """Renaming of above function for compatibility
         """

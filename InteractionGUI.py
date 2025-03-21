@@ -949,7 +949,8 @@ def take_IV_curve(state, step=10, maxV=500):
         curve = manager.dict()
         curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp])
         curve_proc.start()
-
+                                         #Question: Where is _read called in this part of the code??
+                                         #Can use this to make new read function specific to take_IV_curve
         while curve_proc.is_alive():
             event, values = curvew.read(timeout=1)
             if event == 'Terminate Test':
@@ -963,13 +964,15 @@ def take_IV_curve(state, step=10, maxV=500):
                 break
         
         
-
+        sleep(0.5)
         
        
-        
-        
+    
+
+        if curve_proc.is_alive():
+            curve_proc.terminate()
  
-        curve_proc.terminate()
+           
         sleep(0.5)
 
         curve_proc.close()
