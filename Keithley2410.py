@@ -48,7 +48,6 @@ class Keithley2410:
         self._CURRENT_LIMIT_LOW = -1.05
         self._CURRENT_LIMIT_HIGH = 1.05
         self._ELEMENTS = ["voltage", "current", "resistance", "time", "status"]
-
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
@@ -121,12 +120,12 @@ class Keithley2410:
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-            print('Waiting'))
+            print('Waiting')
             response = self._inst.query(queryStr, wait).strip("\r\n")
         print(' >> Keithley2410 Response:', response)
         return response
-        
-    def _query_take_IV_curve(self, status, queryStr, wait = None):
+
+    def _query_take_IV_curve(self, queryStr, status,  wait = None):    
 
         #Copy of _query, but added if statement to check status for termination
         #Only to be used in take_IV_curve function for now
@@ -138,8 +137,11 @@ class Keithley2410:
             wait = self._wait_time_s
             print('Waiting')
             if status == 'TERM':
-                curve_proc.kill()
-            response = self._inst.query(queryStr, wait).strip("\r\n")
+                return
+            response = self._inst.query(queryStr,status, wait).strip("\r\n")  #Find way to get this line to run
+            print('check1')
+            sleep(.2)
+            print('check2')
         print(' >> Keithley2410 Response:', response)
         return response
 
@@ -417,7 +419,7 @@ class Keithley2410:
         """
         return '', self.get_sense_current(), ''
 
-    def measureCurrentLoop(self):
+    def measureCurrentLoop(self, status):
         # Measure current                                                                                                                                             
         # Current stabilizes much faster when you ask for a measurement continually                                                                                              
         if self._sense_mode != "current":
@@ -435,8 +437,11 @@ class Keithley2410:
 
         # repetetively query current measurement
         while True:
-            measurement = self._query("READ?", 0.)
-
+            if status == 'TERM':
+                return
+            measurement = self._query_take_IV_curve("READ?", status, 0.)
+            if status == 'TERM':
+                return
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
             q.append(thiscurrent)
 
@@ -454,6 +459,7 @@ class Keithley2410:
             # if greater than time limit, break
             if time() - start >= maxtime:
                 break
+
         
         measurement = self._query("READ?", 0.)
         thiscurrent = float(self._parse_data(measurement)[0]['current'])
@@ -461,9 +467,6 @@ class Keithley2410:
         measarr = np.array(q)
 
         return '', np.mean(measarr), ''
-
-        #meascurr = float(self._parse_data(measurement)[0]['current'])
-        #return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
@@ -603,11 +606,13 @@ class Keithley2410:
 
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
-    def takeIVproc(self, curve, maxV, stepV, RH, Temp, errcheck_step=5):
+    def takeIVproc(self, status, curve, maxV, stepV, RH, Temp, errcheck_step=5):
 
         self.setVoltage(0.)
         self.outputOn()
 
+        
+        
         ln = int(maxV//stepV)+1
         data = [] # append measurements to this list as rows                                                                                                                           
 
@@ -631,7 +636,9 @@ class Keithley2410:
             self.setVoltage(vltg)
             # Delay here doesn't work for some reason
             # maybe because the Keithley isn't in measure mode?
-            _, current, _ = self.measureCurrentLoop()
+            _, current, _ = self.measureCurrentLoop(status)
+            if status == 'TERM':
+                break
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
 
