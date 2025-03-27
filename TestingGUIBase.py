@@ -219,7 +219,7 @@ def disable_ts_tests():
     toggle_ts_tests(False)
 
 def toggle_iv_tests(enabled):
-    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-']
+    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-', '-StandardIV-MaxV-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
         
@@ -854,6 +854,10 @@ while True:
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
                 exit_tests()
                 continue
+
+            maxV = int(values['-StandardIV-MaxV-'])
+            if maxV > 900:
+                maxV = 900
             
 
             # trim and take pedestals
@@ -861,7 +865,7 @@ while True:
             if status == 'CONT':
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
-                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 500, 500])
+                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
 
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
@@ -871,7 +875,7 @@ while True:
                 continue
             
             # take ambient IV curve - do we want?
-            status = take_IV_curve(current_state, maxV=int(values['-StandardIV-MaxV-']))
+            status = take_IV_curve(current_state, maxV=maxV)
             if status != 'CONT':
                 exit_tests()
                 continue
@@ -920,7 +924,7 @@ while True:
                 exit_tests()
                 continue
 
-            status = take_IV_curve(current_state, maxV=int(values['-StandardIV-MaxV-']))
+            status = take_IV_curve(current_state, maxV=maxV))
             if status != 'CONT':
                 exit_tests()
                 continue
@@ -1002,7 +1006,10 @@ while True:
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            status = take_IV_curve(current_state, maxV=int(values['-AmbIV-MaxV-']))
+            maxV = int(values['-AmbIV-MaxV-'])
+            if maxV > 900:
+                maxV = 900
+            status = take_IV_curve(current_state, maxV=maxV)
             if status == 'CONT':
                 plot_IV_curves(current_state)
             else:
@@ -1081,7 +1088,10 @@ while True:
                     exit_tests()
                     continue
 
-                status = take_IV_curve(current_state, maxV=int(values['-DryIV-MaxV-']))
+                maxV = int(values['-DryIV-MaxV-'])
+                if maxV > 900:
+                    maxV = 900
+                status = take_IV_curve(current_state, maxV=maxV)
                 if status == 'CONT':
                     plot_IV_curves(current_state)
                 else:
