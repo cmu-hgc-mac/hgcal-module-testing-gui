@@ -12,6 +12,8 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
+default_max_V = 500
+
 # Load configuration file
 configuration = {}
 with open('configuration.yaml', 'r') as file:
@@ -130,7 +132,7 @@ testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-'), sg.Text(' Max V:'), sg.Input(s=5,key='-AmbIV-MaxV-')],
-             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('500V Bias in Wait Period', key='-Dry-Wait-Bias-')],
+             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('Bias in Wait Period', key='-Dry-Wait-Bias-')],
              [sg.Text('Wait Periods (minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-'),
               sg.Text(' Max V:'), sg.Input(s=5,key='-DryIV-MaxV-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -237,9 +239,9 @@ def clear_tests():
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
-    basewindow['-DryIV-MaxV-'].update(value='500')
-    basewindow['-AmbIV-MaxV-'].update(value='500')
-    basewindow['-StandardIV-MaxV-'].update(value='500')
+    basewindow['-DryIV-MaxV-'].update(value=f'{default_max_V}')
+    basewindow['-AmbIV-MaxV-'].update(value=f'{default_max_V}')
+    basewindow['-StandardIV-MaxV-'].update(value=f'{default_max_V}')
 
 def exit_tests():
 
@@ -924,7 +926,7 @@ while True:
                 exit_tests()
                 continue
 
-            status = take_IV_curve(current_state, maxV=maxV))
+            status = take_IV_curve(current_state, maxV=maxV)
             if status != 'CONT':
                 exit_tests()
                 continue

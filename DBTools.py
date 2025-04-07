@@ -119,13 +119,16 @@ def pedestal_upload(state, ind=-1):
     # Open the hex data ".root" file and turn the contents into a pandas DataFrame.
     f = uproot.open(fname)
     try:
-        tree = f["runsummary"]["summary"]
-
+        summary = f["runsummary"]["summary"]
+        unpacker = f["unpacker_data"]["hgcroc"]
+        
         # different uproot functions for different OS =.=
         if configuration['TestingPCOpSys'] == 'Centos7':
-            df_data = tree.pandas.df()
+            df_data = summary.pandas.df()
+            df_unp = unpacker.pandas.df()
         elif configuration['TestingPCOpSys'] == 'Alma9':
             df_data = tree.arrays(library='pd')
+            df_unp = unpacker.arrays(library='pd')
 
     except:
         print(" -- DBTools: No tree found in pedestal file!")
@@ -161,6 +164,9 @@ def pedestal_upload(state, ind=-1):
 
     print(' >> DBTools: count bad cells', count_bad_cells, 'list dead', list_dead_cells, 'list noisy', list_noisy_cells)
 
+    just_one_channel = unpdf[(unpdf.chip == 0) & (unpdf.channel == 0) & (unpdf.half == 0)]
+    adc_frac_unc = 1. / np.sqrt(float(len(just_one_channel)))
+    
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
             add_RH_T(state)
@@ -226,9 +232,16 @@ def pedestal_upload(state, ind=-1):
     table = 'module_pedestal_test' if ('320-M' in moduleserial) else 'hxb_pedestal_test'
     
     # upload
-    coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
-    loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(coro)
+    try:
+        db_upload_ped['inverse_sqrt_n'] = adc_frac_unc
+        coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
+    except:
+        db_upload_ped.pop('inverse_sqrt_n', None)
+        coro = upload_PostgreSQL(table_name+ = table, db_upload_data = db_upload_ped)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
 
     print(f" >> DBTools: Uploaded pedestal run of {moduleserial}!")
     
