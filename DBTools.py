@@ -392,8 +392,11 @@ def iv_upload(datadict, state):
 
     v1 = 600
     v2 = 800
-    ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
-    
+    try:
+        ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
+    except:
+        pass
+        
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
