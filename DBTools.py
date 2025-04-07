@@ -127,7 +127,7 @@ def pedestal_upload(state, ind=-1):
             df_data = summary.pandas.df()
             df_unp = unpacker.pandas.df()
         elif configuration['TestingPCOpSys'] == 'Alma9':
-            df_data = tree.arrays(library='pd')
+            df_data = summary.arrays(library='pd')
             df_unp = unpacker.arrays(library='pd')
 
     except:
