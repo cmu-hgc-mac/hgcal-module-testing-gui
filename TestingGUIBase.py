@@ -1129,21 +1129,29 @@ while True:
         print(f' >> TestingGUIBase: Grading {moduleserial}')
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
-            i_600v, i_850v = iv_info(moduleserial)
+            #i_600v, i_850v = iv_info(moduleserial)
+            i_500v = iv_info(moduleserial)
             pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
 
         # four individual grades
-        # last updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
-        if i_600v < 1e-4 and i_850v / i_600v < 2.5:
+        # updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
+        # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf
+        #if i_600v < 1e-4 and i_850v / i_600v < 2.5:
+        #    iv_grade = 'A'
+        #elif i_600v < 2e-4 and i_850v / i_600v < 5:
+        #    iv_grade = 'B'
+        #else:
+        #    iv_grade = 'C'
+        if i_500v < 1e-4:
             iv_grade = 'A'
-        elif i_600v < 2e-4 and i_850v / i_600v < 5:
+        elif i_500v < 1e-3:
             iv_grade = 'B'
-        else:
-            iv_grade = 'C'
-
+        else:                                                                                                                                                                                
+            iv_grade = 'C' 
+        
         if badfrac < 0.02:
             readout_grade = 'A'
         elif badfrac < 0.05:
@@ -1151,16 +1159,16 @@ while True:
         else:
             readout_grade = 'C'
 
-        if abs(pxoffset) < 50 and abs(pyoffset) < 50 and abs(pangoffset) < 0.02:
+        if abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.02:
             proto_grade = 'A'
-        elif abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.05:
+        elif abs(pxoffset) < 200 and abs(pyoffset) < 200 and abs(pangoffset) < 0.04:
             proto_grade = 'B'
         else:
             proto_grade = 'C'
         
-        if abs(mxoffset) < 50 and abs(myoffset) < 50 and abs(mangoffset) < 0.02:
+        if abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.02:
             module_grade = 'A'
-        elif abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.05:
+        elif abs(mxoffset) < 250 and abs(myoffset) < 250 and abs(mangoffset) < 0.06:
             module_grade = 'B'
         else:
             module_grade = 'C'
@@ -1196,8 +1204,8 @@ while True:
                       'list_noisy_cells': noisycells,
                       'list_dead_cells': deadcells,
                       'readout_grade': readout_grade,
-                      'i_at_600v': i_600v,
-                      'i_ratio_850v_600v': i_850v/i_600v,
+                      'i_at_600v': i_500v,
+                      #'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
                       #'grade_version': 'preproduction_1_2024-10-16', 
                       }

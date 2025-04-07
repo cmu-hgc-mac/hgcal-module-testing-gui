@@ -130,8 +130,8 @@ def pedestal_upload(state, ind=-1):
             df_data = summary.arrays(library='pd')
             df_unp = unpacker.arrays(library='pd')
 
-    except:
-        print(" -- DBTools: No tree found in pedestal file!")
+    except Exception:
+        print(' -- DBTools exception:', traceback.format_exc())
         return 0
 
     density = moduleserial.split('-')[1][1]
@@ -164,7 +164,7 @@ def pedestal_upload(state, ind=-1):
 
     print(' >> DBTools: count bad cells', count_bad_cells, 'list dead', list_dead_cells, 'list noisy', list_noisy_cells)
 
-    just_one_channel = unpdf[(unpdf.chip == 0) & (unpdf.channel == 0) & (unpdf.half == 0)]
+    just_one_channel = df_unp[(df_unp.chip == 0) & (df_unp.channel == 0) & (df_unp.half == 0)]
     adc_frac_unc = 1. / np.sqrt(float(len(just_one_channel)))
     
     if configuration['HasRHSensor']:
@@ -595,7 +595,9 @@ def readout_info(moduleserial):
     lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
     midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Completely Encapsulated')
     highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Completely Encapsulated')
-
+    if len(highBVruns) == 0:
+        highBVruns = fetch_pedestal(moduleserial, 500, 300, 'Completely Encapsulated')
+    
     # backwards compatibility
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
@@ -686,10 +688,13 @@ def iv_info(moduleserial):
     ivcurve = ivcurve[-1]
     v = np.array(ivcurve['program_v'])
     i = np.array(ivcurve['meas_i'])
+    i_500v = i[v == 500]
     i_600v = i[v == 600]
     i_850v = i[v == 850]
 
-    return i_600v[0], i_850v[0]
+    print(f' >> DBTools: I(500V) = {i_500v[0]*1e6}uA')
+    # change 2025/4/7 for lower max voltage
+    return i_500v[0] #i_600v[0], i_850v[0]
 
 def assembly_info(moduleserial):
 
