@@ -239,7 +239,7 @@ def pedestal_upload(state, ind=-1):
         result = loop.run_until_complete(coro)
     except:
         db_upload_ped.pop('inverse_sqrt_n', None)
-        coro = upload_PostgreSQL(table_name+ = table, db_upload_data = db_upload_ped)
+        coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
         loop = asyncio.get_event_loop()
         result = loop.run_until_complete(coro)
 
