@@ -590,6 +590,65 @@ def fetch_proto_inspect(moduleserial):
 
     return runs
 
+def fetch_comments(moduleserial):
+
+    tables = ['baseplate', 'bp_inspect', 'sensor', 'hexaboard', 'hxb_inspect', 'hxb_pedestal_test', 'module_info', 'proto_assembly', 'proto_inspect', 'module_assembly', 'module_inspect', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap', 'module_pedestal_test', 'module_iv_test']
+    column = 'comment'
+
+    coro = fetch_serial_PostgreSQL('module_info', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    thisrun = runs[-1]
+    hxbser = thisrun['hxb_name']
+    senser = thisrun['sen_name']
+    bpser = thisrun['bp_name']
+
+    del runs
+
+    comments = []
+    
+    for tab in tables:
+
+        if tab in ['baseplate', 'bp_inspect']:
+            ser = bpser
+        elif tab in ['sensor']:
+            ser = senser
+        elif tab in ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test']:
+            ser = hxbser
+        elif tab in ['proto_assembly', 'proto_inspect']:
+            ser = moduleserial.replace('M', 'P', 1) # protomodule serial number
+        else: # module
+            ser = moduleserial
+
+        try:
+            coro = fetch_serial_PostgreSQL(tab, serial_remove_dashes(ser))
+            loop = asyncio.get_event_loop()
+            result = loop.run_until_complete(coro)
+                        
+            runs = []
+            for r in result:
+                runs.append(r)
+                
+            thesecomments = []
+            for r in runs:
+                if r[column] is not None and r[column] != '' and r[column] != ' ':                
+                    if 'trimmed' not in r[column]:
+                        thesecomments.append(r[column])
+
+            if thesecomments != []:
+                comments.append(thesecomments)
+                
+        except Exception:
+            print('  -- DBTools comments exception; continuing:', traceback.format_exc())
+            
+    return comments
+
+
 def readout_info(moduleserial):
 
     lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
@@ -709,6 +768,8 @@ def assembly_info(moduleserial):
 
 def summary_upload(moduleserial, qc_summary):
 
+    qc_summary.pop('comments', None)
+    
     coro = upload_PostgreSQL(table_name = 'module_qc_summary', db_upload_data = qc_summary)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)

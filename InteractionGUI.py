@@ -1004,7 +1004,11 @@ def plot_IV_curves(state):
 
 def grade_module_window(moduleserial, qc_summary):
 
-    print(qc_summary)
+    #print(qc_summary)
+    comments = qc_summary['comments']
+    commentstr = '\n'.join(['\n'.join(comments[i]) for i in range(len(comments))])
+    # temporary
+    commentstr += '\nqc field i_at_600v is actually at 500V'
     
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
               [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
@@ -1022,6 +1026,10 @@ def grade_module_window(moduleserial, qc_summary):
               [sg.Button('Enter')]]
     window = sg.Window(f"Grade Module {moduleserial}", layout, margins=(200,100))
 
+    event, values = window.read(timeout=10)
+    window['comments'].update(value=commentstr)
+    event, values = window.read(timeout=10)
+    
     comment = ''
     while True:
         event, values = window.read()

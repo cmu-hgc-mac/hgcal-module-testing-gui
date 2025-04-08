@@ -180,7 +180,32 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
             FROM {table_name}
             WHERE REPLACE(module_name,'-','') = '{part_name}'
             ORDER BY date_bond, time_bond;""" 
-                    
+
+    elif table_name in ['baseplate', 'bp_inspect']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(bp_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['sensor']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(sen_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(hxb_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['proto_assembly']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(proto_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['module_info', 'module_assembly', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(module_name,'-','') = '{part_name}';"""
+        
     # fetch and return
     value = await conn.fetch(query)
     await conn.close()

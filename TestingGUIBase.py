@@ -23,7 +23,7 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
     configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
     
-from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
+from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes
     
 # Create theme
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
@@ -1136,6 +1136,8 @@ while True:
             show_string("Tests not complete", field='Right')
             continue
 
+        comments = fetch_comments(moduleserial)
+        
         # four individual grades
         # updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
         # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf
@@ -1184,7 +1186,7 @@ while True:
 
         # pop-up window to show grade and display plots
         # just show grade for now        
-        qc_summary = {'module_name': moduleserial,
+        qc_summary = {'module_name': serial_remove_dashes(moduleserial),
                       'final_grade': final_grade,
                       'proto_flatness': pflatness,
                       'proto_ave_thickness': pthickness,
@@ -1207,7 +1209,8 @@ while True:
                       'i_at_600v': i_500v,
                       #'i_ratio_850v_600v': i_850v/i_600v,
                       'iv_grade': iv_grade,
-                      #'grade_version': 'preproduction_1_2024-10-16', 
+                      #'grade_version': 'preproduction_1_2024-10-16',
+                      'comments': comments
                       }
         
         print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
