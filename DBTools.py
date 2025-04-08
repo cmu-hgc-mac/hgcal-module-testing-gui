@@ -648,6 +648,44 @@ def fetch_comments(moduleserial):
             
     return comments
 
+def fetch_sensor_iv(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('module_info', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    thisrun = runs[-1]
+    scratchpad = thisrun['sen_name'].split('_')[0]
+    
+    del runs
+
+    coro = fetch_serial_PostgreSQL('sen_iv_data', scratchpad)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    #print('actual_volts', np.array(runs[-1]['actual_volts']).shape)
+    #print('tot_curnt_nanoamp', np.array(runs[-1]['tot_curnt_nanoamp']).shape)
+    #print('curnt_nanoamp', np.array(runs[-1]['curnt_nanoamp']).shape)
+
+    if len(runs) == 0:
+        return None
+
+    run = runs[-1]
+
+    v = np.array(run['actual_volts'][0])
+    curnt = np.array(run['tot_curnt_nanoamp'])
+    i = np.mean(curnt, axis = 0)
+    di = np.std(curnt, axis = 0)
+    
+    return v, i, di
 
 def readout_info(moduleserial):
 

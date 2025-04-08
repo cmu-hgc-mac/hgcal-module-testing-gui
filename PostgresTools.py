@@ -206,6 +206,11 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
             FROM {table_name}
             WHERE REPLACE(module_name,'-','') = '{part_name}';"""
         
+    elif table_name == 'sen_iv_data':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(scratchpad_id,'-','') = '{part_name}';"""
+
     # fetch and return
     value = await conn.fetch(query)
     await conn.close()

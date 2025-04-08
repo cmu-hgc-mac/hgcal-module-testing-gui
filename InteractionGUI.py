@@ -20,7 +20,7 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload
+    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv
 
 from DBTools import add_RH_T, iv_save
 
@@ -966,6 +966,16 @@ def plot_IV_curves(state):
             data = datadict['data']
             plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}% RH; {datadict['Temp']}ºC")
         
+        # add sensor IV to plot if in DB
+        try:
+            v0, i0, di0 = fetch_sensor_iv(state["-Module-Serial-"])
+            i0 *= 1e-9
+            di0 *= 1e-9
+            ax.plot(np.abs(v0), np.abs(i0), 'o-', label='Bare Sensor', color = 'grey')
+            ax.fill_between(np.abs(v0), np.abs(i0)-di0, np.abs(i0)+di0, color = 'grey', alpha = 0.15)
+        except Exception:
+            print("  -- InteractionGUI: can't add sensor IV;", traceback.format_exc())
+            
         outdir = state['-Output-Subdir-']
 
         ax.set_yscale('log')
@@ -979,12 +989,19 @@ def plot_IV_curves(state):
         # add grading info to plot
         try:
             v = data[:,0]
-            i600 = data[np.argwhere(v==600.),2]*10**6
-            i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
-            grade = 'A' if (i600 < 100. and i850600 < 2.5) else ('B' if (i600 < 200. and i850600 < 5.) else 'C')
-            ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
-            ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
-            ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
+            # old IV grade
+            #i600 = data[np.argwhere(v==600.),2]*10**6
+            #i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
+            #grade = 'A' if (i600 < 100. and i850600 < 2.5) else ('B' if (i600 < 200. and i850600 < 5.) else 'C')
+            #ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
+            #ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
+            #ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
+            # new
+            i500 = data[np.argwhere(v==500.),2][0][0]*10**6
+            grade = 'A' if (i500 < 100.) else ('B' if (i500 < 1000.) else 'C')
+            ax.text(850, 5e-9, f'IV Grade (last curve): {grade}', ha='right', va='center')
+            ax.text(850, 2.5e-9, f'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
+            
         except Exception:
             print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
             
