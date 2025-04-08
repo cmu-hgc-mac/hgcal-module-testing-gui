@@ -406,8 +406,11 @@ while True:
             basewindow['-Scanned-QR-Code-'].update(value='')
             continue
 
-        basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
-
+        try:
+            basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
+        except ValueError:
+            basewindow['-Module-Index-'].update(value='')
+            
         if serialsections[2][0] == 'F': basewindow['-Full-'].update(value=True)
         elif serialsections[2][0] == 'T': basewindow['-Top-'].update(value=True)
         elif serialsections[2][0] == 'B': basewindow['-Bottom-'].update(value=True)
