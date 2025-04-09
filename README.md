@@ -13,13 +13,17 @@ pip3 install psycopg2 asyncpg paramiko pyyaml pandas matplotlib uproot pyvisa py
 git clone https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui.git
 cd hgcal-module-testing-gui
 ```
-Unfortunately, PySimpleGUI has switched to a subscription model, so to avoid that, let's install an older version:
+Unfortunately, PySimpleGUI has switched to a subscription model, so to avoid that, let's install an older version via a mirror:
 ```
-pip3 uninstall pysimplegui
-pip3 install pysimplegui==4.60.5
+cd
+mkdir temp
+cd temp
+git clone https://github.com/egm3387/PySimpleGUI-4.60.5.git
+cd
+python3 -m pip install --no-index --find-links=~/temp/PySimpleGUI-4.60.5/ PySimpleGUI
 ```
 
-If you do not already have an ssh key for use between the Centos PC and the Trenz FPGA, create one (ensure the Trenz is powered for this, but no need to connect anything to it):
+If you do not already have an ssh key for use between the PC and the Trenz or Kria FPGA, create one (ensure the FPGA is powered for this, but no need to connect anything to it):
 ```
 ssh-keygen # follow the prompts, no need to enter a password or use a name other than the default
 ssh-copy-id -i ~/.ssh/id_rsa root@[FPGAHostname]
@@ -62,7 +66,7 @@ Lastly, create a configuration file with `writeconfig.py`. Open the python scrip
 Once finished, run `python3 writeconfig.py` to create the configuration file. The file will not be overwritten when you update the repository (i.e. with `git pull`).
 
 ## Using the GUI
-Currently, the GUI has to be run on the Centos PC used for testing. The GUI can be opened by simply running `python3 TestingGUIBase.py` from a terminal window. There are several parts of the GUI that are highly setup-dependent and may have to be heavily modified or **entirely re-implemented** for other MACs, but we'll discuss that later. For now, let's assume your setup is the same as the CMU setup.
+Currently, the GUI has to be run on the external PC used for testing. The GUI can be opened by simply running `python3 TestingGUIBase.py` from a terminal window. There are several parts of the GUI that are highly setup-dependent and may have to be heavily modified or **entirely re-implemented** for other MACs, but we'll discuss that later. For now, let's assume your setup is the same as the CMU setup.
 
 The GUI consists of three main windows. The "Module Setup" window controls the selection of the module type and number (which determines the serial number) and other settings. The "Select Tests" window is initially disabled and allows the user to select which tests to run once the system is set up. The "Status Bar" summarizes the current status of the testing system with several indicators. Several values and settings are stored in the `configuration.yaml` file, including the site code ('CM' for CMU) and things like the test stand IP address. Lastly, the GUI has a "Debug Mode" which can be toggled with the checkbox on the bottom. In Debug Mode, the GUI will run normally but will not interface with any of the testing equipment, but it will interface with the user, so it is helpful for understanding the flow of testing and ensuring things are being done as expected inside the GUI. 
 
@@ -88,11 +92,11 @@ Together, these two scripts make up the bulk of the GUI. However, there are part
 
 Then follows a number of classes that interact with the testing system. Portions of these may have to be re-implemented for the setup at other MACs.
 
-The class `CentosPC.py` wraps the Centos testing PC. It takes the Trenz test stand hostname, the module serial number, and a flag specifying if it is a live module as arguments to the constructor. During instantiation, the class restarts the DAQ client service which interacts with the Trenz test stand. It has member functions to check the status of and restart the DAQ client, as well as functions to run the testing scripts (i.e. `pedestal_run.py` from the hexacontroller package) and store the output in the correct place. It also contains a function to make hexmaps from any given pedestal run, which are most useful to evaluating the module under test. There is also a static function to make hexmap plots in this file. Some small parts of this file may have to be modified for other MACs but largely it should apply to any Trenz system.
+The class `ExternalPC.py` wraps the testing PC. It takes the FPGA test stand hostname, the module serial number, and a flag specifying if it is a live module as arguments to the constructor. During instantiation, the class restarts the DAQ client service which interacts with the FPGA test stand. It has member functions to check the status of and restart the DAQ client, as well as functions to run the testing scripts (i.e. `pedestal_run.py` from the hexacontroller package) and store the output in the correct place. It also contains a function to make hexmaps from any given pedestal run, which are most useful to evaluating the module under test. There is also a static function to make hexmap plots in this file. Some small parts of this file may have to be modified for other MACs but largely it should apply to any FPGA system.
 
-The class `TrenzTestStand.py` wraps the Trenz FPGA test stand. It takes the hostname as an argument to its constructor, which waits until the Trenz can be pinged and then creates a SSH Client object with Paramiko. This SSH Client is then used to remotely start and check the services on the test stand. The class includes member functions which load the firmware on the Trenz and start the DAQ and I2C servers, as well as a function that checks the status of the servers and a function that remotely shuts the Trenz down. Some small parts of this file may have to be modified for other MACs, like file paths, but largely it should apply to any Trenz system.
+The class `FPGATestStand.py` wraps the Trenz FPGA test stand. It takes the hostname as an argument to its constructor, which waits until the FPGA can be pinged and then creates a SSH Client object with Paramiko. This SSH Client is then used to remotely start and check the services on the test stand. The class includes member functions which load the firmware on the FPGA and start the DAQ and I2C servers, as well as a function that checks the status of the servers and a function that remotely shuts the FPGA down. Some small parts of this file may have to be modified for other MACs, like file paths, but largely it should apply to any FPGA system.
 
-The class `Keithley2400.py` wraps the Keithley 2410 power supply used to bias the module. It uses PyVISA to interact over an RS232 cable with the power supply and includes member functions to read from, query, and write to the power supply, and member functions that use these to set and measure current and voltage as well as take IV curves on live modules. This is currently done by configuring the sweep function of the Keithley, running a sweep, and then waiting until it is finished and reading all of the data back. It also includes a function to check the state of a switch attached to the testing box which ensures the power is not activated when the box is open. This class is fairly dependent on what power supply is used and how it is connected to the PC. In principle, if connection using PyVISA is possible, editing the constructor to correctly select which resource to open should be the only thing to change, but it is possible that other parts need to change as well, such as the power enable switch or the syntax of the read/write/query calls.
+The class `Keithley2410.py` wraps the Keithley 2410 power supply used to bias the module. It uses PyVISA to interact over an RS232 cable with the power supply and includes member functions to read from, query, and write to the power supply, and member functions that use these to set and measure current and voltage as well as take IV curves on live modules. This is currently done by configuring the sweep function of the Keithley, running a sweep, and then waiting until it is finished and reading all of the data back. It also includes a function to check the state of a switch attached to the testing box which ensures the power is not activated when the box is open. This class is fairly dependent on what power supply is used and how it is connected to the PC. In principle, if connection using PyVISA is possible, editing the constructor to correctly select which resource to open should be the only thing to change, but it is possible that other parts need to change as well, such as the power enable switch or the syntax of the read/write/query calls.
 
 The markdown file `configuration.yaml` stores MAC-specific values that are used by the other scripts. This includes the location on the testing PC where data is stored, the default value for the debug mode flag, the resource name for the power supply, the MAC-specific code to use in live module serial numbers, the location on the PC of the private ssh key used to connect to the test stand, and a list of test stand hostnames. These should be edited manually by each MAC.
 
