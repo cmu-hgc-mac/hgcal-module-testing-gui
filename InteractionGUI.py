@@ -1000,7 +1000,7 @@ def plot_IV_curves(state):
             i500 = data[np.argwhere(v==500.),2][0][0]*10**6
             grade = 'A' if (i500 < 100.) else ('B' if (i500 < 1000.) else 'C')
             ax.text(850, 5e-9, f'IV Grade (last curve): {grade}', ha='right', va='center')
-            ax.text(850, 2.5e-9, f'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
+            ax.text(850, 2.5e-9, rf'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
             
         except Exception:
             print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())

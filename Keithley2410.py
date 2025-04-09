@@ -426,10 +426,16 @@ class Keithley2410:
             # if greater than time limit, break
             if time() - start >= maxtime:
                 break
-            
+        
         measurement = self._query("READ?", 0.)
-        meascurr = float(self._parse_data(measurement)[0]['current'])
-        return '', meascurr, ''
+        thiscurrent = float(self._parse_data(measurement)[0]['current'])
+        q.append(thiscurrent)
+        measarr = np.array(q)
+
+        return '', np.mean(measarr), ''
+
+        #meascurr = float(self._parse_data(measurement)[0]['current'])
+        #return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
