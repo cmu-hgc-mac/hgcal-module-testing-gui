@@ -687,19 +687,22 @@ def fetch_sensor_iv(moduleserial):
     
     return v, i, di
 
-def readout_info(moduleserial):
+def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
-    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
-    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Completely Encapsulated')
-    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Completely Encapsulated')
+    lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, modulestatus)
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, modulestatus)
     if len(highBVruns) == 0:
-        highBVruns = fetch_pedestal(moduleserial, 500, 300, 'Completely Encapsulated')
-    
+        highBVruns = fetch_pedestal(moduleserial, 500, 300, modulestatus)
+        
     # backwards compatibility
-    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
-        lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
-        midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
-        highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
+    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2 and (modulestatus == 'Completely Bonded' or modulestatus == 'Completely Encapsulated'):
+        status = modulestatus.replace('Completely','Frontside')
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, status)
+        midBVruns = fetch_pedestal(moduleserial, 300, 300, status)
+        highBVruns = fetch_pedestal(moduleserial, 800, 300, status)
+        if len(highBVruns) == 0:
+            highBVruns = fetch_pedestal(moduleserial, 500, 300,status)
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         print(f' >> DBTools: not enough pedestal tests: lowBV {len(lowBVruns)} midBV {len(midBVruns)} high BV {len(highBVruns)}')
@@ -884,7 +887,7 @@ def serial_add_dashes(moduleserial):
     if '320-M' in dashedserial: # live module
         dashedserial += moduleserial[5:9]+'-'+moduleserial[9:11]+'-'+moduleserial[11:15]
     elif '320-X' in dashedserial: # hexaboard
-        dashedserial +=	moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
+        dashedserial += moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
     else:
         raise ValueError
         

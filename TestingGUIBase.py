@@ -934,6 +934,16 @@ while True:
                 exit_tests()
                 continue
             plot_IV_curves(current_state)
+
+            # if not encapsulated, show out rebonding information
+            modulestatus = values["-Module-Status-"]
+            if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
+                try:
+                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+                    if len(unconcells) > 0 or len(noisycells) > 0:
+                        module_rebond_window(current_state, unconcells, noisycells)
+                except TypeError:
+                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
             
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
@@ -1129,96 +1139,17 @@ while True:
             show_string("Grading requires local db", field='Right')
             continue
 
-        print(f' >> TestingGUIBase: Grading {moduleserial}')
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
-            #i_600v, i_850v = iv_info(moduleserial)
+            #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
             i_500v = iv_info(moduleserial)
             pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
-
-        comments = fetch_comments(moduleserial)
         
-        # four individual grades
-        # updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
-        # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf
-        #if i_600v < 1e-4 and i_850v / i_600v < 2.5:
-        #    iv_grade = 'A'
-        #elif i_600v < 2e-4 and i_850v / i_600v < 5:
-        #    iv_grade = 'B'
-        #else:
-        #    iv_grade = 'C'
-        if i_500v < 1e-4:
-            iv_grade = 'A'
-        elif i_500v < 1e-3:
-            iv_grade = 'B'
-        else:                                                                                                                                                                                
-            iv_grade = 'C' 
-        
-        if badfrac < 0.02:
-            readout_grade = 'A'
-        elif badfrac < 0.05:
-            readout_grade = 'B'
-        else:
-            readout_grade = 'C'
-
-        if abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.02:
-            proto_grade = 'A'
-        elif abs(pxoffset) < 200 and abs(pyoffset) < 200 and abs(pangoffset) < 0.04:
-            proto_grade = 'B'
-        else:
-            proto_grade = 'C'
-        
-        if abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.02:
-            module_grade = 'A'
-        elif abs(mxoffset) < 250 and abs(myoffset) < 250 and abs(mangoffset) < 0.06:
-            module_grade = 'B'
-        else:
-            module_grade = 'C'
-
-        # determine overall grade = minimum indiv grade
-        grade_list = [iv_grade, readout_grade, proto_grade, module_grade]
-        if grade_list.count('A') == 4:
-            final_grade = 'A'
-        elif grade_list.count('C') == 0:
-            final_grade = 'B'
-        else:
-            final_grade = 'C'
-
-        # pop-up window to show grade and display plots
-        # just show grade for now        
-        qc_summary = {'module_name': serial_remove_dashes(moduleserial),
-                      'final_grade': final_grade,
-                      'proto_flatness': pflatness,
-                      'proto_ave_thickness': pthickness,
-                      'proto_x_offset': pxoffset,
-                      'proto_y_offset': pyoffset,
-                      'proto_ang_offset': pangoffset,
-                      'proto_grade': proto_grade,
-                      'module_flatness': mflatness,
-                      'module_ave_thickness': mthickness,
-                      'module_x_offset': mxoffset,
-                      'module_y_offset': myoffset,
-                      'module_ang_offset': mangoffset,
-                      'module_grade': module_grade,
-                      'list_cells_unbonded': unconcells,
-                      'list_cells_grounded': groundedcells,
-                      'count_bad_cells': len(badcell),
-                      'list_noisy_cells': noisycells,
-                      'list_dead_cells': deadcells,
-                      'readout_grade': readout_grade,
-                      'i_at_600v': i_500v,
-                      #'i_ratio_850v_600v': i_850v/i_600v,
-                      'iv_grade': iv_grade,
-                      #'grade_version': 'preproduction_1_2024-10-16',
-                      'comments': comments
-                      }
-        
-        print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
-        # comments added by pop-up window
-        qc_summary = grade_module_window(moduleserial, qc_summary)
+        print(f' >> TestingGUIBase: Grading {moduleserial}')
+        qc_summary = grade_module(moduleserial)
         summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it

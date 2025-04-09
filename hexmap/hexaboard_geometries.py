@@ -125,7 +125,7 @@ def add_mapping(df, hb_type = "LF"):
 # To mark asic (chip) places on the plot
 # axes: the plt.Axes object with the plot
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
-def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
+def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_corrupted = False):
     if hb_type == 'LR':
         #########################
         # LD Right board geometry and
@@ -705,6 +705,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
 
     # create legend for chip position and add to plot
     hexagon_r = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'red', lw=2, fill=None)
+    hexagon_o = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'orange', lw=2, fill=None)
     hexagon_v = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'violet', lw=2, fill=None)
 
     chip_legend_handle = [Rectangle((0.,0.), width = 0.9, height = 0.6, fill = False, color = color, alpha = 1.)]
@@ -713,10 +714,15 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_corrupted = False):
     if add_noisy:
         chip_legend_handle.append(hexagon_r)
         chip_legend_label.append('Noisy')
+    if add_uncon:
+        chip_legend_handle.append(hexagon_o)
+        chip_legend_label.append('Unbonded')
     if add_corrupted:
         chip_legend_handle.append(hexagon_v)
         chip_legend_label.append('Corrupted')
                 
-    chip_legend = ax.legend(chip_legend_handle, chip_legend_label, loc = 'upper left', fontsize = 'small', handler_map={hexagon_r: HandlerHexagon(), hexagon_v: HandlerHexagon()})
+    chip_legend = ax.legend(chip_legend_handle, chip_legend_label, loc = 'upper left', fontsize = 'small',
+                            handler_map={hexagon_r: HandlerHexagon(), hexagon_o: HandlerHexagon(), hexagon_v: HandlerHexagon()})
+    
     if len(chip_pos) != 0:
         ax.add_artist(chip_legend)

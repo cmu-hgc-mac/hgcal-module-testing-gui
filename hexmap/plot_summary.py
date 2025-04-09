@@ -202,12 +202,14 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 
         # for live module if actual channels have same noise as disconnected channels, label
         # but only label if in low-BV pedestal run
-        if len(df_data[column][nc_mask]) > 0:
-            med_nc = df_data[column][nc_mask].median()
-            uncon = np.abs(df_data[column] - med_nc) < upplim/40.
-        # not using for the moment because I'm unhappy with functionality
-        # but will still print channel numbers
-        
+        if hb_type[0] == 'L' and live:
+            med_nc = df_data[column][nc_mask].median() # not currently using
+            #uncon = np.abs(df_data[column] - med_nc) < upplim/40. # old unbonded channel definition
+            uncon = (df_data[column] < 1.7) & (df_data['adc_stdd'] > 0) # cut at 1.7 ADC counts for low-density modules
+            # high density module uncon detection still in progress
+        else:
+            uncon = df_data[column] <= 0. # all false 
+            
         # if actual channels have significantly higher noise than normal channels, label
         med_norm = df_data[column][norm_mask].median()
         mean_norm = df_data[column][norm_mask].mean()
@@ -252,15 +254,17 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         edgecolors = np.array([])
         edgewidths = np.array([])
 
-        # color edges of pads red if noisy
+        # color edges of pads red if noisy, violet if corrupted, orange if unbonded
         edgeclr = np.array(['#ffffff00' for i in range(len(df_data))])
-        edgeclr[highval & norm_mask] = 'red'
         edgeclr[calib_mask] = 'black'
+        edgeclr[highval & norm_mask] = 'red'
         edgeclr[corrupted] = 'violet'
+        edgeclr[uncon & (norm_mask | calib_mask)] = 'orange'
         
         edgewdth = np.array([1.5 for i in range(len(df_data))])
-        edgewdth[highval & norm_mask] = 3    
-        edgewdth[corrupted & norm_mask] = 3    
+        edgewdth[highval & (norm_mask | calib_mask)] = 3    
+        edgewdth[corrupted & (norm_mask | calib_mask)] = 3    
+        edgewdth[uncon & (norm_mask | calib_mask)] = 3    
         
         for mask, data_type in zip(masks, data_types):
             local_mask = mask.copy()
@@ -286,17 +290,21 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # print summary info to plot
         ax.text(5, 6.5, r'$\mu = '+str(round(np.mean(df_data[column][norm_mask | calib_mask]), 2))+'$')
         ax.text(5, 6, r'$\sigma = '+str(round(np.std(df_data[column][norm_mask | calib_mask]), 2))+'$')            
-        if (column == 'adc_stdd') and np.sum((corrupted) & (df_data["pad"] > 0)) == 0:
-            ax.text(-6.8, -5.8, 'Channels:')
-            ax.text(-6.8, -6.3, f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead')
-            #ax.text(-6.8, -6.8, f'{np.sum(uncon & (df_data["pad"] > 0) & ~(calib_mask))} Unbonded')
-            ax.text(-6.8, -6.8, f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
-        elif column == 'adc_stdd' and np.sum((corrupted) & (df_data["pad"] > 0)) > 0:
-            ax.text(-6.8, -5.3, 'Channels:')
-            ax.text(-6.8, -5.8, f'{np.sum((corrupted) & (df_data["pad"] > 0))} Corrupted') 
-            ax.text(-6.8, -6.3, f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead')
-            ax.text(-6.8, -6.8, f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy')
+
+        if column == 'adc_stdd':
             
+            tallylist = ['Channels:', f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead', f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy']
+            if np.sum((corrupted) & (df_data["pad"] > 0)) > 0:
+                tallylist.insert(1, f'{np.sum((corrupted) & (df_data["pad"] > 0))} Corrupted')
+            if BV in label:    
+                BV = float(label.split('BV')[1].split('_')[0])
+                if np.sum(uncon & (df_data["pad"] > 0)) > 0 and BV <= 50:
+                    tallylist.insert(-1, f'{np.sum(uncon & ~corrupted & (df_data["pad"] > 0))} Unbonded')
+
+            for i in range(len(tallylist)):
+                initheight = -6.8 + 0.5*(len(tallylist)-1)
+                ax.text(-6.8, initheight - i*0.5, tallylist[i])
+                
             
         zlab = 'Noise [ADC counts]' if column == 'adc_stdd' else 'Pedestal [ADC counts]'    
         cb = plt.colorbar(patch_col, label = zlab)#, extend='both', extendrect=True)
@@ -316,8 +324,13 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         cb.ax.text(11./8., -0.18/8.*upplim, r'0', ha='center', va='center')
         
         # annotate chip positions on plot
+        if BV in label:
+            BV = float(label.split('BV')[1].split('_')[0])
+        else:
+            BV = 1e10 # disable uncon flag
         if column == 'adc_stdd':
             ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
+                        add_uncon = (np.sum(uncon & (df_data["pad"] > 0)) > 0 and BV <= 50),
                         add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
         else:
             ad_chip_geo(ax, hb_type = hb_type)
@@ -474,8 +487,9 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         if '320-' in seg:
             moduleserial = seg
 
-    if hb_type is None:
+    if hb_type is None and label is not None:
         #moduleserial = fname.split('/')[-5]
+        moduleserial = label.split('_')[0]
         density = moduleserial.split('-')[1][1]
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
