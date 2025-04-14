@@ -887,14 +887,14 @@ while True:
             plot_IV_curves(current_state)
             
             # if not encapsulated, show out rebonding information
-            modulestatus = values["-Module-Status-"]
-            if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-                try:
-                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-                    if len(unconcells) > 0 or len(noisycells) > 0:
-                        module_rebond_window(current_state, unconcells, noisycells)
-                except TypeError:
-                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+            #modulestatus = values["-Module-Status-"]
+            #if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
+            #    try:
+            #        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+            #        if len(unconcells) > 0 or len(noisycells) > 0:
+            #            module_rebond_window(current_state, unconcells, noisycells)
+            #    except TypeError:
+            #        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
             # open dry air valve manually or automatically            
             if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
@@ -946,14 +946,14 @@ while True:
             plot_IV_curves(current_state)
  
             # if not encapsulated, show out rebonding information
-            modulestatus = values["-Module-Status-"]
-            if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-                try:
-                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-                    if len(unconcells) > 0 or len(noisycells) > 0:
-                        module_rebond_window(current_state, unconcells, noisycells)
-                except TypeError:
-                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+            #modulestatus = values["-Module-Status-"]
+            #if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
+            #    try:
+            #        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+            #        if len(unconcells) > 0 or len(noisycells) > 0:
+            #            module_rebond_window(current_state, unconcells, noisycells)
+            #    except TypeError:
+            #        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
            
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
