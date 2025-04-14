@@ -1219,7 +1219,7 @@ while True:
         print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
         # comments added by pop-up window
         qc_summary = grade_module_window(moduleserial, qc_summary)
-        summary_upload(moduleserial, qc_summary)
+        #summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
     # or press the 'Close GUI' button.
