@@ -687,19 +687,22 @@ def fetch_sensor_iv(moduleserial):
     
     return v, i, di
 
-def readout_info(moduleserial):
+def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
-    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
-    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Completely Encapsulated')
-    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Completely Encapsulated')
+    lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, modulestatus)
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, modulestatus)
     if len(highBVruns) == 0:
-        highBVruns = fetch_pedestal(moduleserial, 500, 300, 'Completely Encapsulated')
-    
+        highBVruns = fetch_pedestal(moduleserial, 500, 300, modulestatus)
+        
     # backwards compatibility
-    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
-        lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
-        midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
-        highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
+    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2 and (modulestatus == 'Completely Bonded' or modulestatus == 'Completely Encapsulated'):
+        status = modulestatus.replace('Completely','Frontside')
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, status)
+        midBVruns = fetch_pedestal(moduleserial, 300, 300, status)
+        highBVruns = fetch_pedestal(moduleserial, 800, 300, status)
+        if len(highBVruns) == 0:
+            highBVruns = fetch_pedestal(moduleserial, 500, 300,status)
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         print(f' >> DBTools: not enough pedestal tests: lowBV {len(lowBVruns)} midBV {len(midBVruns)} high BV {len(highBVruns)}')
@@ -707,22 +710,20 @@ def readout_info(moduleserial):
     
     badcell = set()
     
-    # check unbonded channels - for now only works for LD modules
-    if '320-MH' not in moduleserial:
-        unbondedrun = lowBVruns[-1]
-        noise = np.array(unbondedrun['adc_stdd'])
-        cellid = np.array(unbondedrun['cell'])
-        celltype = np.array(unbondedrun['channeltype'])
-        norm_mask = (celltype == 0) & (cellid > 0)
-        nc_mask = (celltype == 0) & (cellid < 0)
-        calib_mask = celltype == 1
-        med_nc = np.median(noise[nc_mask])
-        uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
-        unconcells = cellid[norm_mask][uncon]
-        for cell in unconcells:
-            badcell.add(cell)
-    else:
-        unconcells = np.array([])
+    # check unbonded channels - necessary BV not currently checked
+    unbondthresh = 0.
+    if '320-ML' in moduleserial:
+        unbondthresh = 1.7
+    elif '320-MH' in moduleserial:
+        unbondthresh = 1.4
+    unbondedrun = lowBVruns[-1] # choose last run
+    noise = np.array(unbondedrun['adc_stdd'])
+    cellid = np.array(unbondedrun['cell'])
+    celltype = np.array(unbondedrun['channeltype'])
+    norm_mask = (celltype == 0) & (cellid > 0)
+    calib_mask = celltype == 1
+    uncon = noise[norm_mask | calib_mask] < unbondthresh
+    unconcells = cellid[norm_mask | calib_mask][uncon]
             
     # check dead channels
     ldeadcells = []
@@ -884,7 +885,7 @@ def serial_add_dashes(moduleserial):
     if '320-M' in dashedserial: # live module
         dashedserial += moduleserial[5:9]+'-'+moduleserial[9:11]+'-'+moduleserial[11:15]
     elif '320-X' in dashedserial: # hexaboard
-        dashedserial +=	moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
+        dashedserial += moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
     else:
         raise ValueError
         
