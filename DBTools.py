@@ -710,22 +710,20 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
     
     badcell = set()
     
-    # check unbonded channels - for now only works for LD modules
-    if '320-MH' not in moduleserial:
-        unbondedrun = lowBVruns[-1]
-        noise = np.array(unbondedrun['adc_stdd'])
-        cellid = np.array(unbondedrun['cell'])
-        celltype = np.array(unbondedrun['channeltype'])
-        norm_mask = (celltype == 0) & (cellid > 0)
-        nc_mask = (celltype == 0) & (cellid < 0)
-        calib_mask = celltype == 1
-        med_nc = np.median(noise[nc_mask])
-        uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
-        unconcells = cellid[norm_mask][uncon]
-        for cell in unconcells:
-            badcell.add(cell)
-    else:
-        unconcells = np.array([])
+    # check unbonded channels - necessary BV not currently checked
+    unbondthresh = 0.
+    if '320-ML' in moduleserial:
+        unbondthresh = 1.7
+    elif '320-MH' in moduleserial:
+        unbondthresh = 1.4
+    unbondedrun = lowBVruns[-1] # choose last run
+    noise = np.array(unbondedrun['adc_stdd'])
+    cellid = np.array(unbondedrun['cell'])
+    celltype = np.array(unbondedrun['channeltype'])
+    norm_mask = (celltype == 0) & (cellid > 0)
+    calib_mask = celltype == 1
+    uncon = noise[norm_mask | calib_mask] < unbondthresh
+    unconcells = cellid[norm_mask | calib_mask][uncon]
             
     # check dead channels
     ldeadcells = []
