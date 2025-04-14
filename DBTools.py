@@ -395,7 +395,7 @@ def iv_upload(datadict, state):
     try:
         ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
     except:
-        pass
+        ratio = 0.
         
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
@@ -722,7 +722,7 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
     celltype = np.array(unbondedrun['channeltype'])
     norm_mask = (celltype == 0) & (cellid > 0)
     calib_mask = celltype == 1
-    uncon = noise[norm_mask | calib_mask] < unbondthresh
+    uncon = noise[norm_mask | calib_mask] <= unbondthresh
     unconcells = cellid[norm_mask | calib_mask][uncon]
             
     # check dead channels

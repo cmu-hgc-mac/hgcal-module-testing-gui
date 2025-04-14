@@ -203,18 +203,19 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         BV = None
         if live:
             BV = float(label.split('BV')[1].split('_')[0])
-            
+
         # for live module if actual channels have same noise as disconnected channels, label
         # but only label if in low-BV pedestal run
+        uncon = []
         if hb_type[0] == 'L' and live:
             #med_nc = df_data[column][nc_mask].median() # not currently using
             #uncon = np.abs(df_data[column] - med_nc) < upplim/40. # old unbonded channel definition
-            uncon = (df_data[column] < 1.7) & (df_data['adc_stdd'] > 0) # cut at 1.7 ADC counts for low-density modules for BV <= 10V
-        if hb_type[0] == 'H' and live:
-            uncon = (df_data[column] < 1.4) & (df_data['adc_stdd'] > 0) # cut at 1.4 ADC counts for high-density modules for BV <= 2V
+            uncon = (df_data[column] < 1.7) & (df_data['adc_stdd'] > 0.) # cut at 1.7 ADC counts for low-density modules for BV <= 10V
+        elif hb_type[0] == 'H' and live:
+            uncon = (df_data[column] < 1.4) & (df_data['adc_stdd'] > 0.) # cut at 1.4 ADC counts for high-density modules for BV <= 2V
         else:
             uncon = df_data[column] <= 0. # all false 
-            
+
         # if actual channels have significantly higher noise than normal channels, label
         med_norm = df_data[column][norm_mask].median()
         mean_norm = df_data[column][norm_mask].mean()
@@ -340,7 +341,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # annotate chip positions on plot
         if column == 'adc_stdd':
             ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
-                        add_uncon = (np.sum(uncon & (df_data["pad"] > 0)) > 0) and live and (BV <= 10),
+                        add_uncon = (np.sum(uncon & (df_data["pad"] > 0)) > 0) and live and (BV <= 10.),
                         add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
         else:
             ad_chip_geo(ax, hb_type = hb_type)
@@ -504,7 +505,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-    livemod = 'ML' in fname or 'MH' in fname
+    livemod = '320-ML' in fname or '320-MH' in fname
     
     # fix figdir
     if figdir == None:

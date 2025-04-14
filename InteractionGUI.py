@@ -1031,9 +1031,9 @@ def module_rebond_window(state, unconcells, noisycells):
               [sg.Button('OK')]]
 
     if len(unconcells) > 0:
-        layout.insert(-1, [sg.Text(f'Found unbonded cells {unconcells.to_list()}, check bonds', font=lgfont)])
+        layout.insert(-1, [sg.Text(f'Found unbonded cells {unconcells.tolist()}, check bonds', font=lgfont)])
     if len(noisycells) > 0:
-        layout.insert(-1, [sg.Text(f'Found noisy cells {noisycells.to_list()}, please ground', font=lgfont)])
+        layout.insert(-1, [sg.Text(f'Found noisy cells {noisycells.tolist()}, please ground', font=lgfont)])
         
     rebond = sg.Window(f"Module {state['-Module-Serial-']} needs bond rework", layout, margins=(200,100))
 
