@@ -852,7 +852,7 @@ while True:
 
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                status = multi_run_pedestals(current_state, [None, None])
+                status = multi_run_pedestals(current_state, [None, None], showplots = False)
                 if status == 'CONT':
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
@@ -866,11 +866,11 @@ while True:
             
 
             # trim and take pedestals
-            status = multi_run_pedestals(current_state, [300, 300]) # untrimmed
+            status = multi_run_pedestals(current_state, [300, 300], showplots = False) # untrimmed
             if status == 'CONT':
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
-                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
+                status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
 
             current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
@@ -887,74 +887,68 @@ while True:
             plot_IV_curves(current_state)
             
             # if not encapsulated, show out rebonding information
-            #modulestatus = values["-Module-Status-"]
-            #if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-            #    try:
-            #        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-            #        if len(unconcells) > 0 or len(noisycells) > 0:
-            #            module_rebond_window(current_state, unconcells, noisycells)
-            #    except TypeError:
-            #        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+            modulestatus = values["-Module-Status-"]
+            if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
+                try:
+                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+                    if len(unconcells) > 0 or len(noisycells) > 0:
+                        module_rebond_window(current_state, unconcells, noisycells)
+                except TypeError:
+                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
-            # open dry air valve manually or automatically            
-            if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
-                from InteractionGUI import do_something_window
-                do_something_window('Open dry air valve', 'Open')
-            else:
-                from AirControl import AirControl
-                ac = AirControl()
-                for i in range(10):
-                    ac.set_air_on()
+            elif modulestatus == 'Completely Encapsulated' or modulestatus == 'Bolted':
+                                    
+                # open dry air valve manually or automatically            
+                if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
+                    from InteractionGUI import do_something_window
+                    do_something_window('Open dry air valve', 'Open')
+                else:
+                    from AirControl import AirControl
+                    ac = AirControl()
+                    for i in range(10):
+                        ac.set_air_on()
                     
-            # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
-            current_state['ps'].outputOn()
-            update_state(current_state, '-HV-Output-On-', True, 'Green')
-            current_state['ps'].setVoltage(500.)
+                wait_time_s = 20*60 # 20 min    
+                dry_date = datetime.now()
+                finalIV_date = dry_date + timedelta(seconds=wait_time_s)
+                finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
 
-            wait_time_s = 20*60 # 20 min    
-            dry_date = datetime.now()
-            finalIV_date = dry_date + timedelta(seconds=wait_time_s)
-            finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
-            layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
-                      [sg.Button('Terminate Test')]]
-            waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+                layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                          [sg.Button('Terminate Test')]]
+                waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
-            eventw, valuesw = waiting.read(timeout=100)
-
-            print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
-
-            while True:
-                eventw, valuesw = waiting.read(timeout=1)
-                if eventw == 'Terminate Test' or eventw == sg.WIN_CLOSED:
-                    print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
-                    status = 'TERM'
-                    break
-                if datetime.now() >= finalIV_date:
-                    break
-
-            waiting.close()
+                eventw, valuesw = waiting.read(timeout=100)
+                print('e1', eventw, valuesw)
                 
-            if status != 'CONT':
-                exit_tests()
-                continue
+                # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
+                current_state['ps'].outputOn()
+                update_state(current_state, '-HV-Output-On-', True, 'Green')
+                current_state['ps'].setVoltage(maxV)
 
-            status = take_IV_curve(current_state, maxV=maxV)
-            if status != 'CONT':
-                exit_tests()
-                continue
-            plot_IV_curves(current_state)
+                while True:
+                    eventw, valuesw = waiting.read(timeout=10)
+                    print('e2', eventw, valuesw)
+                    if eventw == 'Terminate Test': # or eventw == sg.WIN_CLOSED: can't do sg.WIN_CLOSED here apparently, it always terminates immediately
+                        print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                        status = 'TERM'
+                        break
+                    if datetime.now() >= finalIV_date:
+                        break
+
+                    waiting.close()
+                
+                if status != 'CONT':
+                    exit_tests()
+                    continue
+
+                status = take_IV_curve(current_state, maxV=maxV)
+                if status != 'CONT':
+                    exit_tests()
+                    continue
+                plot_IV_curves(current_state)
  
-            # if not encapsulated, show out rebonding information
-            #modulestatus = values["-Module-Status-"]
-            #if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-            #    try:
-            #        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-            #        if len(unconcells) > 0 or len(noisycells) > 0:
-            #            module_rebond_window(current_state, unconcells, noisycells)
-            #    except TypeError:
-            #        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
-           
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -1069,6 +1063,10 @@ while True:
 
                 sleep(1)
                 
+                maxV = int(values['-DryIV-MaxV-'])
+                if maxV > 900:
+                    maxV = 900
+
                 drytime = time()
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=final_dry_time)
@@ -1088,7 +1086,7 @@ while True:
                     if values['-Dry-Wait-Bias-']:
                         current_state['ps'].outputOn()
                         update_state(current_state, '-HV-Output-On-', True, 'Green')
-                        current_state['ps'].setVoltage(500.)
+                        current_state['ps'].setVoltage(maxV)
                     else:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
@@ -1113,9 +1111,6 @@ while True:
                     exit_tests()
                     continue
 
-                maxV = int(values['-DryIV-MaxV-'])
-                if maxV > 900:
-                    maxV = 900
                 status = take_IV_curve(current_state, maxV=maxV)
                 if status == 'CONT':
                     plot_IV_curves(current_state)

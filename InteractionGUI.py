@@ -668,7 +668,7 @@ def run_pedestals(state, BV):
     pedestals.close()
     return hexpath, status
 
-def multi_run_pedestals(state, BV_list):
+def multi_run_pedestals(state, BV_list, showplots = True):
     """
     Runs multiple pedestal runs. If the module is not live, the argument BV_list is full of Nones.
     """
@@ -678,7 +678,7 @@ def multi_run_pedestals(state, BV_list):
         hexpath, status = run_pedestals(state, BV)
         if status != 'CONT':
             break
-    if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '':
+    if not state['-Debug-Mode-'] and len(BV_list) > 0 and hexpath != '' and showplots:
         os.system(f'gio open {hexpath}_adc_mean.png')
         os.system(f'gio open {hexpath}_adc_stdd.png')
 
