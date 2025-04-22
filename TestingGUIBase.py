@@ -872,7 +872,8 @@ while True:
             if status == 'CONT':
                 status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
 
-            current_state['ps'].outputOff()
+            if not current_state['-Debug-Mode-']:
+                current_state['ps'].outputOff()
             update_state(current_state, '-HV-Output-On-', False, 'black')
 
             if status != 'CONT':
