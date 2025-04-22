@@ -920,7 +920,6 @@ while True:
                 waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
                 eventw, valuesw = waiting.read(timeout=100)
-                print('e1', eventw, valuesw)
                 
                 # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
                 current_state['ps'].outputOn()
@@ -929,7 +928,6 @@ while True:
 
                 while True:
                     eventw, valuesw = waiting.read(timeout=10)
-                    print('e2', eventw, valuesw)
                     if eventw == 'Terminate Test': # or eventw == sg.WIN_CLOSED: can't do sg.WIN_CLOSED here apparently, it always terminates immediately
                         print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
                         status = 'TERM'
