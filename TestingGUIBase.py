@@ -923,9 +923,10 @@ while True:
                 eventw, valuesw = waiting.read(timeout=100)
                 
                 # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
-                current_state['ps'].outputOn()
-                update_state(current_state, '-HV-Output-On-', True, 'Green')
-                current_state['ps'].setVoltage(maxV)
+                if not current_state['-Debug-Mode-']:
+                    current_state['ps'].outputOn()
+                    update_state(current_state, '-HV-Output-On-', True, 'Green')
+                    current_state['ps'].setVoltage(maxV)
 
                 while True:
                     eventw, valuesw = waiting.read(timeout=10)
