@@ -951,10 +951,10 @@ while True:
                     if datetime.now() >= finalIV_date:
                         break
 
-                    waiting.close()
-                    if status != 'CONT':
-                        exit_tests()
-                        continue
+                waiting.close()
+                if status != 'CONT':
+                    exit_tests()
+                    continue
 
                 status = take_IV_curve(current_state, maxV=maxV)
                 if status != 'CONT':

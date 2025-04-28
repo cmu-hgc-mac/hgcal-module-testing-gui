@@ -20,7 +20,7 @@ with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
 if configuration['HasLocalDB']:
-    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments
+    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments, serial_remove_dashes
 
 from DBTools import add_RH_T, iv_save
 
@@ -461,7 +461,7 @@ def check_leakage_current(state):
         
         ivprobe.close()
         
-        readout = [[sg.Text(f"{key} V Bias: {round(1000000.*leakage_current[key],3)} μA") if leakage_current[key] is not None else sg.Text(f"{key} V Bias: {None} μA")] for key in leakage_current.keys()]
+        readout = [[sg.Text(f"{abs(key)} V Bias: {round(1000000.*abs(leakage_current[key]),3)} μA") if leakage_current[key] is not None else sg.Text(f"{abs(key)} V Bias: {None} μA")] for key in leakage_current.keys()]
         
         title = "Module leakage current good" if nominal else "Module leakage current not nominal. Continue?"
         
@@ -610,6 +610,7 @@ def run_pedestals(state, BV):
         hexpath = ''
     else:
 
+        BV = float(BV)
         BV_to_use = BV
         if configuration['HVWiresPolarization'] == 'Forward':
             BV_to_use = -BV
@@ -643,7 +644,7 @@ def run_pedestals(state, BV):
         # rename output directory with conditions of test
         trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
-            testtag = f'BV{BV}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
+            testtag = f'BV{int(BV)}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
         else:
             testtag = trimmed
         
@@ -1006,7 +1007,7 @@ def plot_IV_curves(state):
 
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
-        ax.set_xlabel('Bias Voltage [V]')
+        ax.set_xlabel('Reverse Bias [V]')
         ax.set_ylabel(r'Leakage Current [A]')
         ax.set_ylim(1e-9, 1e-03)
         ax.set_xlim(0, 900)
