@@ -609,15 +609,20 @@ def run_pedestals(state, BV):
         sleep(5)
         hexpath = ''
     else:
+
+        BV_to_use = BV
+        if configuration['HVWiresPolarization'] == 'Forward':
+            BV_to_use = -BV
+            
         if state['-Live-Module-'] and BV is not None:
             if not state['ps'].get_output():
                 state['ps'].outputOn()
                 update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(float(BV))
+            state['ps'].setVoltage(float(BV_to_use))
 
         #pedestalpath = state['pc'].pedestal_run(BV=BV)
         # testing this detached test run
-        proc = state['pc'].pedestal_proc(BV=BV)
+        proc = state['pc'].pedestal_proc(BV=BV_to_use)
         while not proc.is_finished():
             event, values = pedestals.read(timeout=1)
             if event == 'Terminate Test' or event == sg.WIN_CLOSED:
@@ -701,10 +706,15 @@ def trim_pedestals(state, BV):
     if state['-Debug-Mode-']:
         sleep(5)
     else:
+
+        BV_to_use = BV
+        if configuration['HVWiresPolarization'] == 'Forward':
+            BV_to_use = -BV
+        
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(float(BV))
+            state['ps'].setVoltage(float(BV_to_use))
 
         proc = state['pc'].create_proc('pedestal_run')
         while not proc.is_finished():
@@ -789,12 +799,17 @@ def run_other_script(script, state, BV):
     if state['-Debug-Mode-']:
         sleep(5)
     else:
+
+        BV_to_use = BV
+        if configuration['HVWiresPolarization'] == 'Forward':
+            BV_to_use = -BV
+        
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(float(BV))
+            state['ps'].setVoltage(float(BV_to_use))
 
-        proc = state['pc'].script_proc(script, BV=BV)
+        proc = state['pc'].script_proc(script, BV=BV_to_use)
         while not proc.is_finished():
             event, values = scriptrun.read(timeout=1)
             if event == 'Terminate Test' or event == sg.WIN_CLOSED:
@@ -831,11 +846,16 @@ def scan_pedestals(state, BV):
     if state['-Debug-Mode-']:
         sleep(5)
     else:
+
+        BV_to_use = BV
+        if configuration['HVWiresPolarization'] == 'Forward':
+            BV_to_use = -BV
+        
         if state['-Live-Module-'] and BV is not None:
             if not state['ps'].get_output():
                 state['ps'].outputOn()
                 update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(float(BV))
+            state['ps'].setVoltage(float(BV_to_use))
         state['pc'].pedestal_run()
         state['pc'].pedestal_scan()
     pedestals.close()
@@ -851,10 +871,15 @@ def scan_vref(state, BV):
     if state['-Debug-Mode-']:
         sleep(5)
     else:
+
+        BV_to_use = BV
+        if configuration['HVWiresPolarization'] == 'Forward':
+            BV_to_use = -BV
+        
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
-            state['ps'].setVoltage(float(BV))
+            state['ps'].setVoltage(float(BV_to_use))
         state['pc'].vrefnoinv_scan()
         state['pc'].vrefinv_scan()
     vref.close()

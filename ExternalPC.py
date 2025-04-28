@@ -101,7 +101,7 @@ class ExternalPC: # no longer Centos7
                 if rocvers == 'X':
                     self.config = f'{self.scriptloc}etc/configs/initHD-bottom.yaml'
                 else: # no V3b bottom yet
-                    raise NotImplementedErro
+                    raise NotImplementedError
             elif shape == 'R' or shape == 'L':
                 if rocvers in ['2', 'B', '4', 'C']:
                     self.config = f'{self.scriptloc}etc/configs/initHD-semi-V3b.yaml'

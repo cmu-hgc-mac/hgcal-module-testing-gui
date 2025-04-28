@@ -618,7 +618,15 @@ while True:
     if values['-Inspector-'] != '':
         inspector = values['-Inspector-']
     modulestatus = values['-Module-Status-']
-        
+
+    bv_fields = ['-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-',
+                 '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-',
+                 '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-', '-DryIV-MaxV-', '-AmbIV-MaxV-',
+                 '-StandardIV-MaxV-']
+    for field in bv_fields:
+        if '-' in values[field]:
+            basewindow[field].update(value=values[field].replace('-', ''))
+            
     # Now, check for button presses
     # Configure test stand starts the FPGA assembly and startup process
     if event == "Configure Test Stand":
@@ -863,7 +871,6 @@ while True:
             maxV = int(values['-StandardIV-MaxV-'])
             if maxV > 900:
                 maxV = 900
-            
 
             # trim and take pedestals
             status = multi_run_pedestals(current_state, [300, 300], showplots = False) # untrimmed
@@ -873,7 +880,9 @@ while True:
                 status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
 
             if not current_state['-Debug-Mode-']:
+                # pedestal run in InteractionGUI handles wire polarization
                 current_state['ps'].outputOff()
+
             update_state(current_state, '-HV-Output-On-', False, 'black')
 
             if status != 'CONT':
@@ -923,11 +932,16 @@ while True:
                 eventw, valuesw = waiting.read(timeout=100)
                 
                 # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
+
                 if not current_state['-Debug-Mode-']:
                     current_state['ps'].outputOn()
                     update_state(current_state, '-HV-Output-On-', True, 'Green')
-                    current_state['ps'].setVoltage(maxV)
 
+                    if configuration['HVWiresPolarization'] == 'Forward':
+                        current_state['ps'].setVoltage(-maxV)
+                    elif configuration['HVWiresPolarization'] == 'Reverse':
+                        current_state['ps'].setVoltage(maxV)
+                    
                 while True:
                     eventw, valuesw = waiting.read(timeout=10)
                     if eventw == 'Terminate Test': # or eventw == sg.WIN_CLOSED: can't do sg.WIN_CLOSED here apparently, it always terminates immediately
@@ -938,10 +952,9 @@ while True:
                         break
 
                     waiting.close()
-                
-                if status != 'CONT':
-                    exit_tests()
-                    continue
+                    if status != 'CONT':
+                        exit_tests()
+                        continue
 
                 status = take_IV_curve(current_state, maxV=maxV)
                 if status != 'CONT':
@@ -1086,7 +1099,11 @@ while True:
                     if values['-Dry-Wait-Bias-']:
                         current_state['ps'].outputOn()
                         update_state(current_state, '-HV-Output-On-', True, 'Green')
-                        current_state['ps'].setVoltage(maxV)
+
+                        if configuration['HVWiresPolarization'] == 'Forward':
+                            current_state['ps'].setVoltage(-maxV)
+                        elif configuration['HVWiresPolarization'] == 'Reverse':
+                            current_state['ps'].setVoltage(maxV)
                     else:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
