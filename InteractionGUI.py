@@ -888,7 +888,7 @@ def scan_vref(state, BV):
         sleep(5)
     else:
 
-	if BV is not None:
+        if BV is not None:
             BV = float(BV)
             BV_to_use = BV
             if configuration['HVWiresPolarization'] == 'Forward':

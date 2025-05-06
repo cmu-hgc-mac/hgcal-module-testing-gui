@@ -392,7 +392,7 @@ def iv_upload(datadict, state):
 
     comment = None
     if len(state['-Output-Subdir-'].split('/')) == 3:
-	comment = state['-Output-Subdir-'].split('/')[2]
+        comment = state['-Output-Subdir-'].split('/')[2]
 
         
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
@@ -441,7 +441,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
 
     comment = None
     if len(state['-Output-Subdir-'].split('/')) == 3:
-	comment = state['-Output-Subdir-'].split('/')[2]
+        comment = state['-Output-Subdir-'].split('/')[2]
 
         
     db_upload_other = {'module_name': serial_remove_dashes(moduleserial),
@@ -531,7 +531,7 @@ def plots_upload(state, ind=-1):
                 
     comment = None
     if len(state['-Output-Subdir-'].split('/')) == 3:
-	comment = state['-Output-Subdir-'].split('/')[2]
+        comment = state['-Output-Subdir-'].split('/')[2]
 
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
