@@ -610,10 +610,13 @@ def run_pedestals(state, BV):
         hexpath = ''
     else:
 
-        BV = float(BV)
-        BV_to_use = BV
-        if configuration['HVWiresPolarization'] == 'Forward':
-            BV_to_use = -BV
+        if BV is not None:
+            BV = float(BV)
+            BV_to_use = BV
+            if configuration['HVWiresPolarization'] == 'Forward':
+                BV_to_use = -BV
+        else:
+            BV_to_use = BV
             
         if state['-Live-Module-'] and BV is not None:
             if not state['ps'].get_output():
@@ -708,10 +711,14 @@ def trim_pedestals(state, BV):
         sleep(5)
     else:
 
-        BV_to_use = BV
-        if configuration['HVWiresPolarization'] == 'Forward':
-            BV_to_use = -BV
-        
+        if BV is not None:
+            BV = float(BV)
+            BV_to_use = BV
+            if configuration['HVWiresPolarization'] == 'Forward':
+                BV_to_use = -BV
+        else:
+            BV_to_use = BV
+
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
@@ -801,10 +808,14 @@ def run_other_script(script, state, BV):
         sleep(5)
     else:
 
-        BV_to_use = BV
-        if configuration['HVWiresPolarization'] == 'Forward':
-            BV_to_use = -BV
-        
+        if BV is not None:
+            BV = float(BV)
+            BV_to_use = BV
+            if configuration['HVWiresPolarization'] == 'Forward':
+                BV_to_use = -BV
+        else:
+            BV_to_use = BV
+
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
             update_state(state, '-HV-Output-On-', True, 'green')
@@ -848,10 +859,14 @@ def scan_pedestals(state, BV):
         sleep(5)
     else:
 
-        BV_to_use = BV
-        if configuration['HVWiresPolarization'] == 'Forward':
-            BV_to_use = -BV
-        
+        if BV is not None:
+            BV = float(BV)
+            BV_to_use = BV
+            if configuration['HVWiresPolarization'] == 'Forward':
+                BV_to_use = -BV
+        else:
+            BV_to_use = BV
+
         if state['-Live-Module-'] and BV is not None:
             if not state['ps'].get_output():
                 state['ps'].outputOn()
@@ -873,9 +888,13 @@ def scan_vref(state, BV):
         sleep(5)
     else:
 
-        BV_to_use = BV
-        if configuration['HVWiresPolarization'] == 'Forward':
-            BV_to_use = -BV
+	if BV is not None:
+            BV = float(BV)
+            BV_to_use = BV
+            if configuration['HVWiresPolarization'] == 'Forward':
+                BV_to_use = -BV
+        else:
+            BV_to_use = BV
         
         if state['-Live-Module-'] and BV is not None:
             state['ps'].outputOn()
@@ -1084,6 +1103,12 @@ def grade_module(moduleserial):
 
     # four individual grades
     # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf
+    final_grade_def = '2025/4/7 https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf'
+    proto_grade_def = 'grade A: xy offsets < 100 um, ang offset < 0.02 deg; grade B: xy offsets < 200 um, ang offset < 0.04 deg; grade C otherwise'
+    module_grade_def = 'grade A: xy offsets < 100 um, ang offset < 0.02 deg; grade B: xy offsets < 250 um, ang offset < 0.06 deg; grade C otherwise'
+    readout_grade_def = 'grade A: bad channel fraction < 2%; grade B: bad channel fraction < 4%; grade C otherwise'
+    iv_grade_def = 'grade A: I(500V) < 100uA; grade B: I(500V) < 1mA; grade C otherwise'
+    # grade_f_criteria?
     if i_500v < 1e-4:
         iv_grade = 'A'
     elif i_500v < 1e-3:
@@ -1093,7 +1118,7 @@ def grade_module(moduleserial):
 
     if badfrac < 0.02:
         readout_grade = 'A'
-    elif badfrac < 0.05:
+    elif badfrac < 0.04:
         readout_grade = 'B'
     else:
         readout_grade = 'C'
@@ -1125,29 +1150,42 @@ def grade_module(moduleserial):
     # just show grade for now                                                                                                                                                             
     qc_summary = {'module_name': serial_remove_dashes(moduleserial),
                   'final_grade': final_grade,
+                  'final_grade_def': final_grade_def,
                   'proto_flatness': pflatness,
                   'proto_ave_thickness': pthickness,
                   'proto_x_offset': pxoffset,
                   'proto_y_offset': pyoffset,
                   'proto_ang_offset': pangoffset,
                   'proto_grade': proto_grade,
+                  'proto_grade_def': proto_grade_def,
                   'module_flatness': mflatness,
                   'module_ave_thickness': mthickness,
                   'module_x_offset': mxoffset,
                   'module_y_offset': myoffset,
                   'module_ang_offset': mangoffset,
                   'module_grade': module_grade,
+                  'module_grade_def': module_grade_def,
+                  'module_weight': None,
+                  'count_back_unbonded': None,
+                  'front_pull_avg': None,
+                  'front_pull_std': None,
                   'list_cells_unbonded': unconcells,
                   'list_cells_grounded': groundedcells,
                   'count_bad_cells': len(badcell),
                   'list_noisy_cells': noisycells,
                   'list_dead_cells': deadcells,
                   'readout_grade': readout_grade,
-                  'i_at_600v': i_500v,
-                  #'i_ratio_850v_600v': i_850v/i_600v,                                                                                                                                    
+                  'readout_grade_def': readout_grade_def,
+                  #'i_at_600v': i_500v,
+                  #'i_ratio_850v_600v': i_850v/i_600v,
+                  'ref_volt_a': 500,
+                  'ref_volt_b': 1e10, # not taking IV past 500V
+                  'i_at_ref_a': i_500v,
+                  'i_ratio_ref_b_over_a': 1e10, # not taking IV past 500V
                   'iv_grade': iv_grade,
+                  'iv_grade_def': iv_grade_def,
                   #'grade_version': 'preproduction_1_2024-10-16',                                                                                                                         
-                  'comments': comments
+                  'comments_all': comments
                   }
 
     print(f' >> InteractionGUI: Module {moduleserial}: Grade {final_grade}')
@@ -1160,7 +1198,7 @@ def grade_module_window(moduleserial, qc_summary):
     comments = qc_summary['comments']
     commentstr = '\n'.join(['\n'.join(comments[i]) for i in range(len(comments))])
     # temporary
-    commentstr += '\nqc field i_at_600v is actually at 500V'
+    # commentstr += '\nqc field i_at_600v is actually at 500V'
     
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
               [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],

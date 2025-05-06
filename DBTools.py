@@ -178,13 +178,9 @@ def pedestal_upload(state, ind=-1):
 
     now = datetime.now()
 
-    comment = runs[-1].split('/')[-1]+' '+state['-Output-Subdir-'] # for now, comment is dir name of raw test results
-
-    if '-Pedestals-Trimmed-' in state.keys():
-        if state['-Pedestals-Trimmed-'] == True:
-            comment += " pedestals trimmed"
-        else:
-            comment += f" pedestals trimmed at {state['-Pedestals-Trimmed-']}V"
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+        comment = state['-Output-Subdir-'].split('/')[2]
     
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
@@ -387,15 +383,17 @@ def iv_upload(datadict, state):
     # save iv as pkl file
     iv_save(datadict, state)
     
-    #### XYZ what should be commented?
-    #### XYZ status? etc.
-
-    v1 = 600
-    v2 = 800
+    v1 = 500
+    v2 = 850
     try:
         ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
     except:
         ratio = 0.
+
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+	comment = state['-Output-Subdir-'].split('/')[2]
+
         
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
@@ -412,7 +410,7 @@ def iv_upload(datadict, state):
                     'date_test': datadict['datetime'].date(),
                     'time_test': datadict['datetime'].time(),
                     'inspector': state['-Inspector-'],
-                    'comment': state['-Output-Subdir-'] 
+                    'comment': comment
                     }
     
     # upload
@@ -440,7 +438,12 @@ def other_test_upload(state, test_name, BV, ind=-1):
     os.system(f'tar -czf tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz {thisrun}')
     with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
         tarfile = f.read()
-    
+
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+	comment = state['-Output-Subdir-'].split('/')[2]
+
+        
     db_upload_other = {'module_name': serial_remove_dashes(moduleserial),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
@@ -451,7 +454,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'date_test': now.date(),
                        'time_test': now.time(),
                        'inspector': state['-Inspector-'],
-                       'comment': state['-Output-Subdir-'],
+                       'comment': comment,
                        'other_test_name': test_name,
                        'other_test_output': tarfile 
                    }
@@ -526,7 +529,9 @@ def plots_upload(state, ind=-1):
         with open(chip, 'rb') as f:
             totnoise.append(f.read())
                 
-    comment = f'run{thisind}'+' '+state['-Output-Subdir-']
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+	comment = state['-Output-Subdir-'].split('/')[2]
 
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
