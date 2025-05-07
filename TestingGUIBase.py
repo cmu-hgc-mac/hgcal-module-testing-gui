@@ -1169,6 +1169,9 @@ while True:
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
+        if i_500v is None:
+            show_string("Tests not complete", field='Right')
+            continue
         
         print(f' >> TestingGUIBase: Grading {moduleserial}')
         qc_summary = grade_module(moduleserial)

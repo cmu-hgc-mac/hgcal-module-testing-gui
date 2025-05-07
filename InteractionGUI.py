@@ -1195,7 +1195,7 @@ def grade_module(moduleserial):
 def grade_module_window(moduleserial, qc_summary):
 
     #print(qc_summary)
-    comments = qc_summary['comments']
+    comments = qc_summary['comments_all']
     commentstr = '\n'.join(['\n'.join(comments[i]) for i in range(len(comments))])
     # temporary
     # commentstr += '\nqc field i_at_600v is actually at 500V'
@@ -1206,7 +1206,7 @@ def grade_module_window(moduleserial, qc_summary):
               [sg.Text(f'{len(qc_summary["list_dead_cells"])} dead; {len(qc_summary["list_cells_unbonded"])} unbonded; {len(qc_summary["list_noisy_cells"])} noisy; {len(qc_summary["list_cells_grounded"])} grounded; {qc_summary["count_bad_cells"]} total bad cells')],
               [sg.Text(f'IV Grade: {qc_summary["iv_grade"]}')],
               #[sg.Text(f'I(600V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA, I(850V)/I(600V) = {round(qc_summary["i_ratio_850v_600v"], 3)}')],
-              [sg.Text(f'I(500V) = {round(qc_summary["i_at_600v"]*1e6, 3)}uA')],
+              [sg.Text(f'I({qc_summary["ref_volt_a"]}V) = {round(qc_summary["i_at_ref_a"]*1e6, 3)}uA')],
               [sg.Text(f'Protomodule Assembly Grade: {qc_summary["proto_grade"]}')],
               [sg.Text(f'Offsets: x: {qc_summary["proto_x_offset"]} um y: {qc_summary["proto_y_offset"]} um ang: {round(qc_summary["proto_ang_offset"], 4)} deg')],
               [sg.Text(f'Module Assembly Grade: {qc_summary["module_grade"]}')],
