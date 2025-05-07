@@ -94,8 +94,8 @@ def fetch_iv(moduleserial, modulestatus, dry=True, roomtemp=True):
     for r in result:
         RH = float(r['rel_hum'])
         T = float(r['temp_c'])
-        req1 = (RH < 8) if dry else (RH > 20)
-        req2 = (T > 10 and T < 30) if roomtemp else (T < -20)
+        req1 = (RH <= 12) if dry else (RH >= 20)
+        req2 = (T >= 10 and T <= 30) if roomtemp else (T <= -20)
         if req1 and req2 and r['status_desc'] == modulestatus:
             runs.append(r)
 
