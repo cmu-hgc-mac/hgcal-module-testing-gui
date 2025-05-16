@@ -84,16 +84,36 @@ async def upload_PostgreSQL(table_name, db_upload_data):
 
     # check table exists and upload
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
-    if table_exists:
 
-        # new db uploading scheme
-        query = get_query(table_name, db_upload_data.keys())
-        print(f'  >> PostgresTools: Executing query: {query}')
-        await conn.execute(query, *db_upload_data.values())
-
-        print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
-    else:
+    if not table_exists:
         print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')
+        await conn.close()
+        return
+
+    # remove key-value pairs from dict if not present in database table schema
+    col_query = f"""SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'; """
+    columns = await conn.fetch(col_query)
+    valid_columns = [row['column_name'] for row in columns]
+    
+    keylist = list(db_upload_data.keys())
+    for key in keylist:
+        if key not in valid_columns:
+            db_upload_data.pop(key, None)
+            print(f'  >> PostgresTools: upload key {key} not in schema of table {table_name}; removing from upload')
+
+    # don't bother uploading an empty dictionary
+    if len(db_upload_data.keys()) == 0:
+        print(f'  >> PostgresTools: upload dictionary is empty, not uploading')
+        await conn.close()
+        return
+            
+    # new db uploading scheme
+    query = get_query(table_name, db_upload_data.keys())
+    print(f'  >> PostgresTools: Executing query: {query}')
+    await conn.execute(query, *db_upload_data.values())
+
+    print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
+    
     await conn.close()
 
 def get_query_read(table_name, part_name = None):
