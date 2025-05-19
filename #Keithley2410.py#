@@ -48,6 +48,7 @@ class Keithley2410:
         self._CURRENT_LIMIT_LOW = -1.05
         self._CURRENT_LIMIT_HIGH = 1.05
         self._ELEMENTS = ["voltage", "current", "resistance", "time", "status"]
+
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
@@ -73,17 +74,24 @@ class Keithley2410:
         # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
         # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
         self.high_i_range = False 
-
+        self.check_for_errors()
+            
+        self.voltage_now = 0.
         self._write(f"SOURCe{self._channel}:CLEar:AUTO ON")
         self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
+        self.check_for_errors()
         # self._write("FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus")
         self.set_elements(self._elements)
         self.set_current_limit(self._ilimit)
         self.set_voltage_limit(self._vlimit)
-        self.set_sense_mode(self._sense_mode)
+        self.check_for_errors()
+        self.set_sense_mode(self._sense_mode) 
+        self.check_for_errors()
         if configuration['HasHVSwitch']:
             self.set_output_enable(1)
+        self.check_for_errors()
         self.set_output(0)
+        self.check_for_errors()
         self._write('SOURce1:CLEar:AUTO OFF')
         self.check_for_errors()
 
@@ -117,49 +125,18 @@ class Keithley2410:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
-        wait = None
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-            print('Waiting')
-            response = self._inst.query(queryStr, wait).strip("\r\n")
-        print(' >> Keithley2410 Response:', response)
-        return response
-
-    def _query_take_IV_curve(self, queryStr, status,  wait = None):    
-
-        #Copy of _query, but added if statement to check status for termination
-        #Only to be used in take_IV_curve function for now
-
-        """Query command returns most recent buffer
-        """
-        wait = None
-        print(' >> Keithley2410 Query:', queryStr)
-        if wait is None:
-            wait = self._wait_time_s
-            print('Waiting')
-            if status == 'TERM':
-                return
-            response = self._inst.query(queryStr, wait).strip("\r\n")  #Find way to get this line to run
-            print('check1')
+        response = self._inst.query(queryStr, wait).strip("\r\n")
         print(' >> Keithley2410 Response:', response)
         return response
 
     def _read(self):
         """Performs a read command and returns the parsed response
         """
-        
         response = self._query("READ?")
-
-        response_array = self.parse_data(response)
-        return response_array
-       # if type(response_array) is int:
-       #     raise TypeError("Failed to call Terminate")
-       # try:
-       #    return response_array
-       # except ValueError:
-            
-            
+        return self._parse_data(response)
 
     def set_elements(self, element_list):
         """Sets the elements returned in a read command
@@ -332,7 +309,6 @@ class Keithley2410:
             return
 
         if self._VOLTAGE_LIMIT_LOW <= abs(value) <= self._vlimit:
-
             self.set_source_voltage_mode("fixed")
 
             # ramp up the voltage slowly if it's very different than current voltage
@@ -386,7 +362,7 @@ class Keithley2410:
         self._write("CONFigure:VOLTage:DC")
         measurement = self._query("READ?")
         return float(self._parse_data(measurement)[0]['voltage'])
-        
+
     def measureVoltage(self):
         """Renaming of above function for compatibility
         """
@@ -437,9 +413,8 @@ class Keithley2410:
 
         # repetetively query current measurement
         while True:
-            
             measurement = self._query("READ?", 0.)
-        
+
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
             q.append(thiscurrent)
 
@@ -457,52 +432,6 @@ class Keithley2410:
             # if greater than time limit, break
             if time() - start >= maxtime:
                 break
-            
-        measurement = self._query("READ?", 0.)
-        meascurr = float(self._parse_data(measurement)[0]['current'])
-        return '', meascurr, ''
-    
-    def measureCurrentLoop_IV_Term(self, status):
-        # Measure current                                                                                                                                             
-        # Current stabilizes much faster when you ask for a measurement continually                                                                                              
-        if self._sense_mode != "current":
-            self.set_sense_mode("current")
-        self._write("CONFigure:CURRent:DC")
-        # reconfigure to disable auto-ranging
-        if not self.high_i_range:
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
-        else:
-            self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
-            
-        start = time()
-        maxtime = 30.
-        q = deque(maxlen=5)
-
-        # repetetively query current measurement
-        while True:
-            if status == 'TERM':
-                return
-            measurement = self._query_take_IV_curve("READ?", status, 0.)
-            if status == 'TERM':
-                return
-            thiscurrent = float(self._parse_data(measurement)[0]['current'])
-            q.append(thiscurrent)
-
-            if thiscurrent > (50. * 10**(-6)) and not self.high_i_range:
-                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
-                self.high_i_range = True
-            if thiscurrent < (20. * 10**(-6)) and self.high_i_range:
-                self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
-                self.high_i_range = False
-                
-            # check if current measurement has stabilized
-            if len(q) >= 5 and ((np.max(np.array(q)) - np.min(np.array(q))) <= 0.2 * 10**(-6)):
-                break
-
-            # if greater than time limit, break
-            if time() - start >= maxtime:
-                break
-
         
         measurement = self._query("READ?", 0.)
         thiscurrent = float(self._parse_data(measurement)[0]['current'])
@@ -510,6 +439,9 @@ class Keithley2410:
         measarr = np.array(q)
 
         return '', np.mean(measarr), ''
+
+        #meascurr = float(self._parse_data(measurement)[0]['current'])
+        #return '', meascurr, ''
 
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
@@ -591,13 +523,9 @@ class Keithley2410:
                     err_string += err
                 else:
                     break
-        err = self._query('SYSTem:ERRor?')
-        if (err[0:3] != '+0,' and err[0:2] != '0,'):
-            err_string += err
         if err_string != '':
             print(' >> Keithley2410: found error: {}'.format(err_string))
-            #raise ValueError(err_string)
-        self._write(':STATus:QUEue:CLEar')
+            raise ValueError(err_string)
 
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
@@ -646,146 +574,3 @@ class Keithley2410:
         self.outputOff()
 
         return datadict
-
-    def takeIVproc(self, curve, maxV, stepV, RH, Temp, errcheck_step=5):
-
-        self.setVoltage(0.)
-        self.outputOn()
-
-        
-        print(maxV)
-        print(stepV)
-        ln = int(maxV//stepV)+1
-        data = [] # append measurements to this list as rows                                                                                                                           
-
-        self.display_string('Looping...')
-        print(f' >> Keithley2410: Looping to {maxV}V in steps of {stepV}V')
-        sleep(5)
-
-        # Record date
-        current_date = datetime.now()
-        date = current_date.isoformat().split('T')[0]
-        time = current_date.isoformat().split('T')[1].split('.')[0]
-
-        # Count the number of measurements that hit current compliance
-        # Break the loop after the second to save time
-        compl_ctr = 0
-        for i in range(0, ln):
-           # if i % errcheck_step == 0:
-               # self.check_for_errors(1) # Periodically check Keithley error cache
-
-            vltg = i*stepV
-            self.setVoltage(vltg)
-            # Delay here doesn't work for some reason
-            # maybe because the Keithley isn't in measure mode?
-            _, current, _ = self.measureCurrentLoop()
-            
-            voltage, _, _ = self.measureVoltage()
-            resistance = voltage / current
-
-            data.append([vltg, voltage, np.abs(current), resistance])
-
-        self.display_string('Loop finished.')
-        print(' >> Keithley2410: Loop finished')
-
-        # Make output dictionary and return                                                                                                                                            
-        #curve = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}                                                                
-        curve['RH'] = RH
-        curve['Temp'] = Temp
-        curve['data'] = np.array(data)
-        curve['date'] = date
-        curve['time'] = time
-        curve['datetime'] = current_date
-        print(curve)
-        self.IVdata.append(curve)
-        print(self.IVdata)
-        print(' >> Keithley2410: Disabling output')
-        self.setVoltage(0.)
-        self.outputOff()
-
-    # Take IV curve - now using internal voltage sweep function on Keithley
-    # Storing/plotting curve handled elsewhere
-    def takeIVproc_IV_Term(self, curve, maxV, stepV, RH, Temp, status, errcheck_step=5):
-
-        self.setVoltage(0.)
-        self.outputOn()
-
-        
-        
-        ln = int(maxV//stepV)+1
-        data = [] # append measurements to this list as rows                                                                                                                           
-
-        self.display_string('Looping...')
-        print(f' >> Keithley2410: Looping to {maxV}V in steps of {stepV}V')
-        sleep(5)
-
-        # Record date
-        current_date = datetime.now()
-        date = current_date.isoformat().split('T')[0]
-        time = current_date.isoformat().split('T')[1].split('.')[0]
-
-        # Count the number of measurements that hit current compliance
-        # Break the loop after the second to save time
-        compl_ctr = 0
-        for i in range(0, ln):
-           # if i % errcheck_step == 0:
-               # self.check_for_errors(1) # Periodically check Keithley error cache
-
-            vltg = i*stepV
-            self.setVoltage(vltg)
-            # Delay here doesn't work for some reason
-            # maybe because the Keithley isn't in measure mode?
-            _, current, _ = self.measureCurrentLoop_IV_Term(status)
-            if status == 'TERM':
-                break
-            voltage, _, _ = self.measureVoltage()
-            resistance = voltage / current
-
-            data.append([vltg, voltage, np.abs(current), resistance])
-
-        self.display_string('Loop finished.')
-        print(' >> Keithley2410: Loop finished')
-
-        # Make output dictionary and return                                                                                                                                            
-        #curve = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}                                                                
-        curve['RH'] = RH
-        curve['Temp'] = Temp
-        curve['data'] = np.array(data)
-        curve['date'] = date
-        curve['time'] = time
-        curve['datetime'] = current_date
-        print(curve)
-        self.IVdata.append(curve)
-        print(self.IVdata)
-        print(' >> Keithley2410: Disabling output')
-        self.setVoltage(0.)
-        self.outputOff()
-
-
-	def clear_queue(self):
-	"""Clear the Keithley Output Queue.
-	"""
-
-	# Clear the MessageBasedResource
-	self._inst.clear()
-	print(">> Keithley2410: I/O communication cleared.")
-
-	# Empty the Trace Butter and Error Queue
-	self._write("TRAC:CLEar")	# clear the trace butter
-	self._write("*CLS")	# empty the error queue
-	print(">> Keithely2410: Trace Buffer and Error queue cleared.")
-
-	# Make sure nothing left in the Output Queue
-	anchor = # response to "*IDN?"
-	self._write("*IDN?")
-
-	while True:
-		response = self._inst.read()
-
-		if response = anchor:
-			break
-		else:
-			print(f">> Keithley2410: Output queue still remains: {response}")
-			continue
-
-	print(">> Keithely2410: Output queue cleared.")
