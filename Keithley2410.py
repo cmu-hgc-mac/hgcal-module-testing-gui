@@ -85,6 +85,11 @@ class Keithley2410:
             self.set_output_enable(1)
         self.set_output(0)
         self._write('SOURce1:CLEar:AUTO OFF')
+
+        # story identity to use later
+        self._write("*IDN?")
+        self.anchor = self._inst.read()
+
         self.check_for_errors()
 
         self.display_string("Adapter connected.")
@@ -746,6 +751,12 @@ class Keithley2410:
         self.display_string('Loop finished.')
         print(' >> Keithley2410: Loop finished')
 
+        
+        # Clear out everything in the Queue:
+        # self.clear_queue()
+
+
+        
         # Make output dictionary and return                                                                                                                                            
         #curve = {'RH': RH, 'Temp': Temp, 'data': np.array(data), 'date': date, 'time': time, 'datetime': current_date}                                                                
         curve['RH'] = RH
@@ -762,30 +773,28 @@ class Keithley2410:
         self.outputOff()
 
 
-	def clear_queue(self):
-	"""Clear the Keithley Output Queue.
-	"""
+    def clear_queue(self):
+        """Clear the Keithley Output Queue.
+        """
+        
+        # Clear the MessageBasedResource
+        #self._inst.clear()
+        #print(" >> Keithley2410: I/O communication cleared.")
 
-	# Clear the MessageBasedResource
-	self._inst.clear()
-	print(">> Keithley2410: I/O communication cleared.")
+        # Empty the Trace Butter and Error Queue
+        self._write("TRAC:CLEar")   # clear the trace butter
+        self._write("*CLS")   # empty the error queue
+        print(" >> Keithely2410: Trace Buffer and Error queue cleared.")
 
-	# Empty the Trace Butter and Error Queue
-	self._write("TRAC:CLEar")	# clear the trace butter
-	self._write("*CLS")	# empty the error queue
-	print(">> Keithely2410: Trace Buffer and Error queue cleared.")
+        # Make sure nothing left in the Output Queue
+        self._write("*IDN?")
 
-	# Make sure nothing left in the Output Queue
-	anchor = # response to "*IDN?"
-	self._write("*IDN?")
+        while True:
+            response = self._inst.read()
+            if response == self.anchor:
+                break
+            else:
+                print(f" >> Keithley2410: Output queue still remains: {response}")
+                continue
 
-	while True:
-		response = self._inst.read()
-
-		if response = anchor:
-			break
-		else:
-			print(f">> Keithley2410: Output queue still remains: {response}")
-			continue
-
-	print(">> Keithely2410: Output queue cleared.")
+        print(">> Keithely2410: Output queue cleared.")

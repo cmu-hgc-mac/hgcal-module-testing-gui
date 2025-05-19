@@ -945,7 +945,7 @@ def take_IV_curve(state, step=10, maxV=900):
     curvew = sg.Window(f"Module Test: Taking IV Curve", layout, margins=(200,100))
 
     event, values = curvew.read(timeout=100)
-
+    
     if state['-Debug-Mode-']:
        sleep(5)
     else:
@@ -974,7 +974,6 @@ def take_IV_curve(state, step=10, maxV=900):
             #Broke up into 2 if statements, so we can tell what happens(closed window or terminate worked)
                 print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
                 status = 'TERM'
-		state['ps'].clear_queue()
                 break
             if  event == sg.WIN_CLOSED:
                 print('Closed window')
@@ -989,6 +988,8 @@ def take_IV_curve(state, step=10, maxV=900):
 
         if curve_proc.is_alive():
             curve_proc.terminate()
+
+            #curve_proc.join()  #This waits until process is fully terminated, could be useful? Instead of "sleep()"
  
            
         sleep(0.5)
@@ -1003,19 +1004,18 @@ def take_IV_curve(state, step=10, maxV=900):
         else:
                                                                                               
             
-           
-           
+           #Clears queue to solve output queue issues" 
+            state['ps'].clear_queue()
            
       
         
             state['ps']._write("STATus:PRESet")
 
       
-           # d = state['ps']._query("STAT:OPER?")#print(d)
-            #e = state['ps']._query("STAT:MEAS?")
-            #print(e)
-            #f = state['ps']._query("STAT:QUES?")
-            #print(f)
+             
+            
+            
+            
             a = state['ps']._query("OUTPut?")
             print('a', a)
 
