@@ -952,7 +952,7 @@ def restart_services(state):
     if not (state['-DCDC-Connected-'] and state['-DCDC-Powered-'] and state['-Hexactrl-Powered-'] and state['-Hexactrl-Accessed-'] and state['-FW-Loaded-']):
         return
     
-    starting = waiting_window("Relaoding firmware and restarting services on test stand...", title="Starting Services...", description='systemctl restart daq-server && systemctl restart i2c-server')
+    starting = waiting_window("Reloading firmware and restarting services on test stand...", title="Starting Services...", description='systemctl restart daq-server && systemctl restart i2c-server')
     if state['-Debug-Mode-']:
         sleep(5)
         services = True

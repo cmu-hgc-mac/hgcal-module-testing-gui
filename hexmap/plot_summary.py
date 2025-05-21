@@ -226,7 +226,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         else:
             noisy_limit = (2 if column == 'adc_stdd' else 5000)
             highval = df_data[column] > noisy_limit
-        # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+            # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
         # pick out channels with corrupted readout
         corrupted = df_data['corruption'] == 1
@@ -355,6 +355,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # save the figure
         figname = figdir + str(label) + "_" + column + ".png"
         plt.savefig(figname)
+        plt.close()
     return 1
 
 def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False):
@@ -426,6 +427,7 @@ def plot_channels(df, figdir = "./", hb_type = "LF", label = None, live = False)
         # save the figure                                                                                                                                                               
         figname = figdir + str(label) + "_" + column + "_channels.pdf"
         plt.savefig(figname)
+        plt.close()
     return 1
 
 def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
@@ -477,6 +479,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # save the figure                                                                                                                                                               
         figname = figdir + str(label) + "_" + column + "_pads.pdf"
         plt.savefig(figname)
+        plt.close()
     return 1
 
                 
