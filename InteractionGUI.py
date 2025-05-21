@@ -909,25 +909,7 @@ def scan_vref(state, BV):
         state['pc'].vrefinv_scan()
     vref.close()
 
-<<<<<<< HEAD
 def take_IV_curve(state, step=10, maxV=500):
-=======
-    
-'''def _query_take_IV_curve(self, queryStr, status, wait = None):         #Original function in e Keithley, Line 128
-    print('>> Keithley2410 Query:', queryStr)
-    if wait is None:
-        wait = self.wait_time_s
-        print('Waiting')
-        if status == 'TERM':
-            curve_proc.kill()
-        response = self._inst._query_take_IV_curve(queryStr, status, wait)
-
-    print(' >> Keithley2410 Response:', response)
-    return response
-'''
-
-def take_IV_curve(state, step=10, maxV=900):
->>>>>>> 5385a2d (New take current changes)
     """
     Takes an IV curve automatically using the power supply object. The range is assumed to be 0-500V
     and the default step is 20V. If the RH argument is not zero, it prompts the user to enter the ambient
