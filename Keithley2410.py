@@ -129,25 +129,7 @@ class Keithley2410:
         print(' >> Keithley2410 Response:', response)
         return response
 
-    def _query_take_IV_curve(self, queryStr, status,  wait = None):    
-
-        #Copy of _query, but added if statement to check status for termination
-        #Only to be used in take_IV_curve function for now
-
-        """Query command returns most recent buffer
-        """
-        wait = None
-        print(' >> Keithley2410 Query:', queryStr)
-        if wait is None:
-            wait = self._wait_time_s
-            print('Waiting')
-            if status == 'TERM':
-                return
-            response = self._inst.query(queryStr, wait).strip("\r\n")  #Find way to get this line to run
-            print('check1')
-        print(' >> Keithley2410 Response:', response)
-        return response
-
+    
     def _read(self):
         """Performs a read command and returns the parsed response
         """

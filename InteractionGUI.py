@@ -779,11 +779,6 @@ def trim_pedestals(state, BV):
         if status == 'RUN':
             status = 'CONT'
 
-        #state['pc'].pedestal_run()
-        #state['pc'].pedestal_scan()
-        #state['pc'].vrefnoinv_scan()
-        #state['pc'].vrefinv_scan()
-
         if not status == 'TERM':
             if state['-Live-Module-'] and BV is not None:
                 _, current, _ = state['ps'].measureCurrentLoop()
@@ -944,7 +939,6 @@ def take_IV_curve(state, step=10, maxV=500):
         # use multiprocessing to run IV curve in separate process
         # output dict is shared between main proc and IV proc
   
-        
         manager = Manager()
         curve = manager.dict()
         curve_proc = Process(target=state['ps'].takeIVproc_IV_Term, args = [curve, maxV, step, RH, Temp, status])
@@ -953,7 +947,7 @@ def take_IV_curve(state, step=10, maxV=500):
         while curve_proc.is_alive():
             event, values = curvew.read(timeout=1)
             if event == 'Terminate Test':
-            #Broke up into 2 if statements, so we can tell what happens(closed window or terminate worked)
+                #Broke up into 2 if statements, so we can tell what happens(closed window or terminate worked)
                 print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
                 status = 'TERM'
                 break
@@ -961,52 +955,32 @@ def take_IV_curve(state, step=10, maxV=500):
                 print('Closed window')
                 status = 'TERM'
                 break
-        
-        
-        sleep(0.5)
-        
-       
-    
-
+                
+        # sleep(0.5)
+               
         if curve_proc.is_alive():
             curve_proc.terminate()
 
             #curve_proc.join()  #This waits until process is fully terminated, could be useful? Instead of "sleep()"
- 
-           
+            
         sleep(0.5)
 
         curve_proc.close()
 
-        
-
-             
         if status == 'RUN':
             status = 'CONT'
         else:
-                                                                                              
-            
-           #Clears queue to solve output queue issues" 
+            # Clear queues: Error queue and Out queue
             state['ps'].clear_queue()
-           
-      
-        
+
+            # Reset the Keithley 
             state['ps']._write("STATus:PRESet")
 
-      
-             
-            
-            
-            
-            a = state['ps']._query("OUTPut?")
-            print('a', a)
+            # Reset Voltage
+            v_now, _, _ = state['ps'].measureVoltage()
+            state['ps'].voltage_now = v_now
+            state['ps'].setVoltage(0.)
 
-            #state['ps']._write("OUTput1:ENABle:STATe 1 ")
-          
-            b = state['ps']._query("OUTPut?")
-            print('b', b)
-     
-            state['ps'].setVoltage(0)
             state['ps'].outputOff()
             
         update_state(state, '-HV-Output-On-', False, 'black')
