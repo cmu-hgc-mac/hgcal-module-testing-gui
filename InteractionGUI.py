@@ -484,9 +484,6 @@ def check_leakage_current(state):
         window.close()
     return 'CONT'
 
-
-    
-        
 def configure_test_stand(state, fpgahostname):
     """
     Guides the user through connecting the various boards and then handles the startup of the testing system. At
