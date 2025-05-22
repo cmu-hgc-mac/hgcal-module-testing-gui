@@ -1,7 +1,10 @@
 # HGCal Module Testing GUI
 A GUI for HGCAL hexaboard and silicon module testing
+
 A component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac)
+
 Andrew C. Roberts
+
 with contributions from Carter Stiteler, Siyu (Rain) Chen, and Xinyue (Joyce) Zhuang
 
 ## Motivation
