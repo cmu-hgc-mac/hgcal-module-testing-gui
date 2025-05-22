@@ -390,7 +390,6 @@ def iv_upload(datadict, state):
     except:
         ratio = 0.
 
-
     comment = None
     if len(state['-Output-Subdir-'].split('/')) == 3:
         comment = state['-Output-Subdir-'].split('/')[2]

@@ -48,6 +48,7 @@ class Keithley2410:
         self._CURRENT_LIMIT_LOW = -1.05
         self._CURRENT_LIMIT_HIGH = 1.05
         self._ELEMENTS = ["voltage", "current", "resistance", "time", "status"]
+
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
@@ -522,9 +523,6 @@ class Keithley2410:
                     err_string += err
                 else:
                     break
-        err = self._query('SYSTem:ERRor?')
-        if (err[0:3] != '+0,' and err[0:2] != '0,'):
-            err_string += err
         if err_string != '':
             print(' >> Keithley2410: found error: {}'.format(err_string))
             #raise ValueError(err_string)
