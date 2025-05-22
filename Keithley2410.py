@@ -579,7 +579,7 @@ class Keithley2410:
         
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
-    def takeIVproc_IV_Term(self, curve, maxV, stepV, RH, Temp, status, errcheck_step=5):
+    def takeIVproc(self, curve, maxV, stepV, RH, Temp, status, errcheck_step=5):
 
         self.setVoltage(0.)
         self.outputOn()
@@ -604,8 +604,8 @@ class Keithley2410:
             # Delay here doesn't work for some reason
             # maybe because the Keithley isn't in measure mode?
             _, current, _ = self.measureCurrentLoop()
-            if status == 'TERM':
-                break
+            #if status == 'TERM':
+            #    break
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
 
@@ -634,7 +634,6 @@ class Keithley2410:
         # Empty the Trace Buffer and Error Queue
         self._write("TRAC:CLEar")   # clear the trace buffer
         self._write("*CLS")   # empty the error queue
-        print(" >> Keithely2410: Trace Buffer and Error queue cleared.")
 
         # Read out everything left in the Output Queue
         self._write("*IDN?")
@@ -647,7 +646,7 @@ class Keithley2410:
                 print(f" >> Keithley2410: Output queue still remains: {response}")
                 continue
 
-        print(" >> Keithely2410: Output queue cleared.")
+        print(" >> Keithely2410: Trace buffer, error queue, and output queue cleared.")
 
 
         
