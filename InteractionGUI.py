@@ -1,4 +1,4 @@
-mport numpy as np
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import PySimpleGUI as sg
@@ -937,7 +937,7 @@ def take_IV_curve(state, step=10, maxV=500):
         # output dict is shared between main proc and IV proc
         manager = Manager()
         curve = manager.dict()
-        curve_proc = Process(target=state['ps'].takeIVproc_IV_Term, args = [curve, maxV, step, RH, Temp, status])
+        curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp, status])
         curve_proc.start()
                                          
         while curve_proc.is_alive():
