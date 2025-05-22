@@ -84,7 +84,7 @@ class Keithley2410:
             self.set_output_enable(1)
         self.set_output(0)
  
-        # story identity to use later
+        # store identity to use later
         self._write("*IDN?")
         self.anchor = self._inst.read()
 
@@ -124,8 +124,7 @@ class Keithley2410:
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-            print('Waiting')
-            response = self._inst.query(queryStr, wait).strip("\r\n")
+        response = self._inst.query(queryStr, wait).strip("\r\n")
         print(' >> Keithley2410 Response:', response)
         return response
 
@@ -138,13 +137,6 @@ class Keithley2410:
 
         response_array = self.parse_data(response)
         return response_array
-       # if type(response_array) is int:
-       #     raise TypeError("Failed to call Terminate")
-       # try:
-       #    return response_array
-       # except ValueError:
-            
-            
 
     def set_elements(self, element_list):
         """Sets the elements returned in a read command
@@ -444,8 +436,11 @@ class Keithley2410:
                 break
             
         measurement = self._query("READ?", 0.)
-        meascurr = float(self._parse_data(measurement)[0]['current'])
-        return '', meascurr, ''
+        thiscurrent = float(self._parse_data(measurement)[0]['current'])
+        q.append(thiscurrent)
+        measarr = np.array(q)
+
+        return '', np.mean(measarr), ''
     
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
@@ -638,7 +633,7 @@ class Keithley2410:
         """Clear the Keithley Output Queue.
         """
         
-        # Empty the Trace Butter and Error Queue
+        # Empty the Trace Buffer and Error Queue
         self._write("TRAC:CLEar")   # clear the trace buffer
         self._write("*CLS")   # empty the error queue
         print(" >> Keithely2410: Trace Buffer and Error queue cleared.")

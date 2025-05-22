@@ -258,9 +258,6 @@ def exit_tests():
         update_state(current_state, '-HV-Output-On-', False, 'black')
         
     basewindow['Run Tests'].update(disabled=False)
-
-    # Reset Keithley?
-    
    
     
 # Variables that will be set by the user and then used to create the module serial number
@@ -897,8 +894,6 @@ while True:
             status = take_IV_curve(current_state, maxV=maxV)
 
             if status != 'CONT':
-                
-                sleep(2)
                 exit_tests()
                 continue
             plot_IV_curves(current_state)
