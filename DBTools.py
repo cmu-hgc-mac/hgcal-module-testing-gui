@@ -390,11 +390,16 @@ def iv_upload(datadict, state):
     except:
         ratio = 0.
 
+
     comment = None
     if len(state['-Output-Subdir-'].split('/')) == 3:
         comment = state['-Output-Subdir-'].split('/')[2]
 
-        
+    v1 = 600
+    v2 = 800
+    #ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
+    ratio = None
+    
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
