@@ -955,19 +955,17 @@ def take_IV_curve(state, step=10, maxV=500):
                 print('Closed window')
                 status = 'TERM'
                 break
-                
-        # sleep(0.5)
-               
+
         if curve_proc.is_alive():
             curve_proc.terminate()
 
-            #curve_proc.join()  #This waits until process is fully terminated, could be useful? Instead of "sleep()"
-            
         sleep(0.5)
+        
+        curve_proc.join()
 
-        curve_proc.close()
-
+        # Append data into IVdata:
         if status == 'RUN':
+            state['ps'].IVdata.append(curve)
             status = 'CONT'
         else:
             # Clear queues: Error queue and Out queue

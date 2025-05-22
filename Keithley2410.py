@@ -628,9 +628,7 @@ class Keithley2410:
         curve['date'] = date
         curve['time'] = time
         curve['datetime'] = current_date
-        print(curve)
-        self.IVdata.append(curve)
-        print(self.IVdata)
+
         print(' >> Keithley2410: Disabling output')
         self.setVoltage(0.)
         self.outputOff()
