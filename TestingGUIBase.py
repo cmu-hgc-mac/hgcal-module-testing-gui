@@ -12,6 +12,8 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
+default_max_V = 500
+
 # Load configuration file
 configuration = {}
 with open('configuration.yaml', 'r') as file:
@@ -21,10 +23,10 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
     configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
     
-from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload
+from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes
     
 # Create theme
-lgfont = ('Arial', 40)
+lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
 
 cmured = '#C41230'
@@ -123,14 +125,14 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
                  'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
 testsetup = [[sg.Text('Tests to run: ')],
-             [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-')],
+             [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-'), sg.Text('IV Max Voltage:'), sg.Input(s=5,key='-StandardIV-MaxV-')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
              [sg.Checkbox('Pedestal Run', key='-Pedestal-Run-', enable_events=True), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Pedestals-', enable_events=True)],
              [sg.pin(sg.Column(BVonly, key='-BV-Menu-', visible=False))],
              [sg.Checkbox('Other Test Script:', key='-Other-Script-'), sg.Combo(other_scripts, key="-Other-Which-Script-"), 
               sg.Text('Bias Voltage: ', key='-Bias-Voltage-Other-Text-'), sg.Input(s=5, key='-Bias-Voltage-Other-')],
              [sg.Checkbox('Ambient IV Curve', key='-Ambient-IV-'), sg.Text(' Max V:'), sg.Input(s=5,key='-AmbIV-MaxV-')],
-             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('800V Bias in Wait Period', key='-Dry-Wait-Bias-')],
+             [sg.Checkbox('Dry IV Curve', key='-Dry-IV-'), sg.Text('Number of tests: '), sg.Input(s=2, key='-N-Dry-IV-'), sg.Checkbox('Bias in Wait Period', key='-Dry-Wait-Bias-')],
              [sg.Text('Wait Periods (minutes):'), sg.Input(s=3,key='-DryIV-Wait-Time-1-'), sg.Input(s=3,key='-DryIV-Wait-Time-2-'), sg.Input(s=3,key='-DryIV-Wait-Time-3-'),
               sg.Text(' Max V:'), sg.Input(s=5,key='-DryIV-MaxV-')],
              [sg.Button("Run Tests", disabled=True, key='Run Tests'), sg.Button("Restart Services", disabled=True), sg.Text('', visible=False, key='-Display-Str-Right-')]]
@@ -170,7 +172,7 @@ elif vers0 == 3 and vers1 < 9:
 
 layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)], logo,
           [leftcol, sg.Push(), rightcol],
-          [sg.Push(), sg.Button("Grade Module (WIP)")],
+          [sg.Push(), sg.Button("Grade Module")],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
           [sg.Frame('Status Bar', statusbar)]]
 
@@ -219,7 +221,7 @@ def disable_ts_tests():
     toggle_ts_tests(False)
 
 def toggle_iv_tests(enabled):
-    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-']
+    keys = ['-Ambient-IV-', '-Dry-IV-', '-N-Dry-IV-', '-Dry-Wait-Bias-', '-DryIV-Wait-Time-1-', '-DryIV-Wait-Time-2-', '-DryIV-Wait-Time-3-', '-DryIV-MaxV-', '-AmbIV-MaxV-', '-StandardIV-MaxV-']
     for key in keys:
         basewindow[key].update(disabled=(not enabled))
         
@@ -233,13 +235,13 @@ def disable_iv_tests():
 def clear_tests():
     for key in ['-Standard-Test-', '-Pedestal-Run-','-Trim-Pedestals-', '-Other-Script-', '-Ambient-IV-', '-Dry-IV-']:
         basewindow[key].update(False)
-    for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal\
-6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
+    for key in ['-N-Pedestals-', '-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-', '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-', '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-']:
         basewindow[key].update('')
     basewindow['-Bias-Voltage-PedTrim-'].update(value='300')
     basewindow['-Bias-Voltage-Other-'].update(value='300')
-    basewindow['-DryIV-MaxV-'].update(value='900')
-    basewindow['-AmbIV-MaxV-'].update(value='900')
+    basewindow['-DryIV-MaxV-'].update(value=f'{default_max_V}')
+    basewindow['-AmbIV-MaxV-'].update(value=f'{default_max_V}')
+    basewindow['-StandardIV-MaxV-'].update(value=f'{default_max_V}')
 
 def exit_tests():
 
@@ -254,9 +256,9 @@ def exit_tests():
     if current_state['-Live-Module-'] and not current_state['-Debug-Mode-']:
         current_state['ps'].outputOff()
         update_state(current_state, '-HV-Output-On-', False, 'black')
-
+        
     basewindow['Run Tests'].update(disabled=False)
-
+   
     
 # Variables that will be set by the user and then used to create the module serial number
 fpgahostname = ''
@@ -404,8 +406,11 @@ while True:
             basewindow['-Scanned-QR-Code-'].update(value='')
             continue
 
-        basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
-
+        try:
+            basewindow['-Module-Index-'].update(value=str(int(serialsections[4])))
+        except ValueError:
+            basewindow['-Module-Index-'].update(value='')
+            
         if serialsections[2][0] == 'F': basewindow['-Full-'].update(value=True)
         elif serialsections[2][0] == 'T': basewindow['-Top-'].update(value=True)
         elif serialsections[2][0] == 'B': basewindow['-Bottom-'].update(value=True)
@@ -613,7 +618,15 @@ while True:
     if values['-Inspector-'] != '':
         inspector = values['-Inspector-']
     modulestatus = values['-Module-Status-']
-        
+
+    bv_fields = ['-Bias-Voltage-Pedestal1-', '-Bias-Voltage-Pedestal2-', '-Bias-Voltage-Pedestal3-',
+                 '-Bias-Voltage-Pedestal4-', '-Bias-Voltage-Pedestal5-', '-Bias-Voltage-Pedestal6-',
+                 '-Bias-Voltage-PedTrim-', '-Bias-Voltage-Other-', '-DryIV-MaxV-', '-AmbIV-MaxV-',
+                 '-StandardIV-MaxV-']
+    for field in bv_fields:
+        if '-' in values[field]:
+            basewindow[field].update(value=values[field].replace('-', ''))
+            
     # Now, check for button presses
     # Configure test stand starts the FPGA assembly and startup process
     if event == "Configure Test Stand":
@@ -640,7 +653,7 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])): # no HD Five
             show_string("Not Implemented")
             continue
 
@@ -652,9 +665,9 @@ while True:
             else:
                 show_string("Not Implemented")
                 continue
-        elif rocvers in ['2', 'B', '4']:
-            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL', 'HR']:
-                pass # V3b ROC testing
+        elif rocvers in ['2', 'B', '4', 'C']:
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'L5', 'HF', 'HT', 'HL', 'HR']: # no V3b/c HD Bottom
+                pass # V3b/c ROC testing
             else:
                 show_string("Not Implemented")
                 continue
@@ -726,7 +739,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])): # all geometries
             show_string("Not Implemented")
             continue
         
@@ -847,19 +860,29 @@ while True:
 
             # for hexaboards, just take a bunch of pedestals, then skip the rest
             if not values['-IsLive-']:
-                #multi_run_pedestals(current_state, [None, None])
-                status = trim_pedestals(current_state, None)
+                status = multi_run_pedestals(current_state, [None, None], showplots = False)
                 if status == 'CONT':
-                    status = multi_run_pedestals(current_state, [None, None, None, None, None, None])
+                    status = trim_pedestals(current_state, None)
+                if status == 'CONT':
+                    status = multi_run_pedestals(current_state, [None, None, None, None, None])
                 exit_tests()
                 continue
-            
-            # trim and take pedestals
-            status = trim_pedestals(current_state, 300)
-            if status == 'CONT':
-                status = multi_run_pedestals(current_state, [10, 300, 300, 300, 300, 300, 800, 800])
 
-            current_state['ps'].outputOff()
+            maxV = int(values['-StandardIV-MaxV-'])
+            if maxV > 900:
+                maxV = 900
+
+            # trim and take pedestals
+            status = multi_run_pedestals(current_state, [300, 300], showplots = False) # untrimmed
+            if status == 'CONT':
+                status = trim_pedestals(current_state, 300)
+            if status == 'CONT':
+                status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
+
+            if not current_state['-Debug-Mode-']:
+                # pedestal run in InteractionGUI handles wire polarization
+                current_state['ps'].outputOff()
+
             update_state(current_state, '-HV-Output-On-', False, 'black')
 
             if status != 'CONT':
@@ -867,59 +890,78 @@ while True:
                 continue
             
             # take ambient IV curve - do we want?
-            status = take_IV_curve(current_state)
+            status = take_IV_curve(current_state, maxV=maxV)
             if status != 'CONT':
                 exit_tests()
                 continue
             plot_IV_curves(current_state)
             
-            # open dry air valve manually or automatically            
-            if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
-                from InteractionGUI import do_something_window
-                do_something_window('Open dry air valve', 'Open')
-            else:
-                from AirControl import AirControl
-                ac = AirControl()
-                for i in range(10):
-                    ac.set_air_on()
+            # if not encapsulated, show out rebonding information
+            modulestatus = values["-Module-Status-"]
+            if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
+                try:
+                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+                    if len(unconcells) > 0 or len(noisycells) > 0:
+                        module_rebond_window(current_state, unconcells, noisycells)
+                except TypeError:
+                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+
+            elif modulestatus == 'Completely Encapsulated' or modulestatus == 'Bolted':
+                                    
+                # open dry air valve manually or automatically            
+                if not configuration['HasRHSensor'] or current_state['-Debug-Mode-']:
+                    from InteractionGUI import do_something_window
+                    do_something_window('Open dry air valve', 'Open')
+                else:
+                    from AirControl import AirControl
+                    ac = AirControl()
+                    for i in range(10):
+                        ac.set_air_on()
                     
-            # bias at 800V during wait to improve curve consistency for modules with glue on guard ring
-            current_state['ps'].outputOn()
-            update_state(current_state, '-HV-Output-On-', True, 'Green')
-            current_state['ps'].setVoltage(800.)
+                wait_time_s = 20*60 # 20 min    
+                dry_date = datetime.now()
+                finalIV_date = dry_date + timedelta(seconds=wait_time_s)
+                finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
 
-            wait_time_s = 20*60 # 20 min    
-            dry_date = datetime.now()
-            finalIV_date = dry_date + timedelta(seconds=wait_time_s)
-            finalIV_time = finalIV_date.isoformat().split('T')[1].split('.')[0]
+                print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
-            layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
-                      [sg.Button('Terminate Test')]]
-            waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+                layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
+                          [sg.Button('Terminate Test')]]
+                waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
-            event, values = waiting.read(timeout=100)
+                eventw, valuesw = waiting.read(timeout=100)
+                
+                # bias at 500V during wait to improve curve consistency for modules with glue on guard ring
 
-            print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
+                if not current_state['-Debug-Mode-']:
+                    current_state['ps'].outputOn()
+                    update_state(current_state, '-HV-Output-On-', True, 'Green')
 
-            while True:
-                event, values = waiting.read(timeout=1)
-                if event == 'Terminate Test' or event == sg.WIN_CLOSED:
-                    print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
-                    status = 'TERM'
-                    break
-                if datetime.now() >= finalIV_date:
-                    break
+                    if configuration['HVWiresPolarization'] == 'Forward':
+                        current_state['ps'].setVoltage(-maxV)
+                    elif configuration['HVWiresPolarization'] == 'Reverse':
+                        current_state['ps'].setVoltage(maxV)
+                    
+                while True:
+                    eventw, valuesw = waiting.read(timeout=10)
+                    if eventw == 'Terminate Test': # or eventw == sg.WIN_CLOSED: can't do sg.WIN_CLOSED here apparently, it always terminates immediately
+                        print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
+                        status = 'TERM'
+                        break
+                    if datetime.now() >= finalIV_date:
+                        break
 
-            if status != 'CONT':
-                exit_tests()
-                continue
+                waiting.close()
+                if status != 'CONT':
+                    exit_tests()
+                    continue
 
-            status = take_IV_curve(current_state)
-            if status != 'CONT':
-                exit_tests()
-                continue
-            plot_IV_curves(current_state)
-            
+                status = take_IV_curve(current_state, maxV=maxV)
+                if status != 'CONT':
+                    exit_tests()
+                    continue
+                plot_IV_curves(current_state)
+ 
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -996,7 +1038,10 @@ while True:
         # Take IV curve at ambient humidity
         if values['-Ambient-IV-']:
 
-            status = take_IV_curve(current_state)
+            maxV = int(values['-AmbIV-MaxV-'])
+            if maxV > 900:
+                maxV = 900
+            status = take_IV_curve(current_state, maxV=maxV)
             if status == 'CONT':
                 plot_IV_curves(current_state)
             else:
@@ -1031,6 +1076,10 @@ while True:
 
                 sleep(1)
                 
+                maxV = int(values['-DryIV-MaxV-'])
+                if maxV > 900:
+                    maxV = 900
+
                 drytime = time()
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=final_dry_time)
@@ -1040,9 +1089,9 @@ while True:
                 # Wait until time passed, then run dry IV curve
                 layout = [[sg.Text(f"Waiting until {finalIV_time} to perform IV", font=lgfont)],
                           [sg.Button('Terminate Test')]]
-                waiting = sg.Window(f"Module Test: Waitinf for Dry IV", layout, margins=(200,100))
+                waiting = sg.Window(f"Module Test: Waiting for Dry IV", layout, margins=(200,100))
 
-                event, values = waiting.read(timeout=100)
+                eventw, valuesw = waiting.read(timeout=100)
                 print(f' >> TestingGUIBase: waiting until {finalIV_time} to perform IV')
 
                 # module conditioning
@@ -1050,14 +1099,19 @@ while True:
                     if values['-Dry-Wait-Bias-']:
                         current_state['ps'].outputOn()
                         update_state(current_state, '-HV-Output-On-', True, 'Green')
-                        current_state['ps'].setVoltage(800.)
+
+                        if configuration['HVWiresPolarization'] == 'Forward':
+                            current_state['ps'].setVoltage(-maxV)
+                        elif configuration['HVWiresPolarization'] == 'Reverse':
+                            current_state['ps'].setVoltage(maxV)
                     else:
                         current_state['ps'].outputOff()
                         update_state(current_state, '-HV-Output-On-', False, 'black')
-                
+
+                status = 'CONT'
                 while True:
-                    event, values = waiting.read(timeout=1)
-                    if event == 'Terminate Test' or event == sg.WIN_CLOSED:
+                    eventw, valuesw = waiting.read(timeout=1)
+                    if eventw == 'Terminate Test' or eventw == sg.WIN_CLOSED:
                         print(' >> TestingGUIBase: calling TERMINATE while waiting for dry IV at user request')
                         status = 'TERM'
                         break
@@ -1069,11 +1123,12 @@ while True:
 
                 waiting.close()
 
+                
                 if status != 'CONT':
                     exit_tests()
                     continue
 
-                status = take_IV_curve(current_state)
+                status = take_IV_curve(current_state, maxV=maxV)
                 if status == 'CONT':
                     plot_IV_curves(current_state)
                 else:
@@ -1094,7 +1149,7 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
-    if event == 'Grade Module (WIP)':
+    if event == 'Grade Module':
         if '320-X' in moduleserial:
             show_string("Can't grade hexaboard", field='Right')
             continue
@@ -1106,85 +1161,20 @@ while True:
             show_string("Grading requires local db", field='Right')
             continue
 
-        print(f' >> TestingGUIBase: Grading {moduleserial}')
         try:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
-            i_600v, i_850v = iv_info(moduleserial)
+            #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
+            i_500v = iv_info(moduleserial)
             pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
-
-        # four individual grades
-        # last updated 2024/10/24 by https://indico.cern.ch/event/1466920/contributions/6176083/attachments/2948475/5183839/ModuleProdNumbers_Oct2024.pdf
-        if i_600v < 1e-4 and i_850v / i_600v < 2.5:
-            iv_grade = 'A'
-        elif i_600v < 2e-4 and i_850v / i_600v < 5:
-            iv_grade = 'B'
-        else:
-            iv_grade = 'C'
-
-        if badfrac < 0.02:
-            readout_grade = 'A'
-        elif badfrac < 0.05:
-            readout_grade = 'B'
-        else:
-            readout_grade = 'C'
-
-        if abs(pxoffset) < 50 and abs(pyoffset) < 50 and abs(pangoffset) < 0.02:
-            proto_grade = 'A'
-        elif abs(pxoffset) < 100 and abs(pyoffset) < 100 and abs(pangoffset) < 0.05:
-            proto_grade = 'B'
-        else:
-            proto_grade = 'C'
+        if i_500v is None:
+            show_string("Tests not complete", field='Right')
+            continue
         
-        if abs(mxoffset) < 50 and abs(myoffset) < 50 and abs(mangoffset) < 0.02:
-            module_grade = 'A'
-        elif abs(mxoffset) < 100 and abs(myoffset) < 100 and abs(mangoffset) < 0.05:
-            module_grade = 'B'
-        else:
-            module_grade = 'C'
-
-        # determine overall grade = minimum indiv grade
-        grade_list = [iv_grade, readout_grade, proto_grade, module_grade]
-        if grade_list.count('A') == 4:
-            final_grade = 'A'
-        elif grade_list.count('C') == 0:
-            final_grade = 'B'
-        else:
-            final_grade = 'C'
-
-        # pop-up window to show grade and display plots
-        # just show grade for now        
-        qc_summary = {'module_name': moduleserial,
-                      'final_grade': final_grade,
-                      'proto_flatness': pflatness,
-                      'proto_ave_thickness': pthickness,
-                      'proto_x_offset': pxoffset,
-                      'proto_y_offset': pyoffset,
-                      'proto_ang_offset': pangoffset,
-                      'proto_grade': proto_grade,
-                      'module_flatness': mflatness,
-                      'module_ave_thickness': mthickness,
-                      'module_x_offset': mxoffset,
-                      'module_y_offset': myoffset,
-                      'module_ang_offset': mangoffset,
-                      'module_grade': module_grade,
-                      'list_cells_unbonded': unconcells,
-                      'list_cells_grounded': groundedcells,
-                      'count_bad_cells': len(badcell),
-                      'list_noisy_cells': noisycells,
-                      'list_dead_cells': deadcells,
-                      'readout_grade': readout_grade,
-                      'i_at_600v': i_600v,
-                      'i_ratio_850v_600v': i_850v/i_600v,
-                      'iv_grade': iv_grade,
-                      #'grade_version': 'preproduction_1_2024-10-16', 
-                      }
-        
-        print(f' >> TestingGUIBase: Module {moduleserial}: Grade {final_grade}')
-        # comments added by pop-up window
-        qc_summary = grade_module_window(moduleserial, qc_summary)
+        print(f' >> TestingGUIBase: Grading {moduleserial}')
+        qc_summary = grade_module(moduleserial)
         summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it

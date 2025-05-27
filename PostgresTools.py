@@ -84,16 +84,36 @@ async def upload_PostgreSQL(table_name, db_upload_data):
 
     # check table exists and upload
     table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
-    if table_exists:
 
-        # new db uploading scheme
-        query = get_query(table_name, db_upload_data.keys())
-        print(f'  >> PostgresTools: Executing query: {query}')
-        await conn.execute(query, *db_upload_data.values())
-
-        print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
-    else:
+    if not table_exists:
         print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')
+        await conn.close()
+        return
+
+    # remove key-value pairs from dict if not present in database table schema
+    col_query = f"""SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'; """
+    columns = await conn.fetch(col_query)
+    valid_columns = [row['column_name'] for row in columns]
+    
+    keylist = list(db_upload_data.keys())
+    for key in keylist:
+        if key not in valid_columns:
+            db_upload_data.pop(key, None)
+            print(f'  >> PostgresTools: upload key {key} not in schema of table {table_name}; removing from upload')
+
+    # don't bother uploading an empty dictionary
+    if len(db_upload_data.keys()) == 0:
+        print(f'  >> PostgresTools: upload dictionary is empty, not uploading')
+        await conn.close()
+        return
+            
+    # new db uploading scheme
+    query = get_query(table_name, db_upload_data.keys())
+    print(f'  >> PostgresTools: Executing query: {query}')
+    await conn.execute(query, *db_upload_data.values())
+
+    print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
+    
     await conn.close()
 
 def get_query_read(table_name, part_name = None):
@@ -180,7 +200,37 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
             FROM {table_name}
             WHERE REPLACE(module_name,'-','') = '{part_name}'
             ORDER BY date_bond, time_bond;""" 
-                    
+
+    elif table_name in ['baseplate', 'bp_inspect']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(bp_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['sensor']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(sen_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(hxb_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['proto_assembly']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(proto_name,'-','') = '{part_name}';"""
+
+    elif table_name in ['module_info', 'module_assembly', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap']:
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(module_name,'-','') = '{part_name}';"""
+        
+    elif table_name == 'sen_iv_data':
+        query = f"""SELECT *
+            FROM {table_name}
+            WHERE REPLACE(scratchpad_id,'-','') = '{part_name}';"""
+
     # fetch and return
     value = await conn.fetch(query)
     await conn.close()

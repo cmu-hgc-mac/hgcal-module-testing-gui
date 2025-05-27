@@ -75,7 +75,6 @@ class Keithley2410:
         # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
         self.high_i_range = False 
 
-        self._write(f"SOURCe{self._channel}:CLEar:AUTO ON")
         self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         # self._write("FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus")
         self.set_elements(self._elements)
@@ -85,7 +84,11 @@ class Keithley2410:
         if configuration['HasHVSwitch']:
             self.set_output_enable(1)
         self.set_output(0)
-        self._write('SOURce1:CLEar:AUTO OFF')
+ 
+        # store identity to use later
+        self._write("*IDN?")
+        self.anchor = self._inst.read()
+
         self.check_for_errors()
 
         self.display_string("Adapter connected.")
@@ -118,6 +121,7 @@ class Keithley2410:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
+        wait = None
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
@@ -125,11 +129,15 @@ class Keithley2410:
         print(' >> Keithley2410 Response:', response)
         return response
 
+    
     def _read(self):
         """Performs a read command and returns the parsed response
         """
+        
         response = self._query("READ?")
-        return self._parse_data(response)
+
+        response_array = self.parse_data(response)
+        return response_array
 
     def set_elements(self, element_list):
         """Sets the elements returned in a read command
@@ -356,7 +364,7 @@ class Keithley2410:
         self._write("CONFigure:VOLTage:DC")
         measurement = self._query("READ?")
         return float(self._parse_data(measurement)[0]['voltage'])
-
+        
     def measureVoltage(self):
         """Renaming of above function for compatibility
         """
@@ -407,8 +415,9 @@ class Keithley2410:
 
         # repetetively query current measurement
         while True:
+            
             measurement = self._query("READ?", 0.)
-
+        
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
             q.append(thiscurrent)
 
@@ -428,9 +437,12 @@ class Keithley2410:
                 break
             
         measurement = self._query("READ?", 0.)
-        meascurr = float(self._parse_data(measurement)[0]['current'])
-        return '', meascurr, ''
+        thiscurrent = float(self._parse_data(measurement)[0]['current'])
+        q.append(thiscurrent)
+        measarr = np.array(q)
 
+        return '', np.mean(measarr), ''
+    
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
         Optional parameters Ilimit and delay_s set the current limit and time delay.
@@ -513,7 +525,8 @@ class Keithley2410:
                     break
         if err_string != '':
             print(' >> Keithley2410: found error: {}'.format(err_string))
-            raise ValueError(err_string)
+            #raise ValueError(err_string)
+        self._write(':STATus:QUEue:CLEar')
 
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
@@ -549,7 +562,7 @@ class Keithley2410:
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
 
-            data.append([vltg, voltage, np.abs(current), resistance])
+            data.append([np.abs(vltg), np.abs(voltage), np.abs(current), np.abs(resistance)])
 
         self.display_string('Loop finished.')
         print(' >> Keithley2410: Loop finished')
@@ -562,3 +575,76 @@ class Keithley2410:
         self.outputOff()
 
         return datadict
+
+        
+    # Take IV curve - now using internal voltage sweep function on Keithley
+    # Storing/plotting curve handled elsewhere
+    def takeIVproc(self, curve, maxV, stepV, RH, Temp, status, errcheck_step=5):
+
+        self.setVoltage(0.)
+        self.outputOn()
+
+        ln = int(maxV//stepV)+1
+        data = [] # append measurements to this list as rows                                                                                                                           
+
+        self.display_string('Looping...')
+        print(f' >> Keithley2410: Looping to {maxV}V in steps of {stepV}V')
+        sleep(5)
+        # Record date
+        current_date = datetime.now()
+        date = current_date.isoformat().split('T')[0]
+        time = current_date.isoformat().split('T')[1].split('.')[0]
+
+        # Count the number of measurements that hit current compliance
+        # Break the loop after the second to save time
+        compl_ctr = 0
+        for i in range(0, ln):
+            vltg = i*stepV
+            self.setVoltage(vltg)
+            # Delay here doesn't work for some reason
+            # maybe because the Keithley isn't in measure mode?
+            _, current, _ = self.measureCurrentLoop()
+            voltage, _, _ = self.measureVoltage()
+            resistance = voltage / current
+
+            data.append([vltg, voltage, np.abs(current), resistance])
+
+        self.display_string('Loop finished.')
+        print(' >> Keithley2410: Loop finished')
+
+        # Make output dictionary and return                                                                                                                                            
+        curve['RH'] = RH
+        curve['Temp'] = Temp
+        curve['data'] = np.array(data)
+        curve['date'] = date
+        curve['time'] = time
+        curve['datetime'] = current_date
+
+        print(' >> Keithley2410: Disabling output')
+        self.setVoltage(0.)
+        self.outputOff()
+
+
+    def clear_queue(self):
+        """Clear the Keithley Output Queue.
+        """
+        
+        # Empty the Trace Buffer and Error Queue
+        self._write("TRAC:CLEar")   # clear the trace buffer
+        self._write("*CLS")   # empty the error queue
+
+        # Read out everything left in the Output Queue
+        self._write("*IDN?")
+
+        while True:
+            response = self._inst.read()
+            if response == self.anchor:
+                break
+            else:
+                print(f" >> Keithley2410: Output queue still remains: {response}")
+                continue
+
+        print(" >> Keithely2410: Trace buffer, error queue, and output queue cleared.")
+
+
+        

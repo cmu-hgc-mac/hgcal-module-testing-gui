@@ -94,8 +94,8 @@ def fetch_iv(moduleserial, modulestatus, dry=True, roomtemp=True):
     for r in result:
         RH = float(r['rel_hum'])
         T = float(r['temp_c'])
-        req1 = (RH < 8) if dry else (RH > 20)
-        req2 = (T > 10 and T < 30) if roomtemp else (T < -20)
+        req1 = (RH <= 12) if dry else (RH >= 20)
+        req2 = (T >= 10 and T <= 30) if roomtemp else (T <= -20)
         if req1 and req2 and r['status_desc'] == modulestatus:
             runs.append(r)
 
@@ -119,16 +119,19 @@ def pedestal_upload(state, ind=-1):
     # Open the hex data ".root" file and turn the contents into a pandas DataFrame.
     f = uproot.open(fname)
     try:
-        tree = f["runsummary"]["summary"]
-
+        summary = f["runsummary"]["summary"]
+        unpacker = f["unpacker_data"]["hgcroc"]
+        
         # different uproot functions for different OS =.=
         if configuration['TestingPCOpSys'] == 'Centos7':
-            df_data = tree.pandas.df()
+            df_data = summary.pandas.df()
+            df_unp = unpacker.pandas.df()
         elif configuration['TestingPCOpSys'] == 'Alma9':
-            df_data = tree.arrays(library='pd')
+            df_data = summary.arrays(library='pd')
+            df_unp = unpacker.arrays(library='pd')
 
-    except:
-        print(" -- DBTools: No tree found in pedestal file!")
+    except Exception:
+        print(' -- DBTools exception:', traceback.format_exc())
         return 0
 
     density = moduleserial.split('-')[1][1]
@@ -145,9 +148,15 @@ def pedestal_upload(state, ind=-1):
     med_norm = df_data[column][norm_mask].median()
     mean_norm = df_data[column][norm_mask].mean()
     std_norm = df_data[column][norm_mask].std()
-    noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
-    highval = (df_data[column] - med_norm) > noisy_limit
+    if '320-M' in moduleserial: #this should be live module condition. please double check!
+        noisy_limit = (2 if (column == 'adc_stdd' or column == 'adc_iqr') else 100)
+        highval = (df_data[column] - med_norm) > noisy_limit
+    else:
+        noisy_limit = (2 if column == 'adc_stdd' else 5000)
+        highval = df_data[column] > noisy_limit
     # median + 2 adc counts as temporary check for high noise? we'll see how it goes
+
+
 
     count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
@@ -155,6 +164,9 @@ def pedestal_upload(state, ind=-1):
 
     print(' >> DBTools: count bad cells', count_bad_cells, 'list dead', list_dead_cells, 'list noisy', list_noisy_cells)
 
+    just_one_channel = df_unp[(df_unp.chip == 0) & (df_unp.channel == 0) & (df_unp.half == 0)]
+    adc_frac_unc = 1. / np.sqrt(float(len(just_one_channel)))
+    
     if configuration['HasRHSensor']:
         if '-Box-RH-' not in state.keys(): # should already exist
             add_RH_T(state)
@@ -166,13 +178,9 @@ def pedestal_upload(state, ind=-1):
 
     now = datetime.now()
 
-    comment = runs[-1].split('/')[-1]+' '+state['-Output-Subdir-'] # for now, comment is dir name of raw test results
-
-    if '-Pedestals-Trimmed-' in state.keys():
-        if state['-Pedestals-Trimmed-'] == True:
-            comment += " pedestals trimmed"
-        else:
-            comment += f" pedestals trimmed at {state['-Pedestals-Trimmed-']}V"
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+        comment = state['-Output-Subdir-'].split('/')[2]
     
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
@@ -220,9 +228,16 @@ def pedestal_upload(state, ind=-1):
     table = 'module_pedestal_test' if ('320-M' in moduleserial) else 'hxb_pedestal_test'
     
     # upload
-    coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
-    loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(coro)
+    try:
+        db_upload_ped['inverse_sqrt_n'] = adc_frac_unc
+        coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
+    except:
+        db_upload_ped.pop('inverse_sqrt_n', None)
+        coro = upload_PostgreSQL(table_name = table, db_upload_data = db_upload_ped)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
 
     print(f" >> DBTools: Uploaded pedestal run of {moduleserial}!")
     
@@ -368,13 +383,17 @@ def iv_upload(datadict, state):
     # save iv as pkl file
     iv_save(datadict, state)
     
-    #### XYZ what should be commented?
-    #### XYZ status? etc.
+    v1 = 500
+    v2 = 850
+    try:
+        ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
+    except:
+        ratio = 0.
 
-    v1 = 600
-    v2 = 800
-    ratio = float(data[:,2][np.argwhere(data[:,0] == v2)] / data[:,2][np.argwhere(data[:,0] == v1)])
-    
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+        comment = state['-Output-Subdir-'].split('/')[2]
+
     db_upload_iv = {'module_name': serial_remove_dashes(moduleserial),
                     'rel_hum': str(RH),
                     'temp_c': str(Temp),
@@ -390,7 +409,7 @@ def iv_upload(datadict, state):
                     'date_test': datadict['datetime'].date(),
                     'time_test': datadict['datetime'].time(),
                     'inspector': state['-Inspector-'],
-                    'comment': state['-Output-Subdir-'] 
+                    'comment': comment
                     }
     
     # upload
@@ -418,7 +437,12 @@ def other_test_upload(state, test_name, BV, ind=-1):
     os.system(f'tar -czf tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz {thisrun}')
     with open(f'tar_{test_name}_{thisrun.split("/")[-1][4:]}.tgz',"rb") as f:
         tarfile = f.read()
-    
+
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+        comment = state['-Output-Subdir-'].split('/')[2]
+
+        
     db_upload_other = {'module_name': serial_remove_dashes(moduleserial),
                        'status': statusdict[state['-Module-Status-']],
                        'status_desc': state['-Module-Status-'],
@@ -429,7 +453,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
                        'date_test': now.date(),
                        'time_test': now.time(),
                        'inspector': state['-Inspector-'],
-                       'comment': state['-Output-Subdir-'],
+                       'comment': comment,
                        'other_test_name': test_name,
                        'other_test_output': tarfile 
                    }
@@ -504,7 +528,9 @@ def plots_upload(state, ind=-1):
         with open(chip, 'rb') as f:
             totnoise.append(f.read())
                 
-    comment = f'run{thisind}'+' '+state['-Output-Subdir-']
+    comment = None
+    if len(state['-Output-Subdir-'].split('/')) == 3:
+        comment = state['-Output-Subdir-'].split('/')[2]
 
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
@@ -568,17 +594,121 @@ def fetch_proto_inspect(moduleserial):
 
     return runs
 
-def readout_info(moduleserial):
+def fetch_comments(moduleserial):
 
-    lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Completely Encapsulated')
-    midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Completely Encapsulated')
-    highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Completely Encapsulated')
+    tables = ['baseplate', 'bp_inspect', 'sensor', 'hexaboard', 'hxb_inspect', 'hxb_pedestal_test', 'module_info', 'proto_assembly', 'proto_inspect', 'module_assembly', 'module_inspect', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap', 'module_pedestal_test', 'module_iv_test']
+    column = 'comment'
 
+    coro = fetch_serial_PostgreSQL('module_info', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    thisrun = runs[-1]
+    hxbser = thisrun['hxb_name']
+    senser = thisrun['sen_name']
+    bpser = thisrun['bp_name']
+
+    del runs
+
+    comments = []
+    
+    for tab in tables:
+
+        if tab in ['baseplate', 'bp_inspect']:
+            ser = bpser
+        elif tab in ['sensor']:
+            ser = senser
+        elif tab in ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test']:
+            ser = hxbser
+        elif tab in ['proto_assembly', 'proto_inspect']:
+            ser = moduleserial.replace('M', 'P', 1) # protomodule serial number
+        else: # module
+            ser = moduleserial
+
+        try:
+            coro = fetch_serial_PostgreSQL(tab, serial_remove_dashes(ser))
+            loop = asyncio.get_event_loop()
+            result = loop.run_until_complete(coro)
+                        
+            runs = []
+            for r in result:
+                runs.append(r)
+                
+            thesecomments = []
+            for r in runs:
+                if r[column] is not None and r[column] != '' and r[column] != ' ':                
+                    if 'trimmed' not in r[column]:
+                        thesecomments.append(r[column])
+
+            if thesecomments != []:
+                comments.append(thesecomments)
+                
+        except Exception:
+            print('  -- DBTools comments exception; continuing:', traceback.format_exc())
+            
+    return comments
+
+def fetch_sensor_iv(moduleserial):
+
+    coro = fetch_serial_PostgreSQL('module_info', serial_remove_dashes(moduleserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    thisrun = runs[-1]
+    scratchpad = thisrun['sen_name'].split('_')[0]
+    
+    del runs
+
+    coro = fetch_serial_PostgreSQL('sen_iv_data', scratchpad)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    for r in result:
+        runs.append(r)
+
+    #print('actual_volts', np.array(runs[-1]['actual_volts']).shape)
+    #print('tot_curnt_nanoamp', np.array(runs[-1]['tot_curnt_nanoamp']).shape)
+    #print('curnt_nanoamp', np.array(runs[-1]['curnt_nanoamp']).shape)
+
+    if len(runs) == 0:
+        return None
+
+    run = runs[-1]
+
+    v = np.array(run['actual_volts'][0])
+    curnt = np.array(run['tot_curnt_nanoamp'])
+    i = np.mean(curnt, axis = 0)
+    di = np.std(curnt, axis = 0)
+    
+    return v, i, di
+
+def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
+
+    lowBVruns = fetch_pedestal(moduleserial, 2, 300, modulestatus)
+    midBVruns = fetch_pedestal(moduleserial, 300, 300, modulestatus)
+    highBVruns = fetch_pedestal(moduleserial, 800, 300, modulestatus)
+    if len(highBVruns) == 0:
+        highBVruns = fetch_pedestal(moduleserial, 500, 300, modulestatus)
+    if len(lowBVruns) == 0:
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+        
     # backwards compatibility
-    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
-        lowBVruns = fetch_pedestal(moduleserial, 10, 300, 'Frontside Encapsulated')
-        midBVruns = fetch_pedestal(moduleserial, 300, 300, 'Frontside Encapsulated')
-        highBVruns = fetch_pedestal(moduleserial, 800, 300, 'Frontside Encapsulated')
+    if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2 and (modulestatus == 'Completely Bonded' or modulestatus == 'Completely Encapsulated'):
+        status = modulestatus.replace('Completely','Frontside')
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, status)
+        midBVruns = fetch_pedestal(moduleserial, 300, 300, status)
+        highBVruns = fetch_pedestal(moduleserial, 800, 300, status)
+        if len(highBVruns) == 0:
+            highBVruns = fetch_pedestal(moduleserial, 500, 300,status)
 
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2:
         print(f' >> DBTools: not enough pedestal tests: lowBV {len(lowBVruns)} midBV {len(midBVruns)} high BV {len(highBVruns)}')
@@ -586,22 +716,20 @@ def readout_info(moduleserial):
     
     badcell = set()
     
-    # check unbonded channels - for now only works for LD modules
-    if '320-MH' not in moduleserial:
-        unbondedrun = lowBVruns[-1]
-        noise = np.array(unbondedrun['adc_stdd'])
-        cellid = np.array(unbondedrun['cell'])
-        celltype = np.array(unbondedrun['channeltype'])
-        norm_mask = (celltype == 0) & (cellid > 0)
-        nc_mask = (celltype == 0) & (cellid < 0)
-        calib_mask = celltype == 1
-        med_nc = np.median(noise[nc_mask])
-        uncon = np.abs(noise[norm_mask] - med_nc) < 1. # is 1 adc count enough?
-        unconcells = cellid[norm_mask][uncon]
-        for cell in unconcells:
-            badcell.add(cell)
-    else:
-        unconcells = np.array([])
+    # check unbonded channels - necessary BV not currently checked
+    unbondthresh = 0.
+    if '320-ML' in moduleserial:
+        unbondthresh = 1.7
+    elif '320-MH' in moduleserial:
+        unbondthresh = 1.4
+    unbondedrun = lowBVruns[-1] # choose last run
+    noise = np.array(unbondedrun['adc_stdd'])
+    cellid = np.array(unbondedrun['cell'])
+    celltype = np.array(unbondedrun['channeltype'])
+    norm_mask = (celltype == 0) & (cellid > 0)
+    calib_mask = celltype == 1
+    uncon = (noise[norm_mask | calib_mask] <= unbondthresh) & (noise[norm_mask | calib_mask] > 0.)
+    unconcells = cellid[norm_mask | calib_mask][uncon]
             
     # check dead channels
     ldeadcells = []
@@ -649,7 +777,7 @@ def readout_info(moduleserial):
     for cell in groundedcells:
         badcell.add(cell)
 
-    print(f' >> DBTools: uncon {unconcells} dead {deadcells} noisy {noisycells} grounded {groundedcells}')
+    print(f'  >> DBTools: uncon {unconcells} dead {deadcells} noisy {noisycells} grounded {groundedcells}')
     badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
     return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
 
@@ -664,10 +792,13 @@ def iv_info(moduleserial):
     ivcurve = ivcurve[-1]
     v = np.array(ivcurve['program_v'])
     i = np.array(ivcurve['meas_i'])
+    i_500v = i[v == 500]
     i_600v = i[v == 600]
     i_850v = i[v == 850]
 
-    return i_600v[0], i_850v[0]
+    print(f'  >> DBTools: I(500V) = {i_500v[0]*1e6}uA')
+    # change 2025/4/7 for lower max voltage
+    return i_500v[0] #i_600v[0], i_850v[0]
 
 def assembly_info(moduleserial):
 
@@ -682,6 +813,8 @@ def assembly_info(moduleserial):
 
 def summary_upload(moduleserial, qc_summary):
 
+    qc_summary.pop('comments', None)
+    
     coro = upload_PostgreSQL(table_name = 'module_qc_summary', db_upload_data = qc_summary)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
@@ -758,7 +891,7 @@ def serial_add_dashes(moduleserial):
     if '320-M' in dashedserial: # live module
         dashedserial += moduleserial[5:9]+'-'+moduleserial[9:11]+'-'+moduleserial[11:15]
     elif '320-X' in dashedserial: # hexaboard
-        dashedserial +=	moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
+        dashedserial += moduleserial[5:8]+'-'+moduleserial[8:10]+'-'+moduleserial[10:15]
     else:
         raise ValueError
         
