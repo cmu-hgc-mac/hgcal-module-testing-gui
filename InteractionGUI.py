@@ -497,7 +497,7 @@ def configure_test_stand(state, fpgahostname):
     density = state['-Module-Serial-'].split('-')[1][1]
     shape = state['-Module-Serial-'].split('-')[2][0]
     if density == 'L':
-        if shape not in ['F', 'L', 'R', 'T', 'B']:
+        if shape not in ['F', 'L', 'R', 'T', 'B', '5']:
             raise NotImplementedError
     elif density == 'H':
         if shape not in ['F', 'B', 'T', 'L', 'R']:

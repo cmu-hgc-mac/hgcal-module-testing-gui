@@ -172,7 +172,7 @@ elif vers0 == 3 and vers1 < 9:
 
 layout = [[sg.Text("Module Testing GUI", font=lgfont, text_color=cmured)], logo,
           [leftcol, sg.Push(), rightcol],
-          [sg.Push(), sg.Button("Grade Module (WIP)")],
+          [sg.Push(), sg.Button("Grade Module")],
           [sg.Text(key='-EXPAND-', font='ANY 1', pad=(0, 0))],
           [sg.Frame('Status Bar', statusbar)]]
 
@@ -653,7 +653,7 @@ while True:
             continue
             
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])): # no HD Five
             show_string("Not Implemented")
             continue
 
@@ -666,7 +666,7 @@ while True:
                 show_string("Not Implemented")
                 continue
         elif rocvers in ['2', 'B', '4', 'C']:
-            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'HF', 'HT', 'HL', 'HR']:
+            if hbtype in ['LF', 'LR', 'LL', 'LT', 'LB', 'L5', 'HF', 'HT', 'HL', 'HR']: # no V3b/c HD Bottom
                 pass # V3b/c ROC testing
             else:
                 show_string("Not Implemented")
@@ -739,7 +739,7 @@ while True:
 
 
         # Catch non-implemented denisities and geometries
-        if (values['-HD-'] and (values['-Five-'])) or (values['-LD-'] and (values['-Five-'])):
+        if (values['-HD-'] and (values['-Five-'])): # all geometries
             show_string("Not Implemented")
             continue
         
@@ -1149,7 +1149,7 @@ while True:
         restart_services(current_state)
         check_services(current_state)
 
-    if event == 'Grade Module (WIP)':
+    if event == 'Grade Module':
         if '320-X' in moduleserial:
             show_string("Can't grade hexaboard", field='Right')
             continue
