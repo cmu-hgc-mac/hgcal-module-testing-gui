@@ -121,7 +121,6 @@ class Keithley2410:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
-        wait = None
         print(' >> Keithley2410 Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
@@ -211,7 +210,7 @@ class Keithley2410:
             self._write(f"OUTPut{self._channel}:ENABle ON")
         else:
             self._write(f"OUTPut{self._channel}:ENABle OFF")
-
+            
     def set_output(self, onoff):
         """Sets the output on or off. Also sets voltage output to zero to keep state consistent
         and structure class properly for ramping.
