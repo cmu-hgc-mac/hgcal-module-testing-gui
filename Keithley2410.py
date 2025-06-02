@@ -132,7 +132,6 @@ class Keithley2410:
     def _read(self):
         """Performs a read command and returns the parsed response
         """
-        
         response = self._query("READ?")
 
         response_array = self.parse_data(response)
@@ -228,7 +227,7 @@ class Keithley2410:
         self.set_output(True)
 
     def outputOff(self):
-        """Sets the output off                                                                                                                                                                            
+        """Sets the output off                                                                                                                                       """
         """
         self.set_output(False)
                  
@@ -603,8 +602,6 @@ class Keithley2410:
             # Delay here doesn't work for some reason
             # maybe because the Keithley isn't in measure mode?
             _, current, _ = self.measureCurrentLoop()
-            #if status == 'TERM':
-            #    break
             voltage, _, _ = self.measureVoltage()
             resistance = voltage / current
 
@@ -627,11 +624,11 @@ class Keithley2410:
 
 
     def clear_queue(self):
-        """Clear the Keithley Output Queue.
+        """Clear the Keithley Queue.
         """
         
         # Empty the Trace Buffer and Error Queue
-        self._write("TRAC:CLEar")   # clear the trace buffer
+        self._write("TRACe:CLEar")   # clear the trace buffer
         self._write("*CLS")   # empty the error queue
 
         # Read out everything left in the Output Queue
