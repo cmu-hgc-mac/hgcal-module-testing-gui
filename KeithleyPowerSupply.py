@@ -88,7 +88,7 @@ class KeithleyPowerSupply:
             raise RuntimeError('HVTerminal in configuration should be Front or Rear')
 
         # current auto ranging makes the measurement jumpy, but we still need to manage range
-        # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
+       # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
         # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
         self.high_i_range = False 
 
@@ -148,17 +148,7 @@ class KeithleyPowerSupply:
         response = self._inst.query(queryStr, wait).strip("\r\n")
         print(f' >> Keithley{self._MODEL_NUM} Response:', response)
         return response
-
     
-    def _read(self):
-        """Performs a read command and returns the parsed response
-        """
-        
-        response = self._query("READ?")
-
-        response_array = self.parse_data(response)
-        return response_array
-
     def set_elements(self, element_list):
         """Sets the elements returned in a read command
         Element must be one of the five enumerated below
@@ -186,7 +176,7 @@ class KeithleyPowerSupply:
         if self._is_2410:
             self._write("FORMat:ELEMents " + element_string)
 
-    def _parse_data_2410(self, response):
+    def _parse_data(self, response):
         """Parses the received data into an array of dictionaries
         """
         response_list = response.split(",")
@@ -201,13 +191,6 @@ class KeithleyPowerSupply:
         else:
             return response
     
-    def _parse_data_2470(self, response):
-        """Parses the received data into an array of dictionaries"""
-        if isinstance(response, str):
-            return [{"current": response}]
-        else:
-            raise ValueError(f"Expected a string, got {type(response)}: {response}")
-
     def _read_async(self):
         """Waits for data to be available for reading. Returns the response when available.
         """
@@ -506,14 +489,12 @@ class KeithleyPowerSupply:
         measurement = self._query("READ?", 0.)
         if self._is_2410:
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
-            q.append(thiscurrent)
-            measarr = np.array(q)
-
-            return '', np.mean(measarr), ''
         else:
-            print(f' >> Keithley{self._MODEL_NUM} Measured Current:', measurement)
-            meascurr = float(measurement)
-            return '', meascurr, ''
+            thiscurrent = measurement
+        q.append(thiscurrent)
+        measarr = np.array(q)
+
+        return '', np.mean(measarr), ''
     
     def voltage_sweep(self, Vmin, Vmax, steps, Ilimit=1.5e-3, delay_s=1.):
         """Performs a voltage sweep from Vmin to Vmax over steps.
@@ -565,6 +546,7 @@ class KeithleyPowerSupply:
             self._write('DISPlay:USER1:TEXT "Module Testing"')
             self._write(f'DISPlay:USER2:TEXT "{string}"')
             sleep(2.0)
+            self._write("DISPlay:CLEar")
 
     # Clear the Keithley error cache and print errors present
     def check_for_errors(self, ln=None):
