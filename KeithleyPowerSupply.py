@@ -40,24 +40,10 @@ class KeithleyPowerSupply:
         else: # mode == 'by-resource'
             self._inst = self._rm.open_resource(configuration['HVResource'])
 
-        # store identity to use later
-        self._write("*IDN?")
-        self.anchor = self._inst.read()
-
-        #get the model number
-        match = re.search(r"MODEL\s+(^,\s]+)", self.anchor)
-        if match:
-            self._MODEL_NUM = match.group(1)
-            print(f"MODEL_NUM:{self._MODEL_NUM}")
-        else:
-            print("MODEL_NUM NOT FOUND")
-
-        self._is_2410 = (self._MODEL_NUM == "2410")
-
         self._inst.read_termination = "\r\n"
         self._inst.write_termination = "\r\n"
         self._inst.timeout = 2000
-
+        
         # Instrument parameters, do not change
         self._VOLTAGE_LIMIT_LOW = -1.1e3
         self._VOLTAGE_LIMIT_HIGH = 1.1e3
@@ -73,6 +59,28 @@ class KeithleyPowerSupply:
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
 
+        # Empty the Trace Buffer and Error Queue before run
+        self._inst.write("TRACe:CLEar")
+        self._inst.write("*CLS")
+        
+        # get model information
+        # store identity to use later
+        self._inst.write("*IDN?")
+        self.anchor = self._inst.read()
+
+        #get the model number 
+        match = re.search(r"MODEL\s+([^,\s]+)", self.anchor)
+        if match:
+            model_num = match.group(1)
+            self._MODEL_NUM = model_num
+            print(f" >> Keithley{model_num}: MODEL_NUM FOUND")
+        else:
+            print(" >> Keithely: MODEL_NUM NOT FOUND")
+
+        self._is_2410 = (self._MODEL_NUM == "2410")
+
+        self.check_for_errors()
+        
         # Initiate instrument
         self._write("*RST")
         if self._is_2410:
@@ -87,21 +95,22 @@ class KeithleyPowerSupply:
         else:
             raise RuntimeError('HVTerminal in configuration should be Front or Rear')
 
+
+        
         # current auto ranging makes the measurement jumpy, but we still need to manage range
-       # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
+        # so, track range with this boolean. range starts as 105 uA, but when we measure 50 uA,
         # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
         self.high_i_range = False 
 
         if self._is_2410:
             self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         self.set_elements(self._elements)
-        self.set_current_limit(self._ilimit)
+        # self.set_current_limit(self._ilimit) # testing_check
         self.set_voltage_limit(self._vlimit)
         self.set_sense_mode(self._sense_mode)
         if configuration['HasHVSwitch']:
             self.set_output_enable(1)
         self.set_output(0)
-        
 
         self.check_for_errors()
 
@@ -113,6 +122,8 @@ class KeithleyPowerSupply:
         self.bv_ramp_step = 25.
         self.bv_ramp_wait = 0.5
 
+        self.check_for_errors()
+        
         
     def __del__(self):
         if hasattr(self, '_inst'):
@@ -132,7 +143,9 @@ class KeithleyPowerSupply:
             self._write("SYSTem:LOCal")
 
     def _write(self, writeStr):
-        print(' >> Keithley2410 Write:', writeStr)
+        print(f' >> Keithley{self._MODEL_NUM} Write:', writeStr)
+        #print(f' >> Keithley2410 Write:', writeStr) #testing_check
+        
         """Write command with built-in delay. Defaults to 100ms
         """
         self._inst.write(writeStr)
@@ -141,11 +154,13 @@ class KeithleyPowerSupply:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
+        #print(f' >> Keithley2410 Query:', queryStr) # testing_check
         print(f' >> Keithley{self._MODEL_NUM} Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
             print('Waiting')
         response = self._inst.query(queryStr, wait).strip("\r\n")
+        #print(f' >> Keithley2410 Response:', response) # testing_check
         print(f' >> Keithley{self._MODEL_NUM} Response:', response)
         return response
     
@@ -267,7 +282,7 @@ class KeithleyPowerSupply:
         """
         if self._VOLTAGE_LIMIT_LOW <= abs(vlimit) <= self._VOLTAGE_LIMIT_HIGH:
             self._vlimit = vlimit
-            self._write(f"SOURc{self._channel}:VOLTage:PROTection:LEVel {vlimit}")
+            self._write(f"SOURce{self._channel}:VOLTage:PROTection:LEVel {vlimit}")
         else:
             raise ValueError("Invalid voltage limit")
 
@@ -507,7 +522,7 @@ class KeithleyPowerSupply:
 
             Vstep = (Vmax - Vmin) / steps 
             self.set_sense_mode("current")
-            self.set_current_limit(Ilimit)
+            # self.set_current_limit(Ilimit) # testing_check
             self._write(f"SOURce{self._channel}:FUNCtion VOLTage")
             self._write(f"SOURce{self._channel}:VOLTage:START {Vmin}")
             self._write(f"SOURce{self._channel}:VOLTage:STOP {Vmax}")
@@ -569,6 +584,7 @@ class KeithleyPowerSupply:
         if (err[0:3] != '+0,' and err[0:2] != '0,'):
             err_string += err
         if err_string != '':
+            #print(f' >> Keithley2410: found error: {err_string}') # testing_check
             print(f' >> Keithley{self._MODEL_NUM}: found error: {err_string}')
         self._write(':STATus:QUEue:CLEar')
         
@@ -641,5 +657,18 @@ class KeithleyPowerSupply:
 
         print(f" >> Keithely{self._MODEL_NUM}: Trace buffer, error queue, and output queue cleared.")
 
+    def get_model_num(self):
+        # store identity to use later                                                                                                                         
+        self._inst.write("*IDN?")
+        self.anchor = self._inst.read()
 
+        #get the model number
+
+        match = re.search(r"MODEL\s+(^,\s]+)", self.anchor)
+        if match:
+            model_num = match.group(1)
+            print(f"MODEL_NUM:{model_num}")
+        else:
+            print("MODEL_NUM NOT FOUND")
         
+        return model_num
