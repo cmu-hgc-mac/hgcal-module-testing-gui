@@ -98,7 +98,6 @@ class Keithley2410:
 
         self.bv_ramp_step = 25.
         self.bv_ramp_wait = 0.5
-
         
     def __del__(self):
         self._inst.close()
