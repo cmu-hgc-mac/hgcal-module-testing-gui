@@ -136,7 +136,6 @@ class KeithleyPowerSupply:
 
     def _write(self, writeStr):
         print(f' >> Keithley{self._MODEL_NUM} Write:', writeStr)
-        #print(f' >> Keithley2410 Write:', writeStr) #testing_check
         
         """Write command with built-in delay. Defaults to 100ms
         """
@@ -146,13 +145,10 @@ class KeithleyPowerSupply:
     def _query(self, queryStr, wait = None):
         """Query command returns most recent buffer
         """
-        #print(f' >> Keithley2410 Query:', queryStr) # testing_check
         print(f' >> Keithley{self._MODEL_NUM} Query:', queryStr)
         if wait is None:
             wait = self._wait_time_s
-            print('Waiting')
         response = self._inst.query(queryStr, wait).strip("\r\n")
-        #print(f' >> Keithley2410 Response:', response) # testing_check
         print(f' >> Keithley{self._MODEL_NUM} Response:', response)
         return response
     
@@ -308,8 +304,7 @@ class KeithleyPowerSupply:
         """
         self._write(f"SOURce{self._channel}:FUNCtion VOLTage")
         if mode == "fixed":
-            if self._is_2410:
-                self._write(f"SOURce{self._channel}:VOLTage:MODE FIXed")
+            self._write(f"SOURce{self._channel}:VOLTage:MODE FIXed")
         elif mode == "list":
             self._write(f"SOURce{self._channel}:VOLTage:MODE LIST")
         elif mode == "sweep":
@@ -323,8 +318,7 @@ class KeithleyPowerSupply:
         """
         self._write(f"SOURce{self._channel}:FUNCtion CURRent")
         if mode == "fixed":
-            if self._is_2410:
-                self._write(f"SOURce{self._channel}:CURRent:MODE FIXed")
+            self._write(f"SOURce{self._channel}:CURRent:MODE FIXed")
         elif mode == "list":
             self._write(f"SOURce{self._channel}:CURRent:MODE LIST")
         elif mode == "sweep":
@@ -342,8 +336,8 @@ class KeithleyPowerSupply:
             return
 
         if self._VOLTAGE_LIMIT_LOW <= abs(value) <= self._vlimit:
-
-            self.set_source_voltage_mode("fixed")
+            if self._is_2410:
+                self.set_source_voltage_mode("fixed")
 
             # ramp up the voltage slowly if it's very different than current voltage
             difference = value - self.voltage_now
@@ -371,7 +365,8 @@ class KeithleyPowerSupply:
         """Sets the source mode to fixed current with the defined value.
         """
         if self._CURRENT_LIMIT_LOW <= abs(value) <= self._ilimit:
-            self.set_source_current_mode("fixed")
+            if self._is_2410:
+                self.set_source_current_mode("fixed")
             self._write(f"SOURce{self._channel}:CURRent {value}")
         else:
             raise ValueError("Invalid set current")
@@ -381,11 +376,11 @@ class KeithleyPowerSupply:
         """
         if mode == "voltage":
             self._sense_mode = mode
-            self._write(f"SENSe{self._channel}:FUNCtion:ON 'VOLTage:DC'")
+            self._write(f"SENSe{self._channel}:Function 'VOLTage'")
             self._write(f"SENSe{self._channel}:VOLTage:RANGe:AUTO ON")
         elif mode == "current":
             self._sense_mode = mode
-            self._write(f"SENSe{self._channel}:FUNCtion:ON 'CURRent:DC'")
+            self._write(f"SENSE{self._channel}:FUNCtion 'CURRent'")
             if not self.high_i_range:
                 self._write(f"SENSe{self._channel}:CURRent:RANG 100E-6")
             else:
@@ -482,10 +477,10 @@ class KeithleyPowerSupply:
             q.append(thiscurrent)
 
             if thiscurrent > (50. * 10**(-6)) and not self.high_i_range:
-                self._write(f"SENSe{self._channel}:CURRent:RANG 1E-3")
+                self._write(f"SENSe{self._channel}:CURRent:RANGe 1E-3")
                 self.high_i_range = True
             if thiscurrent < (20. * 10**(-6)) and self.high_i_range:
-                self._write(f"SENSe{self._channel}:CURRent:RANG 100E-6")
+                self._write(f"SENSe{self._channel}:CURRent:RANGe 100E-6")
                 self.high_i_range = False
                 
             # check if current measurement has stabilized
@@ -517,7 +512,6 @@ class KeithleyPowerSupply:
 
             Vstep = (Vmax - Vmin) / steps 
             self.set_sense_mode("current")
-            # self.set_current_limit(Ilimit) # testing_check
             self._write(f"SOURce{self._channel}:FUNCtion VOLTage")
             self._write(f"SOURce{self._channel}:VOLTage:START {Vmin}")
             self._write(f"SOURce{self._channel}:VOLTage:STOP {Vmax}")
@@ -579,7 +573,6 @@ class KeithleyPowerSupply:
         if (err[0:3] != '+0,' and err[0:2] != '0,'):
             err_string += err
         if err_string != '':
-            #print(f' >> Keithley2410: found error: {err_string}') # testing_check
             print(f' >> Keithley{self._MODEL_NUM}: found error: {err_string}')
         self._write(':STATus:QUEue:CLEar')
         
