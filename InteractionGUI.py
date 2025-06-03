@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from FPGATestStand import FPGATestStand
 from ExternalPC import ExternalPC, check_hexactrl_sw
-from Keithley2410 import Keithley2410
+# from Keithley2410 import Keithley2410
+from KeithleyPowerSupply import KeithleyPowerSupply
 from time import sleep, time
 import os
 import traceback
@@ -408,11 +409,13 @@ def connect_HV(state):
             update_state(state, 'ps', ps)
         else:
             try:
-                ps = Keithley2410()
+               # ps = Keithley2410() #testing_check
+                ps = KeithleyPowerSupply()
             except ValueError:
                 # try again if the Keithley has some stored errors
                 # if the errors are still there, don't try again
-                ps = Keithley2410()
+                # ps = Keithley2410() # testing_check
+                ps = KeithleyPowerSupply()
             update_state(state, 'ps', ps)
         keith.close()
     
@@ -954,6 +957,7 @@ def take_IV_curve(state, step=10, maxV=500):
         # Append data into IVdata:
         if status == 'RUN':
             state['ps'].IVdata.append(curve)
+            print(f" >>>>>>>>>>>>>>> IVdata Length: {len(state['ps'].IVdata[0])}")
             status = 'CONT'
         else:
             # Clear queues: Error queue and Out queue

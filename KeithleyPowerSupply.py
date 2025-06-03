@@ -59,10 +59,6 @@ class KeithleyPowerSupply:
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
 
-        # Empty the Trace Buffer and Error Queue before run
-        self._inst.write("TRACe:CLEar")
-        self._inst.write("*CLS")
-        
         # get model information
         # store identity to use later
         self._inst.write("*IDN?")
@@ -79,8 +75,6 @@ class KeithleyPowerSupply:
 
         self._is_2410 = (self._MODEL_NUM == "2410")
 
-        self.check_for_errors()
-        
         # Initiate instrument
         self._write("*RST")
         if self._is_2410:
@@ -105,7 +99,7 @@ class KeithleyPowerSupply:
         if self._is_2410:
             self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         self.set_elements(self._elements)
-        # self.set_current_limit(self._ilimit) # testing_check
+        self.set_current_limit(self._ilimit)
         self.set_voltage_limit(self._vlimit)
         self.set_sense_mode(self._sense_mode)
         if configuration['HasHVSwitch']:
@@ -122,8 +116,6 @@ class KeithleyPowerSupply:
         self.bv_ramp_step = 25.
         self.bv_ramp_wait = 0.5
 
-        self.check_for_errors()
-        
         
     def __del__(self):
         if hasattr(self, '_inst'):
@@ -273,7 +265,10 @@ class KeithleyPowerSupply:
         """
         if self._CURRENT_LIMIT_LOW <= abs(ilimit) <= self._CURRENT_LIMIT_HIGH:
             self._ilimit = ilimit
-            self._write(f"SOURce{self._channel}:CURRent:PROTection:LEVel {ilimit}")
+            if self._is_2410:
+                self._write(f"SENSe{self._channel}:CURRent:PROTection:LEVel {ilimit}")
+            else:
+                self._write(f"SOURce{self._channel}:CURRent:PROTection:LEVel {ilimit}")
         else:
             raise ValueError("Invalid current limit")
 
@@ -623,7 +618,7 @@ class KeithleyPowerSupply:
         self.display_string('Loop finished.')
         print(f' >> Keithley{self._MODEL_NUM}: Loop finished')
 
-        # Make output dictionary and return                                                                                                                                            
+        # Make output dictionary and return
         curve['RH'] = RH
         curve['Temp'] = Temp
         curve['data'] = np.array(data)
@@ -657,18 +652,3 @@ class KeithleyPowerSupply:
 
         print(f" >> Keithely{self._MODEL_NUM}: Trace buffer, error queue, and output queue cleared.")
 
-    def get_model_num(self):
-        # store identity to use later                                                                                                                         
-        self._inst.write("*IDN?")
-        self.anchor = self._inst.read()
-
-        #get the model number
-
-        match = re.search(r"MODEL\s+(^,\s]+)", self.anchor)
-        if match:
-            model_num = match.group(1)
-            print(f"MODEL_NUM:{model_num}")
-        else:
-            print("MODEL_NUM NOT FOUND")
-        
-        return model_num
