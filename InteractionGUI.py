@@ -957,7 +957,6 @@ def take_IV_curve(state, step=10, maxV=500):
         # Append data into IVdata:
         if status == 'RUN':
             state['ps'].IVdata.append(curve)
-            print(f" >>>>>>>>>>>>>>> IVdata Length: {len(state['ps'].IVdata[0])}")
             status = 'CONT'
         else:
             # Clear queues: Error queue and Out queue
@@ -977,7 +976,7 @@ def take_IV_curve(state, step=10, maxV=500):
 
         if configuration['HasLocalDB'] and status == 'CONT':
             try:
-                iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
+               iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
             except Exception:
                 print('  -- IV upload exception:', traceback.format_exc())
         elif status == 'CONT':
