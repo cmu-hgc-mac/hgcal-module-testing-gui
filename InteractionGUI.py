@@ -409,7 +409,7 @@ def connect_HV(state):
             update_state(state, 'ps', ps)
         else:
             try:
-               # ps = Keithley2410() #testing_check
+                # ps = Keithley2410() #testing_check
                 ps = KeithleyPowerSupply()
             except ValueError:
                 # try again if the Keithley has some stored errors

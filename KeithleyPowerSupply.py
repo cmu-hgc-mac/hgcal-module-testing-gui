@@ -18,7 +18,7 @@ class KeithleyPowerSupply:
         # Initiate and configure PyVISA:
         self._rm = pyvisa.ResourceManager('@py')
         self._resource_list = self._rm.list_resources()
-        print(" >> Keithley:", self._resource_list)
+        print(" >> KeithleyPowerSupply:", self._resource_list)
 
         # check discovery mode and default to manual
         if 'HVDiscoveryMode' not in configuration.keys():
@@ -69,9 +69,9 @@ class KeithleyPowerSupply:
         if match:
             model_num = match.group(1)
             self._MODEL_NUM = model_num
-            print(f" >> Keithley{model_num}: MODEL_NUM FOUND")
+            print(f" >> KeithleyPowerSupply: model_num found: {model_num}")
         else:
-            print(" >> Keithely: MODEL_NUM NOT FOUND")
+            print(" >> KeithleyPowerSupply: MODEL_NUM NOT FOUND")
 
         self._is_2410 = (self._MODEL_NUM == "2410")
 
@@ -495,7 +495,7 @@ class KeithleyPowerSupply:
         if self._is_2410:
             thiscurrent = float(self._parse_data(measurement)[0]['current'])
         else:
-            thiscurrent = measurement
+            thiscurrent = float(measurement)
         q.append(thiscurrent)
         measarr = np.array(q)
 
