@@ -6,6 +6,8 @@ from time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
+import os
+from pathlib import Path
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -13,6 +15,40 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
+#This will print all text from terminal into a .txt file
+class Tee:
+    def __init__(self, file, stream):
+        self.file = file
+        self.stream = stream
+
+    def write(self, message):
+        self.file.write(message)
+        self.stream.write(message)
+        self.file.flush()
+    def flush(self):
+        self.file.flush()
+        self.stream.flush()
+
+#Creates and Opens new file for logging
+now = datetime.now()
+timestamp = now.strftime("%Y-%m-%d  %H:%M:%S")
+folder_path = Path("OutputTextFiles")
+filename = f"log_{timestamp}.txt"
+
+folder_path.mkdir(parents = True, exist_ok = True)
+
+filepath = folder_path / filename
+
+logfile = open(filepath, 'w')
+
+#Redirect stdout to both console and file
+sys.stdout = Tee(logfile, sys.__stdout__)
+
+            
+#prints current date and time
+print(timestamp)
+
+#sets max output voltage to 500V
 default_max_V = 500
 
 # Load configuration file
@@ -1186,4 +1222,6 @@ while True:
     # exit
     if event == 'Close GUI':
         exit()
-        
+
+#Closes .txt file         
+logfile.close        
