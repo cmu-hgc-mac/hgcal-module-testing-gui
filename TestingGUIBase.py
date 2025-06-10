@@ -31,9 +31,9 @@ class Tee:
 
 #Creates and Opens new file for logging
 now = datetime.now()
-timestamp = now.strftime("%Y-%m-%d  %H:%M:%S")
-folder_path = Path("OutputTextFiles")
-filename = f"log_{timestamp}.txt"
+timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+folder_path = Path("logs")
+filename = f"log_{timestamp}.log"
 
 folder_path.mkdir(parents = True, exist_ok = True)
 
