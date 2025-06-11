@@ -15,7 +15,7 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
-#This will print all text from terminal into a .txt file
+# direct print statements to both terminal and log file
 class Tee:
     def __init__(self, file, stream):
         self.file = file
@@ -29,24 +29,22 @@ class Tee:
         self.file.flush()
         self.stream.flush()
 
-#Creates and Opens new file for logging
+# create and open new file for logging
 now = datetime.now()
-timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+timestamp = now.strftime("%Y-%m-%d_%Hh%Mm%Ss")
 folder_path = Path("logs")
 filename = f"log_{timestamp}.log"
 
 folder_path.mkdir(parents = True, exist_ok = True)
-
-filepath = folder_path / filename
-
+filepath = f'{folder_path}/{filename}'
 logfile = open(filepath, 'w')
 
-#Redirect stdout to both console and file
+# redirect stdout to both console and file
 sys.stdout = Tee(logfile, sys.__stdout__)
 
             
 #prints current date and time
-print(timestamp)
+print(f' >> TestingGUIBase: start GUI {timestamp}')
 
 #sets max output voltage to 500V
 default_max_V = 500
