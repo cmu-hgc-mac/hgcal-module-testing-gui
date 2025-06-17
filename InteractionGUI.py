@@ -456,7 +456,7 @@ def check_leakage_current(state):
                 state['ps'].setVoltage(key)
                 _, current, _ = state['ps'].measureCurrentLoop()
                 leakage_current[key] = current
-                print('  >> Checking leakage current:', key, current*1000000.)
+                print(' >> InteractionGUI: Checking leakage current:', key, current*1000000.)
                 if np.abs(current)*1000000. > 1. and abs(key) < 500:
                     nominal = False
                     break
@@ -595,13 +595,15 @@ def configure_test_stand(state, fpgahostname):
     ready.close()
     return 'CONT'
 
-def run_pedestals(state, BV):
+def run_pedestals(state, BV, TIMEOUT=30):
     """
     Runs pedestals via the PC and then makes hexmap plots. If the module is live, sets the bias voltage 
     according to the BV argument.
     """
 
     status = 'RUN'
+
+    start_time = time()
 
     layout = [[sg.Text(f"Running Pedestals (BV={BV})...", font=lgfont)],
               [sg.Text('python3 pedestal_run.py [options...]')],
@@ -633,9 +635,17 @@ def run_pedestals(state, BV):
         # testing this detached test run
         proc = state['pc'].pedestal_proc(BV=BV_to_use)
         while not proc.is_finished():
+            elapsed_time = time() - start_time
             event, values = pedestals.read(timeout=1)
             if event == 'Terminate Test' or event == sg.WIN_CLOSED:
-                print(' >> InteractionGUI: calling TERMINATE on run_pedestals at user request')
+                print(' -- InteractionGUI: calling TERMINATE on run_pedestals at user request')
+                status = 'TERM'
+                break
+            elif elapsed_time > TIMEOUT:
+                print(' -- InteractionGUI: TIMEOUT for pedestal test...')
+                exiting = waiting_window("Exiting test", "TIMEOUT")
+                sleep(2)
+                exiting.close()
                 status = 'TERM'
                 break
 
@@ -667,7 +677,7 @@ def run_pedestals(state, BV):
             try:
                 pedestal_upload(state) # uploads pedestals to database
             except Exception:
-                print('  -- Pedestal upload exception:', traceback.format_exc())
+                print(' -- InteractionGUI: Pedestal upload exception:', traceback.format_exc())
 
         if status == 'CONT':
             hexpath = state['pc'].make_hexmaps(tag=testtag)
@@ -677,7 +687,7 @@ def run_pedestals(state, BV):
             try:
                 plots_upload(state) # uploads pedestal plots to database
             except Exception:
-                print('  -- Plots upload exception:', traceback.format_exc())
+                print(' -- InteractionGUI: Plots upload exception:', traceback.format_exc())
 
     pedestals.close()
     return hexpath, status
@@ -698,10 +708,12 @@ def multi_run_pedestals(state, BV_list, showplots = True):
 
     return status
         
-def trim_pedestals(state, BV):
+def trim_pedestals(state, BV, TIMEOUT=300):
     """
     """
 
+    start_time = time()
+    
     status = 'RUN'
 
     layout = [[sg.Text(f"Trimming Pedestals (BV={BV})...", font=lgfont)],
@@ -731,9 +743,17 @@ def trim_pedestals(state, BV):
 
         proc = state['pc'].create_proc('pedestal_run')
         while not proc.is_finished():
+            elapsed_time = time() - start_time
             event, values = trimming.read(timeout=1)
             if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
-                print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                print(' -- InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                status = 'TERM'
+                break
+            elif elapsed_time > TIMEOUT:
+                print(" -- InteractionGUI: TIMEOUT for trimmed pedestal test")
+                exiting = waiting_window("Exiting test", "TIMEOUT")
+                sleep(2)
+                exiting.close()
                 status = 'TERM'
                 break
 
@@ -743,9 +763,17 @@ def trim_pedestals(state, BV):
         if status == 'RUN':
             proc = state['pc'].create_proc('pedestal_scan')
             while not proc.is_finished():
+                elapsed_time = time() - start_time
                 event, values = trimming.read(timeout=1)
                 if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
-                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    print(' -- InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+                elif elapsed_time > TIMEOUT:
+                    print(" -- InteractionGUI: TIMEOUT for trimmed pedestal test")
+                    exiting = waiting_window("Exiting test", "TIMEOUT")
+                    sleep(2)
+                    exiting.close()
                     status = 'TERM'
                     break
 
@@ -755,9 +783,17 @@ def trim_pedestals(state, BV):
         if status == 'RUN':
             proc = state['pc'].create_proc('vrefnoinv_scan')
             while not proc.is_finished():
+                elapsed_time = time() - start_time
                 event, values = trimming.read(timeout=1)
                 if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
-                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    print(' -- InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+                elif elapsed_time > TIMEOUT:
+                    print(" -- InteractionGUI: TIMEOUT for trimmed pedestal test")
+                    exiting = waiting_window("Exiting test", "TIMEOUT")
+                    sleep(2)
+                    exiting.close()
                     status = 'TERM'
                     break
 
@@ -767,9 +803,17 @@ def trim_pedestals(state, BV):
         if status == 'RUN':
             proc = state['pc'].create_proc('vrefinv_scan')
             while not proc.is_finished():
+                elapsed_time = time() - start_time
                 event, values = trimming.read(timeout=1)
                 if event == 'Terminate Trimming' or event == sg.WIN_CLOSED:
-                    print(' >> InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    print(' -- InteractionGUI: calling TERMINATE on trim_pedestals at user request')
+                    status = 'TERM'
+                    break
+                elif elapsed_time > TIMEOUT:
+                    print(" -- InteractionGUI: TIMEOUT for trimmed pedestal test")
+                    exiting = waiting_window("Exiting test", "TIMEOUT")
+                    sleep(2)
+                    exiting.close()
                     status = 'TERM'
                     break
 
@@ -825,7 +869,7 @@ def run_other_script(script, state, BV):
         while not proc.is_finished():
             event, values = scriptrun.read(timeout=1)
             if event == 'Terminate Test' or event == sg.WIN_CLOSED:
-                print(' >> InteractionGUI: calling TERMINATE on run_other_script at user request')
+                print(' -- InteractionGUI: calling TERMINATE on run_other_script at user request')
                 status = 'TERM'
                 break
 
@@ -842,7 +886,7 @@ def run_other_script(script, state, BV):
             try:
                 other_test_upload(state, script, BV)            
             except Exception:
-                print('  -- Other test upload exception:', traceback.format_exc())
+                print(' -- InteractionGUI: Other test upload exception:', traceback.format_exc())
 
     scriptrun.close()
     return status
@@ -928,7 +972,7 @@ def take_IV_curve(state, step=10, maxV=500):
     else:
         HVswitch_tripped = state['ps'].switch_state()
         if not HVswitch_tripped and configuration['HasHVSwitch']:
-            print(' >> HV switch not tripped - exiting. Please close box and try again.')
+            print(' -- InteractionGUI: HV switch not tripped - exiting. Please close box and try again.')
             return 'END'
         update_state(state, '-HV-Output-On-', True, 'green')
 
@@ -946,7 +990,7 @@ def take_IV_curve(state, step=10, maxV=500):
         while curve_proc.is_alive():
             event, values = curvew.read(timeout=1)
             if event == 'Terminate Test' or event == sg.WIN_CLOSED:
-                print(' >> InteractionGUI: calling TERMINATE on take_IV_curve at user request')
+                print(' -- InteractionGUI: calling TERMINATE on take_IV_curve at user request')
                 curve_proc.terminate()
                 status = 'TERM'
                 break
@@ -978,7 +1022,7 @@ def take_IV_curve(state, step=10, maxV=500):
             try:
                 iv_upload(curve, state) # saves IV curve as pickle object and uploads to local db
             except Exception:
-                print('  -- IV upload exception:', traceback.format_exc())
+                print(' -- InteractionGUI: IV upload exception:', traceback.format_exc())
         elif status == 'CONT':
             iv_save(curve, state) # saves IV curve as pickle object
         curvew.close()
@@ -1062,7 +1106,7 @@ def plot_IV_curves(state):
             ax.plot(np.abs(v0), np.abs(i0), 'o-', label='Bare Sensor', color = 'grey')
             ax.fill_between(np.abs(v0), np.abs(i0)-di0, np.abs(i0)+di0, color = 'grey', alpha = 0.15)
         except Exception:
-            print("  -- InteractionGUI: can't add sensor IV;", traceback.format_exc())
+            print(" -- InteractionGUI: can't add sensor IV;", traceback.format_exc())
             
         outdir = state['-Output-Subdir-']
 
@@ -1091,7 +1135,7 @@ def plot_IV_curves(state):
             ax.text(850, 2.5e-9, rf'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
             
         except Exception:
-            print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
+            print(" -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
             
         # dynamically name file to avoid overwriting plots
         filepath = f'{configuration["DataLoc"]}/{outdir}/{state["-Module-Serial-"]}_IVset_{datadict["date"]}'
@@ -1112,7 +1156,7 @@ def module_rebond_window(state, unconcells, noisycells):
     try:
         assert state['-Module-Status-'] in ['Frontside Bonded', 'Completely Bonded', 'Bonds Reworked']
     except AssertionError:
-        print('  >> DBTools: cannot rebond if not bonded or already encapsulated')
+        print(' -- DBTools: cannot rebond if not bonded or already encapsulated')
         return
 
     layout = [[sg.Text(f"Module {state['-Module-Serial-']} needs bond rework", font=lgfont)],
