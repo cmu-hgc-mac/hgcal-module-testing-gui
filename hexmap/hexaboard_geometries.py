@@ -125,6 +125,8 @@ def add_mapping(df, hb_type = "LF"):
 # To mark asic (chip) places on the plot
 # axes: the plt.Axes object with the plot
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
+# updated chip labels to have both chip number and what is printed on the hexaboard silkscreen
+# according to https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
 def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_corrupted = False):
     if hb_type == 'LR':
         #########################
@@ -163,7 +165,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1']
+        chip_labels = ['Chip 0 (M1)', 'Chip1 (M2)']
 
     elif hb_type == 'LL':
         #########################
@@ -201,7 +203,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1']
+        chip_labels = ['Chip 0 (M1)', 'Chip 1 (M2)']
         
     elif hb_type == "LF":
         #########################
@@ -255,7 +257,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1', 'chip2']
+        chip_labels = ['Chip 0 (M1)', 'Chip 1 (M2)', 'Chip 2 (M3)']
 
     elif hb_type == "LB":
         #########################
@@ -293,7 +295,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1', 'chip2']
+        chip_labels = ['Chip 0 (IC4)', 'Chip 1 (IC3)']
 
     elif hb_type == "LT":
         #########################
@@ -331,7 +333,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1']
+        chip_labels = ['Chip 0 (IC1)', 'Chip 1 (IC2)']
 
     elif hb_type == "L5":
         #########################
@@ -339,8 +341,8 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         #    chip positions
         #         ______
         #        /  0 / |
-        #       /____/ 1|
-        #       \  2 \  |
+        #       /____/ 2|
+        #       \  1 \  |
         #        \____\_|
         #
         ##########################
@@ -385,7 +387,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
 
         # list of chip labels
-        chip_labels = ['chip0', 'chip1', 'chip2']
+        chip_labels = ['Chip 0 (IC1)', 'Chip 1 (IC3)', 'Chip 2 (IC2)']
 
     elif hb_type == "HF":
         ########################
@@ -439,39 +441,39 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip1_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip2
-        chip2_pos = (-2.6, -1.6)      
+        chip2_pos = (-1.5, -4.4)      
         chip2_angle = 0.
-        chip2_anno_pos = (-6.2, -2.1)    
+        chip2_anno_pos = (-4.55, -5.)    
         chip2_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip3
-        chip3_pos = (-1.5, -4.4)      
+        chip3_pos = (-2.6, -1.6)      
         chip3_angle = 0.
-        chip3_anno_pos = (-4.55, -5.)    
+        chip3_anno_pos = (-6.2, -2.1)    
         chip3_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip4
-        chip4_pos = (1.7, -0.8)      
+        chip4_pos = (3.4, 1.8)      
         chip4_angle = -60.
-        chip4_anno_pos = (3.8, -4.9)    
+        chip4_anno_pos = (5.4, -2.1)    
         chip4_anno_angle = -120.
 
         # marker posisition, angle and annotation position, angle for chip5
-        chip5_pos = (3.4, 1.8)      
+        chip5_pos = (1.7, -0.8)      
         chip5_angle = -60.
-        chip5_anno_pos = (5.4, -2.1)    
+        chip5_anno_pos = (3.8, -4.9)    
         chip5_anno_angle = -120.
 
         # lists of chip positions, angles and annotation positions, angles
         chip_pos = [chip0_pos, chip1_pos, chip2_pos, chip3_pos, chip4_pos, chip5_pos]
         chip_angles = [chip0_angle, chip1_angle, chip2_angle, chip3_angle, chip4_angle, chip5_angle]
-        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos, chip2_anno_pos, chip3_anno_pos, chip4_anno_pos, 
-                                                                                            chip5_anno_pos]
-        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle, chip3_anno_angle, 
-                                                                        chip4_anno_angle, chip5_anno_angle]
+        chip_anno_pos = [chip0_anno_pos, chip1_anno_pos, chip2_anno_pos,
+                         chip3_anno_pos, chip4_anno_pos, chip5_anno_pos]
+        chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle,
+                            chip3_anno_angle, chip4_anno_angle, chip5_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['chip0', 'chip1', 'chip3', 'chip2', 'chip5', 'chip4']
+        chip_labels = ['Chip 0 (IC1)', 'Chip 1 (IC2)', 'Chip 2 (IC4)', 'Chip 3 (IC3)', 'Chip 4 (IC6)', 'Chip 5 (IC5)']
 
     elif hb_type == "HL":
         ########################
@@ -511,7 +513,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['chip0', 'chip1']
+        chip_labels = ['Chip 0 (IC4)', 'Chip 1 (IC3)']
 
     elif hb_type == "HR":
         ########################
@@ -551,7 +553,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['chip0', 'chip1']
+        chip_labels = ['Chip 0 (IC1)', 'Chip 1 (IC2)']
 
     elif hb_type == "HT":
         ########################
@@ -562,6 +564,8 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         #      /_0__/_2_\
         #
         #########################
+        # this layout disagrees with https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
+        # need to investigate!
 
         # endpoints of line dividing chips 0 and 1 (l0)
         x_010 = [-1., 0.]    
@@ -607,7 +611,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['chip0', 'chip1', 'chip2']
+        chip_labels = ['Chip 0 (IC5)', 'Chip 1 (IC4)', 'Chip 2 (IC3)']
 
     elif hb_type == "HB":
         ########################
@@ -619,7 +623,9 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         #       \__2__\/
         #
         #########################
-
+        # layout not on https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
+        # need to investigate
+        
         # endpoints of line dividing chips 2 and 0
         x_20 = [1.5, 3.] 
         y_20 = [-2.9, -5.6]
@@ -660,15 +666,15 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip1_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip2
-        chip2_pos = (-4., -0.8)      
+        chip2_pos = (-2.0, -4.4)
         chip2_angle = 0.
-        chip2_anno_pos = (-6.2, -2.1)    
+        chip2_anno_pos = (-4.55, -5.)    
         chip2_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip3
-        chip3_pos = (-2.0, -4.4)      
+        chip3_pos = (-4., -0.8)     
         chip3_angle = 0.
-        chip3_anno_pos = (-4.55, -5.)    
+        chip3_anno_pos = (-6.2, -2.1)    
         chip3_anno_angle = 120.
 
         # lists of chip positions, angles and annotation positions, angles
@@ -678,7 +684,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle, chip3_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['chip0', 'chip1', 'chip2', 'chip3']
+        chip_labels = ['Chip 0 (M1)', 'Chip 1 (M2)', 'Chip 2 (M3)', 'Chip 3 (M4)']
 
     # chip marker height/width
     if hb_type[0] == 'L':
