@@ -156,8 +156,6 @@ def pedestal_upload(state, ind=-1):
         highval = df_data[column] > noisy_limit
     # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
-
-
     count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
     list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
@@ -184,6 +182,13 @@ def pedestal_upload(state, ind=-1):
     
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
+    # grab test configuration .yaml file and convert to json to upload
+    test_config_yaml_path = runs[ind]+'/initial_full_config.yaml'
+    test_config = {}
+    with open(test_config_yaml_path, 'r') as file:
+        test_config = yaml.safe_load(file)
+    test_config_json_string = json.dumps(test_config)
+    
     # build upload row list
     namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
     db_upload_ped = {namekey: serial_remove_dashes(moduleserial),
@@ -199,7 +204,8 @@ def pedestal_upload(state, ind=-1):
                      'inspector': state['-Inspector-'],
                      'comment': comment,
                      'trim_bias_voltage': trimval,
-                     'cell': df_data['pad'].tolist() # rename pad -> cell
+                     'cell': df_data['pad'].tolist(), # rename pad -> cell
+                     'pedestal_config_json': test_config_json_string
                      }
 
     dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
@@ -279,6 +285,13 @@ def previous_pedestal_upload(path):
                 status = key
                 datelist = [int(i) for i in run.removeprefix(configuration["DataLoc"]).split('/')[1].split('_')[-1].split('-')]
                 date_test = date(datelist[0], datelist[1], datelist[2])
+
+        # grab test configuration .yaml file and convert to json to upload
+        test_config_yaml_path = run+'/initial_full_config.yaml'
+        test_config = {}
+        with open(test_config_yaml_path, 'r') as file:
+            test_config = yaml.safe_load(file)
+        test_config_json_string = json.dumps(test_config)
                 
         # build upload row list
         namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
@@ -289,7 +302,8 @@ def previous_pedestal_upload(path):
                          'list_dead_cells': list_dead_cells,
                          'list_noisy_cells':list_noisy_cells,
                          'date_test': date_test,
-                         'cell': df_data['pad'].tolist() # rename pad -> cell
+                         'cell': df_data['pad'].tolist(), # rename pad -> cell
+                         'pedestal_config_json': test_config_json_string
                          }
 
         dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
