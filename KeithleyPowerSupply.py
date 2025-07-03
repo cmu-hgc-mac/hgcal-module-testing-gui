@@ -73,11 +73,11 @@ class KeithleyPowerSupply:
         else:
             print(" >> KeithleyPowerSupply: MODEL_NUM NOT FOUND")
 
-        self._is_2410 = (self._MODEL_NUM == "2410")
+        self._is_2470 = (self._MODEL_NUM == "2470")
 
         # Initiate instrument
         self._write("*RST")
-        if self._is_2410:
+        if not self._is_2470:
             self._write("SYSTem:REMote")
 
         self.voltage_now = 0.
@@ -96,7 +96,7 @@ class KeithleyPowerSupply:
         # increase range to 1.05 mA. when the current drops below 20 uA, return range to 105 uA.
         self.high_i_range = False 
 
-        if self._is_2410:
+        if not self._is_2470:
             self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         self.set_elements(self._elements)
         self.set_current_limit(self._ilimit)
@@ -131,7 +131,7 @@ class KeithleyPowerSupply:
         self.set_source_voltage(0)
         self.set_output(0)
         self.set_output_enable(0)
-        if self._is_2410:
+        if not self._is_2470:
             self._write("SYSTem:LOCal")
 
     def _write(self, writeStr):
@@ -176,7 +176,7 @@ class KeithleyPowerSupply:
                     raise ValueError("Undefined element")
             else:
                 raise ValueError("Undefined element")
-        if self._is_2410:
+        if not self._is_2470:
             self._write("FORMat:ELEMents " + element_string)
 
     def _parse_data(self, response):
@@ -222,16 +222,16 @@ class KeithleyPowerSupply:
         """Sets the output enable function active. This is used for safeguarding the test stand.
         """
         if onoff:
-            if self._is_2410:
-                self._write(f"OUTPut{self._channel}:ENABle ON")
-            else:
+            if self._is_2470:
                 self._write(f"OUTPut{self._channel}:INTerlock:STATe ON")
-        else:
-            if self._is_2410:
-                self._write(f"OUTPut{self._channel}:ENABle OFF")
             else:
+                self._write(f"OUTPut{self._channel}:ENABle ON")
+        else:
+            if self._is_2470:
                 self._write(f"OUTPut{self._channel}:INTerlock:STATe OFF")
-
+            else:
+                self._write(f"OUTPut{self._channel}:ENABle OFF")
+    
     def set_output(self, onoff):
         """Sets the output on or off. Also sets voltage output to zero to keep state consistent
         and structure class properly for ramping.
@@ -261,10 +261,10 @@ class KeithleyPowerSupply:
         """
         if self._CURRENT_LIMIT_LOW <= abs(ilimit) <= self._CURRENT_LIMIT_HIGH:
             self._ilimit = ilimit
-            if self._is_2410:
-                self._write(f"SENSe{self._channel}:CURRent:PROTection:LEVel {ilimit}")
-            else:
+            if self._is_2470:
                 self._write(f"SOURce{self._channel}:CURRent:PROTection:LEVel {ilimit}")
+            else:
+                self._write(f"SENSe{self._channel}:CURRent:PROTection:LEVel {ilimit}")
         else:
             raise ValueError("Invalid current limit")
 
@@ -287,10 +287,10 @@ class KeithleyPowerSupply:
     def get_enable_tripped(self):
         """Returns 1 if the output enable line has been tripped. (Tripped means the output can be enabled)
         """
-        if self._is_2410:
-            status = int(self._query("OUTPut:ENABle:TRIPped?"))
-        else:
+        if self._is_2470:
             status = int(self._query("OUTPut:INTerlock:TRIPped?"))
+        else:
+            status = int(self._query("OUTPut:ENABle:TRIPped?"))
         return status
 
     def switch_state(self):
@@ -336,7 +336,7 @@ class KeithleyPowerSupply:
             return
 
         if self._VOLTAGE_LIMIT_LOW <= abs(value) <= self._vlimit:
-            if self._is_2410:
+            if not self._is_2470:
                 self.set_source_voltage_mode("fixed")
 
             # ramp up the voltage slowly if it's very different than current voltage
@@ -345,14 +345,14 @@ class KeithleyPowerSupply:
                 for i in range(1, int(abs(difference) // self.bv_ramp_step) + 1):
                     this_voltage = self.voltage_now + self.bv_ramp_step*i*copysign(1, difference)
                     self._write(f"SOURce{self._channel}:VOLTage {this_voltage}")
-                    if not self._is_2410:
+                    if self._is_2470:
                         self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")     # Corrected: ILIMit for 1 mA 
                     sleep(self.bv_ramp_wait)
 
             self.voltage_now = value
             self._write(f"SOURce{self._channel}:VOLTage {value}")
-            if not self._is_2410:
-                        self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")     # Corrected: ILIMit for 1 mA 
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")     # Corrected: ILIMit for 1 mA 
         else:
             raise ValueError("Invalid set voltage")
 
@@ -365,7 +365,7 @@ class KeithleyPowerSupply:
         """Sets the source mode to fixed current with the defined value.
         """
         if self._CURRENT_LIMIT_LOW <= abs(value) <= self._ilimit:
-            if self._is_2410:
+            if not self._is_2470:
                 self.set_source_current_mode("fixed")
             self._write(f"SOURce{self._channel}:CURRent {value}")
         else:
@@ -393,15 +393,15 @@ class KeithleyPowerSupply:
         """
         if self._sense_mode != "voltage":
             self.set_sense_mode("voltage")
-        if self._is_2410:
-            self._write("CONFigure:VOLTage:DC")
-        else:
+        if self._is_2470:
             self._write(f"SENSe{self._channel}:FUNCtion 'VOLTage'")
-        measurement = self._query("READ?")
-        if self._is_2410:
-            return float(self._parse_data(measurement)[0]['voltage'])
         else:
+            self._write("CONFigure:VOLTage:DC")
+        measurement = self._query("READ?")
+        if self._is_2470:
             return float(measurement)
+        else:
+            return float(self._parse_data(measurement)[0]['voltage'])
         
     def measureVoltage(self):
         """Renaming of above function for compatibility
@@ -414,10 +414,10 @@ class KeithleyPowerSupply:
         """
         if self._sense_mode != "current":
             self.set_sense_mode("current")
-        if self._is_2410:
-            self._write("CONFigure:CURRent:DC")
-        else:
+        if self._is_2470:
             self._write(f"SENSe{self._channel}:FUNCtion 'CURRent'")
+        else:
+            self._write("CONFigure:CURRent:DC")
 
         # reconfigure to disable auto-ranging
         if not self.high_i_range:
@@ -432,10 +432,10 @@ class KeithleyPowerSupply:
             if time() - start >= 3.:
                 break
         measurement = self._query("READ?", 0.)
-        if self._is_2410:
-            return float(self._parse_data(measurement)[0]['current'])
-        else:
+        if self._is_2470:
             return float(measurement)
+        else:
+            return float(self._parse_data(measurement)[0]['current'])
 
     def measureCurrent(self):
         """Renaming of above function for compatibility
@@ -447,10 +447,10 @@ class KeithleyPowerSupply:
         # Current stabilizes much faster when you ask for a measurement continually                                                                                              
         if self._sense_mode != "current":
             self.set_sense_mode("current")
-        if self._is_2410:
-            self._write("CONFigure:CURRent:DC")
-        else:
+        if self._is_2470:
             self._write(f"SENSe{self._channel}:FUNCtion 'CURRent'")
+        else:
+            self._write("CONFigure:CURRent:DC")
 
         # reconfigure to disable auto-ranging
         if not self.high_i_range:
@@ -459,10 +459,7 @@ class KeithleyPowerSupply:
             self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
             
         start = time()
-        if self._is_2410:
-            maxtime = 30.
-        else:
-            maxtime = 10.
+        maxtime = 10.
         q = deque(maxlen=5)
 
         # repetetively query current measurement
@@ -470,10 +467,10 @@ class KeithleyPowerSupply:
             
             measurement = self._query("READ?", 0.)
 
-            if self._is_2410:
-                thiscurrent = float(self._parse_data(measurement)[0]['current'])
-            else:
+            if self._is_2470:
                 thiscurrent = float(measurement)
+            else:
+                thiscurrent = float(self._parse_data(measurement)[0]['current'])
             q.append(thiscurrent)
 
             if thiscurrent > (50. * 10**(-6)) and not self.high_i_range:
@@ -492,10 +489,10 @@ class KeithleyPowerSupply:
                 break
             
         measurement = self._query("READ?", 0.)
-        if self._is_2410:
-            thiscurrent = float(self._parse_data(measurement)[0]['current'])
-        else:
+        if self._is_2470:
             thiscurrent = float(measurement)
+        else:
+            thiscurrent = float(self._parse_data(measurement)[0]['current'])
         q.append(thiscurrent)
         measarr = np.array(q)
 
@@ -537,7 +534,7 @@ class KeithleyPowerSupply:
     def display_string(self, string):
         """Display a string on the upper display of the power supply
         """
-        if self._is_2410:
+        if not self._is_2470:
             self._write('DISP:WIND1:TEXT "{}"'.format(string))
             self._write('DISP:WIND1:TEXT:STAT ON')
             sleep(2.0)
