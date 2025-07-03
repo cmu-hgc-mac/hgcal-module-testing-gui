@@ -227,7 +227,7 @@ class Keithley2410:
         self.set_output(True)
 
     def outputOff(self):
-        """Sets the output off                                                                                                                                       
+        """Sets the output off
         """
         self.set_output(False)
                  
