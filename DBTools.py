@@ -17,6 +17,7 @@ from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
 from functools import reduce
+import json
 
 import yaml
 configuration = {}
