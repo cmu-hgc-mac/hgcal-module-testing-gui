@@ -128,6 +128,15 @@ def add_mapping(df, hb_type = "LF"):
 # updated chip labels to have both chip number and what is printed on the hexaboard silkscreen
 # according to https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
 def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_corrupted = False):
+
+    # center alignment for labels: xy positions
+    label_top = (0, 5.85)
+    label_upper_right = (4.9, 2.64)
+    label_lower_right = (4.9, -2.64)
+    label_bottom = (0., -5.85)
+    label_lower_left = (-4.9, -2.64)
+    label_upper_left = (-4.9, 2.64)
+
     if hb_type == 'LR':
         #########################
         # LD Right board geometry and
@@ -235,19 +244,19 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-0.6, 2.45)      
         chip0_angle = 119.
-        chip0_anno_pos = (-4.9, 2.8)    
-        chip0_anno_angle = 63
+        chip0_anno_pos = label_upper_left
+        chip0_anno_angle = 60
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (2.6, -1.1)
         chip1_angle = 0.
-        chip1_anno_pos = (4.15, 2.6)
-        chip1_anno_angle = -58
+        chip1_anno_pos = label_upper_right
+        chip1_anno_angle = -60
 
         # marker posisition, angle and annotation position, angle for chip2
         chip2_pos = (-1.45, -3.8)
         chip2_angle = 59.
-        chip2_anno_pos = (-0.7, -5.95)
+        chip2_anno_pos = label_bottom
         chip2_anno_angle = 0.0
 
         # lists of chip positions, angles and annotation positions, angles
@@ -707,7 +716,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
                                                                     chip_labels, chip_anno_pos, chip_anno_angles):
         ax.add_patch(Rectangle(chip_xy, width = width, height = height, 
                     angle = chip_angle, fill = False, linewidth = 2, alpha = 0.8, color = color))
-        ax.annotate(chip_label, text_pos, rotation = text_angle, fontsize = 18, alpha = 1., color = color)
+        ax.annotate(chip_label, text_pos, rotation = text_angle, fontsize = 18, alpha = 1., color = color, ha='center', va='center')
 
     # create legend for chip position and add to plot
     hexagon_r = RegularPolygon((0.5, 0.5), numVertices = 6, radius = 10, orientation = 0, edgecolor = 'red', linestyle='--', lw=2, fill=None)
