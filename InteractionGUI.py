@@ -784,7 +784,7 @@ def trim_pedestals(state, BV):
             if BV is None:
                 state['-Pedestals-Trimmed-'] = True
             else:
-                state['-Pedestals-Trimmed-'] = BV
+                state['-Pedestals-Trimmed-'] = int(BV)
 
     trimming.close()
     return status
