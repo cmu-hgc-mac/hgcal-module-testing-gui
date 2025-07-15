@@ -1063,17 +1063,20 @@ def plot_IV_curves(state):
             
         outdir = state['-Output-Subdir-']
 
+        maxv = np.max(data[:,0])
+        
         ax.set_yscale('log')
         ax.set_title(f'{state["-Module-Serial-"]} module IV Curve Set {datadict["date"]}')
         ax.set_xlabel('Reverse Bias [V]')
         ax.set_ylabel(r'Leakage Current [A]')
         ax.set_ylim(1e-9, 1e-03)
-        ax.set_xlim(0, 900)
+        ax.set_xlim(0, maxv)
         ax.legend()
 
         # add grading info to plot
         try:
             v = data[:,0]
+            
             # old IV grade
             #i600 = data[np.argwhere(v==600.),2]*10**6
             #i850600 = data[np.argwhere(v==850.),2]/data[np.argwhere(v==600.),2]
@@ -1081,11 +1084,12 @@ def plot_IV_curves(state):
             #ax.text(850, 1e-8, f'IV Grade (last curve): {grade}', ha='right', va='center')
             #ax.text(850, 5e-9, f'I(600V) = {round(data[60,2]*10**6, 2)} $\mu$A', ha='right', va='center')
             #ax.text(850, 2.5e-9, f'I(850V)/I(600V) = {round(data[85,2]/data[60,2], 3)}', ha='right', va='center')
+
             # new
             i500 = data[np.argwhere(v==500.),2][0][0]*10**6
             grade = 'A' if (i500 < 100.) else ('B' if (i500 < 1000.) else 'C')
-            ax.text(850, 5e-9, f'IV Grade (last curve): {grade}', ha='right', va='center')
-            ax.text(850, 2.5e-9, rf'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
+            ax.text(maxv-50, 5e-9, f'IV Grade (last curve): {grade}', ha='right', va='center')
+            ax.text(maxv-50, 2.5e-9, rf'I(500V) = {round(i500, 2)} $\mu$A', ha='right', va='center')
             
         except Exception:
             print("  -- InteractionGUI: can't add grading info to IV plot;", traceback.format_exc())
