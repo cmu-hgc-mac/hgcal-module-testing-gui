@@ -73,25 +73,15 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                    sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
                    sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)]]
-                  #[sg.Text('ROC Version: '),
-                  # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                  # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
-                  # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
-                  # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
-                  # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
-                  #[sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
 
 # Module Setup fields for hexaboards only
-# for now, including Hexaboard/ROC version as input for backwards compatibility -
-# will hopfully change to radio buttons once `F03` format is obsolete
-hexaboardonly = [#[sg.Text('ROC Version: '),
-                 # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                 # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
-                 # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
-                 # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
-                 # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
-                 #[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
-                 [sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
+hexaboardonly = [[sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
+
+# Field only for use outside of MACs
+nonmaconly = [[sg.Text('MAC Code: '), sg.Radio('CM', 8, key='-CM-', enable_events=True),
+               sg.Radio('SB', 8, key='-SB-', enable_events=True), sg.Radio('TT', 8, key='-TT-', enable_events=True),
+               sg.Radio('NT', 8, key='-NT-', enable_events=True), sg.Radio('IH', 8, key='-IH-', enable_events=True),
+               sg.Radio('TI', 8, key='-TI-', enable_events=True)]]
 
 # Module Setup section which has both live module and hexaboard fields from above but initially hides them
 modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), sg.Radio('Hexaboard', 1, key='-IsHB-', enable_events=True)],
@@ -107,6 +97,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                 sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
                 sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
                [sg.pin(sg.Column(hexaboardonly, key='-HB-Menu-', visible=False))],
+               [sg.pin(sg.Column(nonmaconly, key='-Non-MAC-Menu-', visible=False))],
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
@@ -269,7 +260,7 @@ ivonly_skip = False
 empty = ''
 majortype = ['X', 'L']
 minortype = ['F', '2', 'C', '']
-macserial = configuration['MACSerial']
+macserial = configuration['MACSerial'] if configuration['MACSerial'] in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI'] else ''
 moduleindex = ''
 vendorserial = ''
 moduleserial = ''
@@ -472,7 +463,22 @@ while True:
 
             if not values['-IsHB-']:
                 basewindow.write_event_value('-IsHB-', True)
-
+                
+        # if not at MAC, populate MAC code
+        if configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI']:
+            macserial = serialsections[3]
+            if macserial == 'CM': basewindow['-CM-'].update(value=True)
+            elif macserial == 'SB': basewindow['-SB-'].update(value=True)
+            elif macserial == 'TT': basewindow['-TT-'].update(value=True)
+            elif macserial == 'NT': basewindow['-NT-'].update(value=True)
+            elif macserial == 'IH': basewindow['-IH-'].update(value=True)
+            elif macserial == 'TI': basewindow['-TI-'].update(value=True)
+            else:
+                basewindow['-Scanned-QR-Code-'].update(value='')
+                continue
+        else:
+            macserial = configuration['MACSerial']
+        
     # Ensure clicking on Live or HB overrides scanned QR code
     if (event == '-IsLive-' and values['-IsHB-']) or (event == '-IsHB-' and values['-IsLive-']):
         toggleval = (event == '-IsLive-')
@@ -497,6 +503,7 @@ while True:
     # Change visibility of sections based on if live module or not
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
+    basewindow['-Non-MAC-Menu-'].update(visible=values['-IsLive-'] and configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI'])
     basewindow['-Mod-Status-Text-'].update('Module Status:' if values['-IsLive-'] else 'Hexaboard Status:')
     thesestatuses = mod_statuses if values['-IsLive-'] else hxb_statuses
     if basewindow['-Module-Status-'].Values != thesestatuses:
@@ -580,6 +587,17 @@ while True:
         if len(vendorid) == 2:
             pcbvendor = vendorid[0]
             assemblyvendor = vendorid[1]
+
+    # if not at MAC check MAC code
+    if configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI']:
+        if values['-CM-']: macserial = 'CM'
+        elif values['-SB-']: macserial = 'SB'
+        elif values['-TT-']: macserial = 'TT'
+        elif values['-NT-']: macserial = 'NT'
+        elif values['-IH-']: macserial = 'IH'
+        elif values['-TI-']: macserial = 'TI'
+    else:
+        macserial = configuration['MACSerial']
         
     # Only using DCDC if LD Full
     if majortype[1] != 'L' or minortype[0] != 'F':
