@@ -1104,7 +1104,7 @@ def plot_IV_curves(state):
         plt.close(fig)
         os.system(f'gio open {filepath.format(end)}')
 
-def module_rebond_window(state, unconcells, noisycells, dead_and_ungrounded):
+def module_rebond_window(state, uncon_and_ungrounded, noisycells, dead_and_ungrounded):
 
     try:
         assert state['-Module-Status-'] in ['Frontside Bonded', 'Completely Bonded', 'Bonds Reworked']
@@ -1115,12 +1115,12 @@ def module_rebond_window(state, unconcells, noisycells, dead_and_ungrounded):
     layout = [[sg.Text(f"Module {state['-Module-Serial-']} needs bond rework", font=lgfont)],
               [sg.Button('OK')]]
 
-    if len(unconcells) > 0:
-        layout.insert(-1, [sg.Text(f'Found unbonded cells {unconcells.tolist()}, check bonds', font=lgfont)])
+    if len(uncon_and_ungrounded) > 0:
+        layout.insert(-1, [sg.Text(f'Found unbonded cells {uncon_and_ungrounded}, check bonds', font=lgfont)])
     if len(noisycells) > 0:
         layout.insert(-1, [sg.Text(f'Found noisy cells {noisycells.tolist()}, please ground', font=lgfont)])
     if len(dead_and_ungrounded) > 0:
-        layout.insert(-1, [sg.Text(f'Found dead and ungrounded cells {noisycells.tolist()}, please ground', font=lgfont)])
+        layout.insert(-1, [sg.Text(f'Found dead and ungrounded cells {dead_and_ungrounded}, please ground', font=lgfont)])
         
     rebond = sg.Window(f"Module {state['-Module-Serial-']} needs bond rework", layout, margins=(200,100))
 

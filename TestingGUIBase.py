@@ -902,8 +902,9 @@ while True:
                 try:
                     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
                     dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
-                    if len(unconcells) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
-                        module_rebond_window(current_state, unconcells, noisycells, dead_and_ungrounded)
+                    uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
+                    if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
+                        module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
                 except TypeError:
                     print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
