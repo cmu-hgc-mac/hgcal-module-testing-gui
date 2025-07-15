@@ -912,7 +912,7 @@ while True:
             if status == 'CONT':
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
-                status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
+                status = multi_run_pedestals(current_state, [1, 10, 100, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
 
             if not current_state['-Debug-Mode-']:
                 # pedestal run in InteractionGUI handles wire polarization
@@ -936,8 +936,10 @@ while True:
             if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
                 try:
                     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-                    if len(unconcells) > 0 or len(noisycells) > 0:
-                        module_rebond_window(current_state, unconcells, noisycells)
+                    dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
+                    uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
+                    if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
+                        module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
                 except TypeError:
                     print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
