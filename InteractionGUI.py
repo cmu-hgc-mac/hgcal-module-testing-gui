@@ -936,8 +936,8 @@ def take_IV_curve(state, step=10, maxV=500):
         # use multiprocessing to run IV curve in separate process
         # output dict is shared between main proc and IV proc
         manager = Manager()
-        curve = manager.dict()
-        curve_proc = Process(target=state['ps'].takeIVproc, args = [curve, maxV, step, RH, Temp, status])
+        mcurve = manager.dict()
+        curve_proc = Process(target=state['ps'].takeIVproc, args = [mcurve, maxV, step, RH, Temp, status])
         curve_proc.start()
                                          
         while curve_proc.is_alive():
@@ -950,6 +950,9 @@ def take_IV_curve(state, step=10, maxV=500):
 
         sleep(0.5)        
         curve_proc.join()
+
+        # convert mcurve into normal dictionary so can be stored safely
+        curve = dict(mcurve)
 
         # Append data into IVdata:
         if status == 'RUN':

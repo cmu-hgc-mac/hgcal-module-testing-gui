@@ -40,7 +40,7 @@ def iv_save(datadict, state):
 
     moduleserial = state['-Module-Serial-']
     outdir = state['-Output-Subdir-']
-    with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+    with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"].replace(":", "")}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
     return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
