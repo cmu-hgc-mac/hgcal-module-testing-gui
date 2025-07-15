@@ -708,14 +708,18 @@ def fetch_sensor_iv(moduleserial):
 
 def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
-    lowBVruns = fetch_pedestal(moduleserial, 2, 300, modulestatus)
+    lowBVruns = fetch_pedestal(moduleserial, 1, 300, modulestatus)
+    if len(lowBVruns) == 0:
+        lowBVruns = fetch_pedestal(moduleserial, 2, 300, modulestatus)
+    if len(lowBVruns) == 0:
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+
     midBVruns = fetch_pedestal(moduleserial, 300, 300, modulestatus)
+
     highBVruns = fetch_pedestal(moduleserial, 800, 300, modulestatus)
     if len(highBVruns) == 0:
         highBVruns = fetch_pedestal(moduleserial, 500, 300, modulestatus)
-    if len(lowBVruns) == 0:
-        lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
-        
+
     # backwards compatibility
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2 and (modulestatus == 'Completely Bonded' or modulestatus == 'Completely Encapsulated'):
         status = modulestatus.replace('Completely','Frontside')
@@ -745,7 +749,21 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
     calib_mask = celltype == 1
     uncon = (noise[norm_mask | calib_mask] <= unbondthresh) & (noise[norm_mask | calib_mask] > 0.)
     unconcells = cellid[norm_mask | calib_mask][uncon]
-            
+
+    # more sophisticated unbonded detection
+    bv1runs = fetch_pedestal(moduleserial, 1, 300, modulestatus)
+    bv10runs = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+    bv100runs = fetch_pedestal(moduleserial, 100, 300, modulestatus)
+
+    if len(bv1runs) > 0 and len(bv10runs) > 0 or len(bv100runs) > 0:
+        bv1noise = np.array(bv1runs[-1]['adc_stdd'])
+        bv1t10ratio = np.array(bv1runs[-1]['adc_stdd']) / np.array(bv10runs[-1]['adc_stdd'])
+        bv10t100ratio = np.array(bv10runs[-1]['adc_stdd']) / np.array(bv100runs[-1]['adc_stdd'])
+
+        checksum = (bv1noise < 1.2).astype(int) + (bv1t10ratio < 1.1).astype(int) + (bv10t100ratio < 1.1).astype(int)
+        uncon2 = checksum >= 2 # pass at least two of three checks
+        # leave unused for now
+        
     # check dead channels
     ldeadcells = []
     for run in midBVruns[-5:]:

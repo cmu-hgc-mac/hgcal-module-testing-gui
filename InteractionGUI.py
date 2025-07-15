@@ -1104,7 +1104,7 @@ def plot_IV_curves(state):
         plt.close(fig)
         os.system(f'gio open {filepath.format(end)}')
 
-def module_rebond_window(state, unconcells, noisycells):
+def module_rebond_window(state, unconcells, noisycells, dead_and_ungrounded):
 
     try:
         assert state['-Module-Status-'] in ['Frontside Bonded', 'Completely Bonded', 'Bonds Reworked']
@@ -1119,6 +1119,8 @@ def module_rebond_window(state, unconcells, noisycells):
         layout.insert(-1, [sg.Text(f'Found unbonded cells {unconcells.tolist()}, check bonds', font=lgfont)])
     if len(noisycells) > 0:
         layout.insert(-1, [sg.Text(f'Found noisy cells {noisycells.tolist()}, please ground', font=lgfont)])
+    if len(dead_and_ungrounded) > 0:
+        layout.insert(-1, [sg.Text(f'Found dead and ungrounded cells {noisycells.tolist()}, please ground', font=lgfont)])
         
     rebond = sg.Window(f"Module {state['-Module-Serial-']} needs bond rework", layout, margins=(200,100))
 
@@ -1208,11 +1210,11 @@ def grade_module(moduleserial):
                   'count_back_unbonded': None,
                   'front_pull_avg': None,
                   'front_pull_std': None,
-                  'list_cells_unbonded': unconcells,
-                  'list_cells_grounded': groundedcells,
+                  'list_cells_unbonded': set(unconcells),
+                  'list_cells_grounded': set(groundedcells),
                   'count_bad_cells': len(badcell),
-                  'list_noisy_cells': noisycells,
-                  'list_dead_cells': deadcells,
+                  'list_noisy_cells': set(noisycells),
+                  'list_dead_cells': set(deadcells),
                   'readout_grade': readout_grade,
                   'readout_grade_def': readout_grade_def,
                   #'i_at_600v': i_500v,
@@ -1238,7 +1240,7 @@ def grade_module_window(moduleserial, qc_summary):
     commentstr = '\n'.join(['\n'.join(comments[i]) for i in range(len(comments))])
     # temporary
     # commentstr += '\nqc field i_at_600v is actually at 500V'
-    
+
     layout = [[sg.Text(f'Module {moduleserial}', font=lgfont)], 
               [sg.Text('Grade: ', font=lgfont), sg.Text(qc_summary['final_grade'], font=('Arial', 3*int(configuration['DefaultFontSize'])))],
               [sg.Text(f'Readout Grade: {qc_summary["readout_grade"]}')],
