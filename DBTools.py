@@ -43,7 +43,7 @@ def iv_save(datadict, state):
     with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"].replace(":", "")}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"].replace(":", "")}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
