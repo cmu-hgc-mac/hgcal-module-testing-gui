@@ -132,11 +132,18 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
     # center alignment for labels: xy positions
     label_top = (0, 5.85)
     label_upper_right = (4.9, 2.64)
-    label_lower_right = (4.9, -2.64)
+    label_lower_right = (5.1, -3.19)
     label_bottom = (0., -5.85)
-    label_lower_left = (-4.9, -2.64)
+    label_lower_left = (-5.1, -3.19)
     label_upper_left = (-4.9, 2.64)
-
+    label_diff_x = 0.75
+    label_diff_y = 1.3
+    # up-to-date as of 2025/7/16: LF, LR, LT, LB, HF, HL, HR
+    # LL need a root file
+    # L5 lacks mapping 
+    # HB looks ok but would like confirmation
+    # HT has weirdness
+    
     if hb_type == 'LR':
         #########################
         # LD Right board geometry and
@@ -158,14 +165,14 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (1.4, 2.3)      
         chip0_angle = 0.
-        chip0_anno_pos = (5.0, -3.0)    
-        chip0_anno_angle = 243
+        chip0_anno_pos = label_lower_right 
+        chip0_anno_angle = 240
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (1.4, -3.25)
         chip1_angle = 0.
-        chip1_anno_pos = (4.1, 2.95)
-        chip1_anno_angle = -58
+        chip1_anno_pos = label_upper_right
+        chip1_anno_angle = -60
 
         # lists of chip positions, angles and annotation positions, angles
         chip_pos = [chip0_pos, chip1_pos]
@@ -288,13 +295,13 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-0.7, -3.4)
         chip0_angle = 90.
-        chip0_anno_pos = (-5.3, -3.9)    
+        chip0_anno_pos = label_lower_left
         chip0_anno_angle = -60
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (2.4, -0.6)
         chip1_angle = 210.
-        chip1_anno_pos = (4.4, -4.)
+        chip1_anno_pos = label_lower_right
         chip1_anno_angle = 60
 
         # lists of chip positions, angles and annotation positions, angles
@@ -326,14 +333,14 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-1.5, 2.1)      
         chip0_angle = 90.
-        chip0_anno_pos = (-4.9, 2.8)    
-        chip0_anno_angle = 63
+        chip0_anno_pos = label_upper_left
+        chip0_anno_angle = 60
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (2.3, 2.1)
         chip1_angle = 90.
-        chip1_anno_pos = (4.15, 2.6)
-        chip1_anno_angle = -58
+        chip1_anno_pos = label_upper_right
+        chip1_anno_angle = -60
 
         # lists of chip positions, angles and annotation positions, angles
         chip_pos = [chip0_pos, chip1_pos]
@@ -440,37 +447,37 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-3.2, 2.1)      
         chip0_angle = 60.
-        chip0_anno_pos = (-1.9, 5.8)    
+        chip0_anno_pos = tuple(np.array(label_top) - np.array([1.5, 0]))  
         chip0_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (-0.3, 1.8)      
         chip1_angle = 60.
-        chip1_anno_pos = (1.2, 5.8)    
+        chip1_anno_pos = tuple(np.array(label_top) + np.array([1.5, 0]))
         chip1_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip2
         chip2_pos = (-1.5, -4.4)      
         chip2_angle = 0.
-        chip2_anno_pos = (-4.55, -5.)    
+        chip2_anno_pos = tuple(np.array(label_lower_left) + np.array([label_diff_x, -label_diff_y]))
         chip2_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip3
         chip3_pos = (-2.6, -1.6)      
         chip3_angle = 0.
-        chip3_anno_pos = (-6.2, -2.1)    
+        chip3_anno_pos = tuple(np.array(label_lower_left) + np.array([-label_diff_x, label_diff_y]))
         chip3_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip4
         chip4_pos = (3.4, 1.8)      
         chip4_angle = -60.
-        chip4_anno_pos = (5.4, -2.1)    
+        chip4_anno_pos = tuple(np.array(label_lower_right) + np.array([label_diff_x, label_diff_y]))
         chip4_anno_angle = -120.
 
         # marker posisition, angle and annotation position, angle for chip5
         chip5_pos = (1.7, -0.8)      
         chip5_angle = -60.
-        chip5_anno_pos = (3.8, -4.9)    
+        chip5_anno_pos = tuple(np.array(label_lower_right) + np.array([-label_diff_x, -label_diff_y]))
         chip5_anno_angle = -120.
 
         # lists of chip positions, angles and annotation positions, angles
@@ -506,13 +513,13 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-2., -1.4)      
         chip0_angle = 0.
-        chip0_anno_pos = (-3.85, -3.)    
+        chip0_anno_pos = tuple(np.array(label_lower_left) + np.array([2.1, 0]))
         chip0_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (-1.9, 1.6)
         chip1_angle = 0.
-        chip1_anno_pos = (-3.8, 2)    
+        chip1_anno_pos = tuple(np.array(label_upper_left) + np.array([1.7, 0]))
         chip1_anno_angle = 60.
 
         # lists of chip positions, angles and annotation positions, angles
@@ -525,12 +532,13 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_labels = ['Chip 0 (IC4)', 'Chip 1 (IC3)']
 
     elif hb_type == "HR":
+        # correct as of 2025/2/11 based on https://edms.cern.ch/ui/#!master/navigator/document?P:101100955:101282077:subDocs
         ########################
         # HL board geometry and
         #    chip positions
         #       __
         #      |0 \
-        #      |___\   subject to change - as of 2025/2/7 no channel mapping so I'm making some guesses here
+        #      |___\   
         #      |1  /    
         #      |__/
         #
@@ -546,13 +554,13 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (0.6, 1.6)      
         chip0_angle = 0.
-        chip0_anno_pos = (2.8, 2)    
+        chip0_anno_pos = tuple(np.array(label_upper_right) - np.array([1.8, 0]))
         chip0_anno_angle = -60.
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (0.7, -1.7)
         chip1_angle = 0.
-        chip1_anno_pos = (3.05, -3.)    
+        chip1_anno_pos = tuple(np.array(label_lower_right) - np.array([2, 0]))
         chip1_anno_angle = 60.
 
         # lists of chip positions, angles and annotation positions, angles
@@ -634,6 +642,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         #########################
         # layout not on https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
         # need to investigate
+        # using https://edms.cern.ch/ui/#!master/navigator/document?P:1036960031:101186010:subDocs
         
         # endpoints of line dividing chips 2 and 0
         x_20 = [1.5, 3.] 
@@ -665,25 +674,25 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (4, -2.5)      
         chip0_angle = 60.
-        chip0_anno_pos = (5.5, -2.)    
+        chip0_anno_pos = label_lower_right 
         chip0_anno_angle = 60.
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (0.3, -1.)      
         chip1_angle = 60.
-        chip1_anno_pos = (0.4, 1.05)    
+        chip1_anno_pos = tuple(np.array(label_top) - np.array([0, 4.7]))
         chip1_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip2
         chip2_pos = (-2.0, -4.4)
         chip2_angle = 0.
-        chip2_anno_pos = (-4.55, -5.)    
+        chip2_anno_pos = tuple(np.array(label_lower_left) + np.array([label_diff_x, -label_diff_y]))    
         chip2_anno_angle = 120.
 
         # marker posisition, angle and annotation position, angle for chip3
         chip3_pos = (-4., -0.8)     
         chip3_angle = 0.
-        chip3_anno_pos = (-6.2, -2.1)    
+        chip3_anno_pos = tuple(np.array(label_lower_left) + np.array([-label_diff_x, label_diff_y]))
         chip3_anno_angle = 120.
 
         # lists of chip positions, angles and annotation positions, angles

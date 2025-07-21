@@ -2,7 +2,7 @@ import os, sys, glob
 
 import pandas as pd
 import numpy as np
-from argparse import ArgumentParser
+from argparse import ArgumentParser, BooleanOptionalAction
 import math
 
 import matplotlib as mpl
@@ -167,7 +167,7 @@ def create_masks(df_data):
 # figdir: the output directory for the plots
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
 # label: a label to put in the plot names
-def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
+def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False, BV = None):
     print(" >> Hexmap: Plotting hexmaps")
     df_data = df # create clone to avoid conflict
 
@@ -200,9 +200,11 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
 
         upplim = 400. if column == 'adc_mean' or column == 'adc_median' else 8.
 
-        BV = None
-        if live:
-            BV = float(label.split('BV')[1].split('_')[0])
+        if live and BV is None:
+            try:
+                BV = float(label.split('BV')[1].split('_')[0])
+            except:
+                pass
 
         # for live module if actual channels have same noise as disconnected channels, label
         # but only label if in low-BV pedestal run
@@ -241,9 +243,10 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         for x, y, pad in df.loc[(zeros | maxes) & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
             ax.text(x, y-0.03, str(int(pad)), fontsize=14, ha='center', va='center', color='w')
 
-        if live and (column == 'adc_stdd' or column == 'adc_iqr') and BV <= 10:
-            for x, y, pad in df.loc[uncon & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
-                ax.text(x, y-0.03, str(int(pad)), fontsize=14, ha='center', va='center', color='w')
+        if BV is not None:
+            if live and (column == 'adc_stdd' or column == 'adc_iqr') and BV <= 10:
+                for x, y, pad in df.loc[uncon & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
+                    ax.text(x, y-0.03, str(int(pad)), fontsize=14, ha='center', va='center', color='w')
         if column == 'adc_stdd' or column == 'adc_iqr':
             for x, y, pad in df.loc[highval & (df_data['pad'] > 0), ["x", "y", "pad"]].values:
                 ax.text(x, y-0.03, str(int(pad)), fontsize=14, ha='center', va='center')
@@ -265,20 +268,23 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         edgeclr[calib_mask] = 'black'
         edgeclr[highval & (norm_mask | calib_mask)] = 'red'
         edgeclr[corrupted] = 'violet'
-        if live and BV <= 10.:
-            edgeclr[uncon & (norm_mask | calib_mask)] = 'orange'
+        if BV is not None:
+            if live and BV <= 10.:
+                edgeclr[uncon & (norm_mask | calib_mask)] = 'orange'
 
         edgesty = np.array(['-' for i in range(len(df_data))], dtype=(str, 20))
         edgesty[highval & (norm_mask | calib_mask)] = '--'
         edgesty[corrupted] = '-.'
-        if live and BV <= 10.:
-            edgesty[uncon & (norm_mask | calib_mask)] = '-'
+        if BV is not None:
+            if live and BV <= 10.:
+                edgesty[uncon & (norm_mask | calib_mask)] = '-'
         
         edgewdth = np.array([1.5 for i in range(len(df_data))])
         edgewdth[highval & (norm_mask | calib_mask)] = 3    
         edgewdth[corrupted & (norm_mask | calib_mask)] = 3    
-        if live	and BV <= 10.:
-            edgewdth[uncon & (norm_mask | calib_mask)] = 3    
+        if BV is not None:
+            if live and BV <= 10.:
+                edgewdth[uncon & (norm_mask | calib_mask)] = 3    
         
         for mask, data_type in zip(masks, data_types):
             local_mask = mask.copy()
@@ -312,7 +318,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
             tallylist = ['Channels:', f'{np.sum((zeros) & ~corrupted & (df_data["pad"] > 0))} Dead', f'{np.sum(highval & ~corrupted & (df_data["pad"] > 0) & ~(calib_mask))} Noisy']
             if np.sum((corrupted) & (df_data["pad"] > 0)) > 0:
                 tallylist.insert(1, f'{np.sum((corrupted) & (df_data["pad"] > 0))} Corrupted')
-            if live:
+            if live and BV is not None:
                 if np.sum(uncon & (df_data["pad"] > 0)) > 0 and BV <= 10.:
                     tallylist.insert(-1, f'{np.sum(uncon & ~corrupted & (df_data["pad"] > 0))} Unbonded')
 
@@ -341,7 +347,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False):
         # annotate chip positions on plot
         if column == 'adc_stdd':
             ad_chip_geo(ax, hb_type = hb_type, add_noisy = (np.sum(highval & ~corrupted & (df_data["pad"] > 0)) > 0),
-                        add_uncon = (np.sum(uncon & (df_data["pad"] > 0)) > 0) and live and (BV <= 10.),
+                        add_uncon = (np.sum(uncon & (df_data["pad"] > 0)) > 0) and live and (BV is not None and BV <= 10.),
                         add_corrupted = (np.sum((corrupted) & (df_data["pad"] > 0)) > 0))
         else:
             ad_chip_geo(ax, hb_type = hb_type)
@@ -490,7 +496,7 @@ def plot_pads(df, figdir = "./", hb_type = "LF", label = None, live = False):
 # figdir: the output directory for the plots
 # hb_type: the type of the board ("LF" for low density or "HF" for high density)
 # label: a label to put in the plot names
-def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = None):
+def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = None, is_live=None, bv=None):
     # fix label
     if label == None:
         label = os.path.basename(fname)
@@ -508,7 +514,10 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
         shape = moduleserial.split('-')[2][0]
         hb_type = density+shape
 
-    livemod = '320-ML' in fname or '320-MH' in fname
+    if is_live is None:
+        livemod = '320-ML' in fname or '320-MH' in fname
+    else:
+        livemod = is_live
     
     # fix figdir
     if figdir == None:
@@ -536,7 +545,7 @@ def make_hexmap_plots_from_file(fname, figdir = "./", hb_type = None, label = No
     df_data = add_mapping(df_data, hb_type = hb_type)
 
     # do plots
-    plot_hexmaps(df_data, figdir, hb_type, label, live=livemod)
+    plot_hexmaps(df_data, figdir, hb_type, label, live=livemod, BV=bv)
     plot_channels(df_data, figdir, hb_type, label, live=livemod)
     plot_pads(df_data, figdir, hb_type, label, live=livemod)
 
@@ -559,6 +568,11 @@ if __name__ == "__main__":
     parser.add_argument("-d", "--figdir", type=str, default=None, help="Plot directory, if None (default), use same directory as input file")
     parser.add_argument("-t", "--hb_type", type=str, default=None, help="Hexaboard type", choices=["LF","LL","LR","LB","LT","HF","HR","HL","HT","HB"])
     parser.add_argument("-l", "--label", type=str, default=None, help="Label to use in plots")
-
+    parser.add_argument("-b", "--bias_vol", type=int, default=None, help="bias voltage for the live module")
+    parser.add_argument("--live", action=BooleanOptionalAction, help="Is live module")
+    parser.add_argument("--hb", action=BooleanOptionalAction, help="Is hexaboard")
+    
     args = parser.parse_args()
-    make_hexmap_plots_from_file(args.infname, args.figdir, args.hb_type, args.label)
+    is_live = args.live
+    assert args.live != args.hb
+    make_hexmap_plots_from_file(args.infname, figdir=args.figdir, hb_type=args.hb_type, label=args.label, is_live=is_live, bv=args.bias_vol)
