@@ -1,10 +1,13 @@
 import sys
 import PySimpleGUI as sg
-from Keithley2410 import Keithley2410
+# from Keithley2410 import Keithley2410
+from KeithleyPowerSupply import KeithleyPowerSupply
 from time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
+import os
+from pathlib import Path
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -12,6 +15,38 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
+# direct print statements to both terminal and log file
+class Tee:
+    def __init__(self, file, stream):
+        self.file = file
+        self.stream = stream
+
+    def write(self, message):
+        self.file.write(message)
+        self.stream.write(message)
+        self.file.flush()
+    def flush(self):
+        self.file.flush()
+        self.stream.flush()
+
+# create and open new file for logging
+now = datetime.now()
+timestamp = now.strftime("%Y-%m-%d_%Hh%Mm%Ss")
+folder_path = Path("logs")
+filename = f"log_{timestamp}.log"
+
+folder_path.mkdir(parents = True, exist_ok = True)
+filepath = f'{folder_path}/{filename}'
+logfile = open(filepath, 'w')
+
+# redirect stdout to both console and file
+sys.stdout = Tee(logfile, sys.__stdout__)
+
+            
+#prints current date and time
+print(f' >> TestingGUIBase: start GUI {timestamp}')
+
+#sets max output voltage to 500V
 default_max_V = 500
 
 # Load configuration file
@@ -1205,4 +1240,6 @@ while True:
     # exit
     if event == 'Close GUI':
         exit()
-        
+
+#Closes .txt file         
+logfile.close        

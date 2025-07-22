@@ -118,7 +118,7 @@ class FPGATestStand:
 
         return ssh_stdout, ssh_stderr
 
-    def loadfw(self):
+    def loadfw(self, _retry=False):
         """
         Loads the firmware for the HGCAL testing system. Currently locked to version hexaboard-hd-tester-v1p1-trophy-v3,
         may allow for selection in the future. After the firmware is loaded, this function prints the I2C devices found
@@ -161,15 +161,20 @@ class FPGATestStand:
                 break
 
         if not channels_found:
-            print(' -- FPGATestStand: unable to find ROC channels in listdevice')
-            return False
+            print(' -- FPGATestStand: Unable to find ROC channels in listdevice')
+            # return False
                 
 
         if firmware_loaded and channels_found:
             self.fwloaded = True
             return True
         else:
-            return False
+            # retry for another time:
+            if not _retry:
+                print(" >> FPGATestStand: Trying firmware load again")
+                self.loadfw(_retry=True)
+            else:
+                return False
 
     
     def startservers(self):
@@ -226,12 +231,12 @@ class FPGATestStand:
             print(' >> FPGATestStand: Identified Hexaboard')
 
         if self.fpgatype == 'Kria':
-            print(self.fpgatype, 'adding to firewall')
+            print(f' >> FPGATestStand: opening {self.fpgatype} firewall')
             ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
-            for line in ssh_stdout.readlines():
-                print(line)
-            for line in ssh_stderr.readlines():
-                print(line)
+            #for line in ssh_stdout.readlines():
+            #    print(line)
+            #for line in ssh_stderr.readlines():
+            #    print(line)
 
             
         if board_discovered and daq_initiated and error_check:
