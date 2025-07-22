@@ -54,7 +54,7 @@ class KeithleyPowerSupply:
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
-        self._ilimit = 1.5e-3  # Current limit in A - now 1.5 mA
+        self._ilimit = 1e-3  # Current limit in A - now 1.5 mA
         self._vlimit = 921  # Voltage limit in V - 921 to configure sweep to 900 correctly
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
@@ -100,7 +100,9 @@ class KeithleyPowerSupply:
             self._write(f"SENSe{self._channel}:FUNCtion:CONCurrent OFF")
         self.set_elements(self._elements)
         self.set_current_limit(self._ilimit)
-        self.set_voltage_limit(self._vlimit)
+        if not self._is_2470:
+            # 2470 has different rules; doesn't need a vlimit set
+            self.set_voltage_limit(self._vlimit)
         self.set_sense_mode(self._sense_mode)
         if configuration['HasHVSwitch']:
             self.set_output_enable(1)
@@ -231,7 +233,7 @@ class KeithleyPowerSupply:
                 self._write(f"OUTPut{self._channel}:INTerlock:STATe OFF")
             else:
                 self._write(f"OUTPut{self._channel}:ENABle OFF")
-    
+
     def set_output(self, onoff):
         """Sets the output on or off. Also sets voltage output to zero to keep state consistent
         and structure class properly for ramping.
@@ -262,7 +264,10 @@ class KeithleyPowerSupply:
         if self._CURRENT_LIMIT_LOW <= abs(ilimit) <= self._CURRENT_LIMIT_HIGH:
             self._ilimit = ilimit
             if self._is_2470:
-                self._write(f"SOURce{self._channel}:CURRent:PROTection:LEVel {ilimit}")
+                self._write(f"SOURce{self._channel}:FUNCtion VOLTage")            
+                self._write(f"SOURce{self._channel}:VOLTage:ILIMit {ilimit}")
+                # 2470 has no SOURce{self._channel}:CURRent:PROTection:LEVel function, and 
+                # SOURce{self._channel}:VOLTage:ILIMit {ilimit} needed to set source function voltage first
             else:
                 self._write(f"SENSe{self._channel}:CURRent:PROTection:LEVel {ilimit}")
         else:
@@ -273,7 +278,13 @@ class KeithleyPowerSupply:
         """
         if self._VOLTAGE_LIMIT_LOW <= abs(vlimit) <= self._VOLTAGE_LIMIT_HIGH:
             self._vlimit = vlimit
-            self._write(f"SOURce{self._channel}:VOLTage:PROTection:LEVel {vlimit}")
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:FUNCtion CURRent")            
+                self._write(f"SOURce{self._channel}:CURRent:VLIMit {vlimit}")
+                # Although in 2470 "SOURce{self._channel}:VOLTage:PROTection PROT{vlimit}" is available,
+                # PROT only available under 500V, any vlimit>500 do not work.
+            else:
+                self._write(f"SOURce{self._channel}:VOLTage:PROTection:LEVel {vlimit}")
         else:
             raise ValueError("Invalid voltage limit")
 
@@ -336,7 +347,9 @@ class KeithleyPowerSupply:
             return
 
         if self._VOLTAGE_LIMIT_LOW <= abs(value) <= self._vlimit:
-            if not self._is_2470:
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:FUNCtion VOLTage")
+            else:
                 self.set_source_voltage_mode("fixed")
 
             # ramp up the voltage slowly if it's very different than current voltage
@@ -365,9 +378,13 @@ class KeithleyPowerSupply:
         """Sets the source mode to fixed current with the defined value.
         """
         if self._CURRENT_LIMIT_LOW <= abs(value) <= self._ilimit:
-            if not self._is_2470:
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:FUNCtion CURRent")
+            else:
                 self.set_source_current_mode("fixed")
             self._write(f"SOURce{self._channel}:CURRent {value}")
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:CURRent:VLIMit 921") #Same with set_source_voltage.
         else:
             raise ValueError("Invalid set current")
         
@@ -571,8 +588,11 @@ class KeithleyPowerSupply:
             err_string += err
         if err_string != '':
             print(f' >> Keithley{self._MODEL_NUM}: found error: {err_string}')
-        self._write(':STATus:QUEue:CLEar')
-        
+        if self._is_2470:
+            self._write(':STATus:CLEar') 
+        else:
+            self._write(':STATus:QUEue:CLEar')
+            
     # Take IV curve - now using internal voltage sweep function on Keithley
     # Storing/plotting curve handled elsewhere
     def takeIVproc(self, curve, maxV, stepV, RH, Temp, status, errcheck_step=5):
