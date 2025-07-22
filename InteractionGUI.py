@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import PySimpleGUI as sg
 from FPGATestStand import FPGATestStand
 from ExternalPC import ExternalPC, check_hexactrl_sw
-# from Keithley2410 import Keithley2410
 from KeithleyPowerSupply import KeithleyPowerSupply
 from time import sleep, time
 import os
@@ -409,12 +408,10 @@ def connect_HV(state):
             update_state(state, 'ps', ps)
         else:
             try:
-                # ps = Keithley2410() #testing_check
                 ps = KeithleyPowerSupply()
             except ValueError:
                 # try again if the Keithley has some stored errors
                 # if the errors are still there, don't try again
-                # ps = Keithley2410() # testing_check
                 ps = KeithleyPowerSupply()
             update_state(state, 'ps', ps)
         keith.close()

@@ -233,11 +233,6 @@ class FPGATestStand:
         if self.fpgatype == 'Kria':
             print(f' >> FPGATestStand: opening {self.fpgatype} firewall')
             ssh_stdout, ssh_stderr = self._runcmd('firewall-cmd --add-port=5555/tcp --add-port=6000/tcp --add-port=8888/tcp --add-port=8080/tcp')
-            #for line in ssh_stdout.readlines():
-            #    print(line)
-            #for line in ssh_stderr.readlines():
-            #    print(line)
-
             
         if board_discovered and daq_initiated and error_check:
             self.services = True

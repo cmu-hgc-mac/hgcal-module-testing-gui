@@ -1,6 +1,5 @@
 import sys
 import PySimpleGUI as sg
-# from Keithley2410 import Keithley2410
 from KeithleyPowerSupply import KeithleyPowerSupply
 from time import sleep, time
 from InteractionGUI import *
