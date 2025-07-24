@@ -121,7 +121,7 @@ class ExternalPC: # no longer Centos7
         self.outyaml = {'pedestal_scan': 'trimmed_pedestal.yaml', 'sampling_scan': 'best_phase.yaml',
                         'vrefinv_scan': 'vrefinv.yaml', 'vrefnoinv_scan': 'vrefnoinv.yaml',
                         'toa_vref_scan_noinj': 'toa_vref.yaml', 'toa_vref_scan': 'toa_vref.yaml',
-                        'toa_trim_scan': 'trimmed_toa.yaml'}
+                        'toa_trim_scan': 'trimmed_toa.yaml', 'inputdac_scan': 'inputdacs.yaml'}
         
     def init_outdir(self, outdir):
         self.outdir = outdir
@@ -370,7 +370,8 @@ class ScriptProcess:
         self.scriptname = scriptname
 
         print(f' >> ExternalPC: Running {self.scriptname}.py with config {self.pc.config}...')
-
+        print(f'    >> ExternalPC: command is {self.command}')
+        
         self.proc = subprocess.Popen(self.command, shell=True, executable="/bin/bash")
 
     def is_finished(self):
