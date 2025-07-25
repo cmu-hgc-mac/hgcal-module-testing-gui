@@ -358,14 +358,10 @@ class KeithleyPowerSupply:
                 for i in range(1, int(abs(difference) // self.bv_ramp_step) + 1):
                     this_voltage = self.voltage_now + self.bv_ramp_step*i*copysign(1, difference)
                     self._write(f"SOURce{self._channel}:VOLTage {this_voltage}")
-                    if self._is_2470:
-                        self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")     # Corrected: ILIMit for 1 mA 
                     sleep(self.bv_ramp_wait)
 
             self.voltage_now = value
             self._write(f"SOURce{self._channel}:VOLTage {value}")
-            if self._is_2470:
-                self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")     # Corrected: ILIMit for 1 mA 
         else:
             raise ValueError("Invalid set voltage")
 
@@ -383,8 +379,6 @@ class KeithleyPowerSupply:
             else:
                 self.set_source_current_mode("fixed")
             self._write(f"SOURce{self._channel}:CURRent {value}")
-            if self._is_2470:
-                self._write(f"SOURce{self._channel}:CURRent:VLIMit 921") #Same with set_source_voltage.
         else:
             raise ValueError("Invalid set current")
         
@@ -472,8 +466,12 @@ class KeithleyPowerSupply:
         # reconfigure to disable auto-ranging
         if not self.high_i_range:
             self._write(f"SENSe{self._channel}:CURRent:DC:RANG 100E-6")
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:VOLTage:ILIMit 100E-6")
         else:
             self._write(f"SENSe{self._channel}:CURRent:DC:RANG 1E-3")
+            if self._is_2470:
+                self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")
             
         start = time()
         maxtime = 10.
@@ -492,9 +490,13 @@ class KeithleyPowerSupply:
 
             if thiscurrent > (50. * 10**(-6)) and not self.high_i_range:
                 self._write(f"SENSe{self._channel}:CURRent:RANGe 1E-3")
+                if self._is_2470:
+                    self._write(f"SOURce{self._channel}:VOLTage:ILIMit 1E-3")
                 self.high_i_range = True
             if thiscurrent < (20. * 10**(-6)) and self.high_i_range:
                 self._write(f"SENSe{self._channel}:CURRent:RANGe 100E-6")
+                if self._is_2470:
+                    self._write(f"SOURce{self._channel}:VOLTage:ILIMit 100E-6")
                 self.high_i_range = False
                 
             # check if current measurement has stabilized
