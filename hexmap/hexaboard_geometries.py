@@ -204,13 +204,13 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-2.55, 1.05)      
         chip0_angle = 0.
-        chip0_anno_pos = (-4.9, 2.8)
-        chip0_anno_angle = 63
+        chip0_anno_pos = label_upper_left
+        chip0_anno_angle = 60
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (-2.95, -2.4)
         chip1_angle = 0.
-        chip1_anno_pos = (-5.0, -4.1)
-        chip1_anno_angle = -243
+        chip1_anno_pos = label_lower_left
+        chip1_anno_angle = -240
 
         # lists of chip positions, angles and annotation positions, angles
         chip_pos = [chip0_pos, chip1_pos]
