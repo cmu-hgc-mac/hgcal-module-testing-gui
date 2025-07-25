@@ -138,8 +138,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
     label_upper_left = (-4.9, 2.64)
     label_diff_x = 0.75
     label_diff_y = 1.3
-    # up-to-date as of 2025/7/16: LF, LR, LT, LB, HF, HL, HR
-    # LL need a root file
+    # up-to-date as of 2025/7/16: LF, LR, LL, LT, LB, HF, HL, HR
     # L5 lacks mapping 
     # HB looks ok but would like confirmation
     # HT has weirdness
