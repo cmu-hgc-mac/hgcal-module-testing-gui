@@ -880,10 +880,10 @@ def run_other_script(script, state, BV):
             state['-Leakage-Current-'] = current
 
         # rename output directory with conditions of test       
-	trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
+        trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
             testtag = f'BV{int(BV)}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
-	else:
+        else:
             testtag = trimmed
 
         # rename, but prevent crash if it fails                            
