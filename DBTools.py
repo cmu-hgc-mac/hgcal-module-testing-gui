@@ -757,12 +757,15 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
     if len(bv1runs) > 0 and len(bv10runs) > 0 or len(bv100runs) > 0:
         bv1noise = np.array(bv1runs[-1]['adc_stdd'])
+        bv10noise = np.array(bv10runs[-1]['adc_stdd'])
+        bv100noise = np.array(bv100runs[-1]['adc_stdd'])
         bv1t10ratio = np.array(bv1runs[-1]['adc_stdd']) / np.array(bv10runs[-1]['adc_stdd'])
         bv10t100ratio = np.array(bv10runs[-1]['adc_stdd']) / np.array(bv100runs[-1]['adc_stdd'])
 
-        checksum = (bv1noise < 1.2).astype(int) + (bv1t10ratio < 1.1).astype(int) + (bv10t100ratio < 1.1).astype(int)
+        checksum = ((bv1noise < 1.2) & (bv1noise > 0.)).astype(int) + ((bv1t10ratio < 1.1) & (bv10noise > 0.)).astype(int) + ((bv10t100ratio < 1.1) & (bv100noise > 0.)).astype(int)
         uncon2 = checksum >= 2 # pass at least two of three checks
-        # leave unused for now
+        # start using if necessary pedestal runs are present
+        unconcells = cellid[uncon2 & (norm_mask | calib_mask)]
         
     # check dead channels
     ldeadcells = []
