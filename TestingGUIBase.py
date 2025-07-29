@@ -149,7 +149,7 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 
 # Select Tests section
 other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
-                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
+                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan', 'inputdac_scan']
 testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-'), sg.Text('IV Max Voltage:'), sg.Input(s=5,key='-StandardIV-MaxV-')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
