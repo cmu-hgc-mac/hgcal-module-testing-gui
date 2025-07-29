@@ -140,8 +140,8 @@ def get_query_read(table_name, part_name = None):
             FROM {table_name}   
             WHERE REPLACE(module_name,'-','') = '{part_name}';"""
     elif table_name == 'module_pedestal_plots':
-        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                                                                           
-            FROM {table_name}                                                                                                                                                                                
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                               
+            FROM {table_name}
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
         query = None

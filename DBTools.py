@@ -512,6 +512,9 @@ def plots_upload(state, ind=-1):
     # open hexmaps
     hexpaths = glob.glob(f'{hexpath}_*.png')
     for path in hexpaths:
+
+        compress_png(path)
+        
         if 'mean' in path:
             with open(path, 'rb') as f:
                 hexmean = f.read()
@@ -951,3 +954,12 @@ def serial_remove_dashes(moduleserial):
         raise ValueError
         
     return undashedserial
+
+from PIL import Image
+def compress_png(image_path):
+    """Compress image before uploading to DB
+    """
+    img = Image.open(image_path)
+    img = img.convert("P", palette=Image.ADAPTIVE, colors=256) # limit the colors
+    img.save(image_path, optimize=True)
+    print(" >> DBTools: Image compressed")

@@ -734,8 +734,12 @@ def trim_pedestals(state, BV, TIMEOUT=300):
             BV_to_use = BV
 
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+
+            # turn on output if it is not on:
+            if not state['ps'].get_output():
+                state['ps'].outputOn() # outputOn() would set the voltage to 0 if it is not
+                update_state(state, '-HV-Output-On-', True, 'green')
+                
             state['ps'].setVoltage(float(BV_to_use))
 
         proc = state['pc'].create_proc('pedestal_run')
