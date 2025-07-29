@@ -7,6 +7,7 @@ import yaml
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
+import subprocess
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -730,6 +731,12 @@ while True:
             continue
 
         fpgahostname = values['-FPGAHostname-'].rstrip()
+
+        # print out the testing module/hxb serial
+        if values['-IsLive-']:
+            print(" >> TestingGUIBase: Beginning test of live module", moduleserial)
+        if values['-IsHB-']:
+            print(" >> TestingGUIBase: Beginning test of hexaboard", moduleserial)
         
         # Initialize test stand state dictionary
         init_state()
@@ -794,6 +801,9 @@ while True:
         if (values['-HD-'] and (values['-Five-'])): # all geometries
             show_string("Not Implemented")
             continue
+
+        # print out the testing module
+        print(" >> TestingGUIBase: Beginning IV-only test for live module", moduleserial)
         
         # Initialize state dictionary
         init_state()
@@ -835,6 +845,7 @@ while True:
             ac = AirControl()
             for i in range(10):
                 ac.set_air_off()
+            ac.close()
         
     # Run the selected tests
     if event == 'Run Tests':
@@ -971,7 +982,8 @@ while True:
                     ac = AirControl()
                     for i in range(10):
                         ac.set_air_on()
-                    
+                    ac.close()
+                                            
                 wait_time_s = 20*60 # 20 min    
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=wait_time_s)
@@ -1115,6 +1127,7 @@ while True:
                 ac = AirControl()
                 for i in range(10):
                     ac.set_air_on()
+                ac.close()
                             
             for iV in range(int(values['-N-Dry-IV-'])):
 

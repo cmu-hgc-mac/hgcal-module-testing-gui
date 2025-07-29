@@ -512,6 +512,9 @@ def plots_upload(state, ind=-1):
     # open hexmaps
     hexpaths = glob.glob(f'{hexpath}_*.png')
     for path in hexpaths:
+
+        compress_png(path)
+        
         if 'mean' in path:
             with open(path, 'rb') as f:
                 hexmean = f.read()
@@ -757,11 +760,14 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
     if len(bv1runs) > 0 and len(bv10runs) > 0 or len(bv100runs) > 0:
         bv1noise = np.array(bv1runs[-1]['adc_stdd'])
+        bv10noise = np.array(bv10runs[-1]['adc_stdd'])
+        bv100noise = np.array(bv100runs[-1]['adc_stdd'])
         bv1t10ratio = np.array(bv1runs[-1]['adc_stdd']) / np.array(bv10runs[-1]['adc_stdd'])
         bv10t100ratio = np.array(bv10runs[-1]['adc_stdd']) / np.array(bv100runs[-1]['adc_stdd'])
 
-        checksum = (bv1noise < 1.2).astype(int) + (bv1t10ratio < 1.1).astype(int) + (bv10t100ratio < 1.1).astype(int)
+        checksum = ((bv1noise < 1.2) & (bv1noise > 0.)).astype(int) + ((bv1t10ratio < 1.1) & (bv10noise > 0.)).astype(int) + ((bv10t100ratio < 1.1) & (bv100noise > 0.)).astype(int)
         uncon2 = checksum >= 2 # pass at least two of three checks
+        #print(cellid[uncon2 & (norm_mask | calib_mask)])
         # leave unused for now
         
     # check dead channels
@@ -948,3 +954,12 @@ def serial_remove_dashes(moduleserial):
         raise ValueError
         
     return undashedserial
+
+from PIL import Image
+def compress_png(image_path):
+    """Compress image before uploading to DB
+    """
+    img = Image.open(image_path)
+    img = img.convert("P", palette=Image.ADAPTIVE, colors=256) # limit the colors
+    img.save(image_path, optimize=True)
+    print(" >> DBTools: Image compressed")

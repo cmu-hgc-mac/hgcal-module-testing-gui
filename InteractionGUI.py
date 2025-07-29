@@ -734,8 +734,12 @@ def trim_pedestals(state, BV, TIMEOUT=300):
             BV_to_use = BV
 
         if state['-Live-Module-'] and BV is not None:
-            state['ps'].outputOn()
-            update_state(state, '-HV-Output-On-', True, 'green')
+
+            # turn on output if it is not on:
+            if not state['ps'].get_output():
+                state['ps'].outputOn() # outputOn() would set the voltage to 0 if it is not
+                update_state(state, '-HV-Output-On-', True, 'green')
+                
             state['ps'].setVoltage(float(BV_to_use))
 
         proc = state['pc'].create_proc('pedestal_run')
@@ -880,10 +884,10 @@ def run_other_script(script, state, BV):
             state['-Leakage-Current-'] = current
 
         # rename output directory with conditions of test       
-	trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
+        trimmed = 'untrimmed' if '-Pedestals-Trimmed-' not in state.keys() else ('trimmed' if state['-Pedestals-Trimmed-'] == True else f'trimmed{state["-Pedestals-Trimmed-"]}')
         if BV is not None:
             testtag = f'BV{int(BV)}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
-	else:
+        else:
             testtag = trimmed
 
         # rename, but prevent crash if it fails                            

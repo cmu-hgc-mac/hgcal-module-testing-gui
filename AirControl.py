@@ -21,20 +21,41 @@ class AirControl:
         # As of 2024/8/26 trying both ports as they seem to change without warning
         # As of 2024/10/4, switched to automatic discovery
 
+        # check if the serial is opened or not
+        if self.nano.is_open:
+            print("  >> AirControl: Serial ready to connect")
+
+        if not self.nano.is_open:
+            try:
+                self.nano.open()
+            except:
+                self.nano = serial.Serial(self.ttystr, 115200, timeout=2) # try reconnect
+
+        # query the env data incase to remove the potential error ahead
+        self.nano.readline().decode('ASCII').rstrip()
+        
+            
     def __del__(self):
         self.nano.close()
 
     def set_air_on(self):
         """Turns the air relay on
         """
+        if self.nano.in_waiting:
+            print(" >> AirControl: Serial receiving command")
+            
+        time.sleep(0.5)
         self.nano.write(b'air on\n')
+        time.sleep(0.5)
         self.nano.write(b'air on\n')
         print('  >> AirControl: air on')
 
     def set_air_off(self):
         """Turns the air relay off
         """
+        time.sleep(0.5)
         self.nano.write(b'air off\n')
+        time.sleep(0.5)
         self.nano.write(b'air off\n')
         print('  >> AirControl: air off')
 
@@ -51,6 +72,12 @@ class AirControl:
         environment_string = self.nano.readline().decode('ASCII').rstrip()
         temperature_string = environment_string.split(',')[1]
         return int(temperature_string)
+
+    def close(self):
+        """Close the serial for releasing process.
+        """
+        self.nano.close()
+        print(" >> AirControl: Serial closed.")
         
 if __name__ == "__main__":
     controller = AirControl()

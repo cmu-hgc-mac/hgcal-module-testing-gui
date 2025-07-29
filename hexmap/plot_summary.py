@@ -173,7 +173,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False, 
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
     try:
-        cmap = mpl.colormaps['viridis']
+        cmap = mpl.colormaps['viridis'].resampled(400)
     except AttributeError:
         cmap = mpl.cm.get_cmap('viridis', 400)
     try:
