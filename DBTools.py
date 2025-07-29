@@ -767,8 +767,8 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
         checksum = ((bv1noise < 1.2) & (bv1noise > 0.)).astype(int) + ((bv1t10ratio < 1.1) & (bv10noise > 0.)).astype(int) + ((bv10t100ratio < 1.1) & (bv100noise > 0.)).astype(int)
         uncon2 = checksum >= 2 # pass at least two of three checks
-        #print(cellid[uncon2 & (norm_mask | calib_mask)])
-        # leave unused for now
+        # start using if necessary pedestal runs are present
+        unconcells = cellid[uncon2 & (norm_mask | calib_mask)]
         
     # check dead channels
     ldeadcells = []
