@@ -1027,7 +1027,34 @@ while True:
                     exit_tests()
                     continue
                 plot_IV_curves(current_state)
- 
+
+                # now that standard test completes, automatically grade modules
+                can_grade = True
+                err_msg = ''
+                
+                if not configuration['HasLocalDB']:
+                    can_grade = False
+                    err_msg = "Grading requires local db"
+                try:
+                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
+                    i_500v = iv_info(moduleserial)
+                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+                except TypeError:
+                    can_grade = False
+                    err_msg = "Tests not complete"
+                if i_500v is None:
+                    can_grade = False
+                    err_msg = "Tests not complete"
+
+                if can_grade:
+                    print(f' >> TestingGUIBase: Grading {moduleserial}')
+                    qc_summary = grade_module(moduleserial)
+                    summary_upload(moduleserial, qc_summary)
+                else:
+                    ending = waiting_window(f"Can't grade module: {err_msg}", title="Can't Grade Module")
+                    sleep(2)
+                    ending.close()
+               
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
