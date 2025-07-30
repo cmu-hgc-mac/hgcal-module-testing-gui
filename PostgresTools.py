@@ -112,7 +112,7 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     print(f'  >> PostgresTools: Executing query: {query}')
     await conn.execute(query, *db_upload_data.values())
 
-    print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
+    print(f'  >> PostgresTools: Data is successfully uploaded to {table_name}!')
     
     await conn.close()
 

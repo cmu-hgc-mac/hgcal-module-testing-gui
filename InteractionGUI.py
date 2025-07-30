@@ -1222,7 +1222,7 @@ def grade_module(moduleserial):
     # grade_f_criteria?
     if i_500v < 1e-4:
         iv_grade = 'A'
-    elif i_500v < 1e-3:
+    elif i_500v < 9.95e-4: # not quite one milliamp so exactly one mA fails grade B 
         iv_grade = 'B'
     else:
         iv_grade = 'C'
