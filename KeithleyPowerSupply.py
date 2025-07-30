@@ -54,7 +54,7 @@ class KeithleyPowerSupply:
         # User-editable default parameters below:
         self._channel = 1  # Default channel is 1, on rear of device
         self._wait_time_s = 0.1  # Wait time in seconds
-        self._ilimit = 1e-3  # Current limit in A - now 1.5 mA
+        self._ilimit = 1.05e-3  # Current limit in A - now 1.05 mA
         self._vlimit = 921  # Voltage limit in V - 921 to configure sweep to 900 correctly
         self._sense_mode = "current"
         self._elements = ["voltage", "current", "resistance", "time", "status"]
