@@ -592,7 +592,7 @@ def configure_test_stand(state, fpgahostname):
     ready.close()
     return 'CONT'
 
-def run_pedestals(state, BV, TIMEOUT=30):
+def run_pedestals(state, BV, TIMEOUT=30, inftoa=False):
     """
     Runs pedestals via the PC and then makes hexmap plots. If the module is live, sets the bias voltage 
     according to the BV argument.
@@ -630,7 +630,10 @@ def run_pedestals(state, BV, TIMEOUT=30):
 
         #pedestalpath = state['pc'].pedestal_run(BV=BV)
         # testing this detached test run
-        proc = state['pc'].pedestal_proc(BV=BV_to_use)
+        if not inftoa:
+            proc = state['pc'].pedestal_proc(BV=BV_to_use)
+        else:
+            proc = state['pc'].pedestal_inftoa_proc(BV=BV_to_use)
         while not proc.is_finished():
             elapsed_time = time() - start_time
             event, values = pedestals.read(timeout=1)
@@ -662,7 +665,10 @@ def run_pedestals(state, BV, TIMEOUT=30):
             testtag = f'BV{int(BV)}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
         else:
             testtag = trimmed
-        
+
+        if inftoa:
+            testtag += 'InfToAVref'
+            
         # rename, but prevent crash if it fails
         try:
             os.system(f'mv {pedestalpath} {pedestalpath}_{testtag}')

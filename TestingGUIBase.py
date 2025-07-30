@@ -928,6 +928,10 @@ while True:
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
+                if status == 'CONT':
+                    hexpath, status = run_pedestals(state, None, inftoa = True)
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(state, None, inftoa = True)
                 exit_tests()
                 continue
 
@@ -941,7 +945,11 @@ while True:
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
                 status = multi_run_pedestals(current_state, [1, 10, 100, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
-
+            if status == 'CONT':
+                hexpath, status = run_pedestals(state, 500, inftoa = True)
+                if status == 'CONT':
+                    hexpath, status = run_pedestals(state, 500, inftoa = True)
+                
             if not current_state['-Debug-Mode-']:
                 # pedestal run in InteractionGUI handles wire polarization
                 current_state['ps'].outputOff()
