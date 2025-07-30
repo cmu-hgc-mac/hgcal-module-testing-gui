@@ -173,7 +173,7 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False, 
 
     # modify colormap to highlight extrema - red for top bin, gray for bottom
     try:
-        cmap = mpl.colormaps['viridis'].resampled(400)
+        cmap = mpl.colormaps['viridis']
     except AttributeError:
         cmap = mpl.cm.get_cmap('viridis', 400)
     try:
@@ -209,12 +209,10 @@ def plot_hexmaps(df, figdir = "./", hb_type = "LF", label = None, live = False, 
         # for live module if actual channels have same noise as disconnected channels, label
         # but only label if in low-BV pedestal run
         uncon = []
-        if hb_type[0] == 'L' and live:
-            #med_nc = df_data[column][nc_mask].median() # not currently using
-            #uncon = np.abs(df_data[column] - med_nc) < upplim/40. # old unbonded channel definition
-            uncon = (df_data[column] < 1.7) & (df_data['adc_stdd'] > 0.) # cut at 1.7 ADC counts for low-density modules for BV <= 10V
-        elif hb_type[0] == 'H' and live:
-            uncon = (df_data[column] < 1.4) & (df_data['adc_stdd'] > 0.) # cut at 1.4 ADC counts for high-density modules for BV <= 2V
+        if live:
+            # new 2025/7/30 - just use 1.2 ADC counts cut. real unbonded detection requires more than one pedestal test, but still highlight
+            # in plot for individual tests
+            uncon = (df_data[column] < 1.2) & (df_data['adc_stdd'] > 0.)
         else:
             uncon = df_data[column] <= 0. # all false 
 
