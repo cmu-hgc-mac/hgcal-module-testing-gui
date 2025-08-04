@@ -843,8 +843,7 @@ while True:
         if configuration['HasRHSensor'] and not current_state['-Debug-Mode-']:
             from AirControl import AirControl
             ac = AirControl()
-            for i in range(10):
-                ac.set_air_off()
+            ac.set_air_off()
             ac.close()
         
     # Run the selected tests
@@ -928,10 +927,13 @@ while True:
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
-                if status == 'CONT':
-                    hexpath, status = run_pedestals(state, None, inftoa = True)
+                try:    
                     if status == 'CONT':
-                        hexpath, status = run_pedestals(state, None, inftoa = True)
+                        hexpath, status = run_pedestals(current_state, None, inftoa = True)
+                        if status == 'CONT':
+                            hexpath,status = run_pedestals(current_state, None, inftoa = True)
+                except Exception:
+                    print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
                 exit_tests()
                 continue
 
@@ -945,11 +947,13 @@ while True:
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
                 status = multi_run_pedestals(current_state, [1, 10, 100, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
-            if status == 'CONT':
-                hexpath, status = run_pedestals(state, 500, inftoa = True)
+            try:
                 if status == 'CONT':
-                    hexpath, status = run_pedestals(state, 500, inftoa = True)
-                
+                    hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+            except Exception:
+                print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
             if not current_state['-Debug-Mode-']:
                 # pedestal run in InteractionGUI handles wire polarization
                 current_state['ps'].outputOff()
@@ -979,6 +983,25 @@ while True:
                 except TypeError:
                     print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
+                try:
+                    status = run_other_script('inputdac_scan', current_state, 500)
+                    if status != 'CONT':
+                        exit_tests()
+                        continue
+                    
+                    status = multi_run_pedestals(current_state, [300, 300, 500, 500], showplots = False)
+                    if status != 'CONT':
+                        exit_tests()
+                        continue
+                    
+                    status = take_IV_curve(current_state, maxV=maxV)
+                    if status != 'CONT':
+                        exit_tests()
+                        continue
+                    plot_IV_curves(current_state)
+                except Exception:
+                    print(' -- TestingGUIBase: inputdac or following test exception:', traceback.format_exc())
+                    
             elif modulestatus == 'Completely Encapsulated' or modulestatus == 'Bolted':
                                     
                 # open dry air valve manually or automatically            
@@ -988,8 +1011,7 @@ while True:
                 else:
                     from AirControl import AirControl
                     ac = AirControl()
-                    for i in range(10):
-                        ac.set_air_on()
+                    ac.set_air_on()
                     ac.close()
                                             
                 wait_time_s = 20*60 # 20 min    
@@ -1062,7 +1084,8 @@ while True:
                     ending = waiting_window(f"Can't grade module: {err_msg}", title="Can't Grade Module")
                     sleep(2)
                     ending.close()
-               
+
+                    
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -1160,8 +1183,7 @@ while True:
             else:
                 from AirControl import AirControl
                 ac = AirControl()
-                for i in range(10):
-                    ac.set_air_on()
+                ac.set_air_on()
                 ac.close()
                             
             for iV in range(int(values['-N-Dry-IV-'])):

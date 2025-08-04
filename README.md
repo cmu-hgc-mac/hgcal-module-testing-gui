@@ -126,6 +126,7 @@ A cell is determined to be "unbonded" if two or more of the following three crit
 - Its noise at BV=1 is less than 1.2 ADC counts, $\sigma_1 < 1.2$ ADC counts
 - The decrease in noise from BV=1 to BV=10 is less than 10%, $\sigma_1 / \sigma_{10} < 1.1$
 - The decrease in noise from BV=10 to BV=100 is less than 10%, $\sigma_{10} / \sigma_{100} < 1.1$
+
 This is the purpose of the first three pedestal runs after trimming. If a cell is detected to be unbonded and was not intentionally grounded, it should be inspected under a microscope and rebonded if possible.
 
 A cell is determined to be "dead" if it is dead (zero noise) in all five 300V pedestal runs. If a cell is detected to be dead, it should be grounded so the conditions of the Si cell are controlled and do not affect adjacent cells.
@@ -145,6 +146,7 @@ As the module is encapsulated, no bond rework can be done, so the module is grad
 - Assembly: for grade A, x and y offsets less than 100 microns and angular offset less than 0.02 degrees; for grade B, protomodule x and y offsets less than 200 microns and angular offset less than 0.04 degrees, and module x and y offsets less than 0.06 degrees; grade C otherwise
 - Readout: for grade A, bad cell fraction < 2%; for grade B, bad cell fraction < 4%; grade C otherwise. A "bad" cell is either unbonded, grounded, dead, or noisy by the above definitions, but using the tests from post-encapsulation.
 - IV: for grade A, current at 500V less than 100 microamps; for grade B, current at 500V less than one milliamp; grade C otherwise.
+
 Grading is done automatically after the standard test, and QC information and grades are uploaded to the database. Users are shown all comments entered for the module during assembly and may edit them or add additional comments.
 
 I am considering for addition to the above: leakage current compensation, infinite ToA runs to test noisy TDCs
