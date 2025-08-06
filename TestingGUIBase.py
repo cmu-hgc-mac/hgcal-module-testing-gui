@@ -57,9 +57,8 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
     configuration['FPGAHostname'] = configuration['TrenzHostname']
     configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
-    
-from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes
-    
+from DBTools import add_RH_T, readout_info, hexaboard_readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes, upload_bonding_instructions
+
 # Create theme
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -136,6 +135,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
+               [sg.Text("Trophy Serial No.: "), sg.Input(s=15, key='-Trophy-Serial-', enable_events=True), sg.Button('Clear', key='-Trophy-Clear-')],
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['FPGAHostname'], default_value=configuration['FPGAHostname'][0], key="-FPGAHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
                [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
@@ -398,6 +398,9 @@ while True:
 
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
+
+    if event == '-Trophy-Clear-':
+        basewindow['-Trophy-Serial-'].update(value='')
 
     if values['-Scanned-QR-Code-'] != '':
 
@@ -731,7 +734,7 @@ while True:
             continue
 
         fpgahostname = values['-FPGAHostname-'].rstrip()
-
+        
         # print out the testing module/hxb serial
         if values['-IsLive-']:
             print(" >> TestingGUIBase: Beginning test of live module", moduleserial)
@@ -741,9 +744,10 @@ while True:
         # Initialize test stand state dictionary
         init_state()
         current_state['-Skip-Checks-'] = values['-Skip-Checks-']
+        current_state['-Trophy-Serial-'] = values['-Trophy-Serial-']
         # Disable the module setup section
         disable_module_setup()
-
+        
         # Run initial checks on module, including pad resistance and power
         # If the checks show a problem, the function handles the ending of the test session
         outcode = initial_module_checks(current_state)
@@ -928,6 +932,13 @@ while True:
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
+
+                try:
+                    deadcells, noisycells = hexaboard_readout_info(current_state['-Module-Serial-'], status=current_state['-Module-Status-'])
+                    upload_bonding_instructions(current_state['-Module-Serial-'], list_dead_ground=deadcells, list_noisy_ground=noisycells)
+                except Exception:
+                    print(' -- TestingGUIBase: hexaboard wirebond uploading error:', traceback.format_exc())
+                    
                 exit_tests()
                 continue
 
@@ -966,6 +977,13 @@ while True:
                     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
                     dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
                     uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
+
+                    try:
+                        upload_bonding_instructions(current_state['-Module-Serial-'], list_rebond=uncon_and_ungrounded, 
+                                                    list_dead_ground=dead_and_ungrounded, list_noisy_ground=noisycells)
+                    except Exception:
+                        print(' -- TestingGUIBase: module rebonding uploading error:', traceback.format_exc())
+
                     if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
                         module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
                 except TypeError:
