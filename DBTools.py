@@ -859,7 +859,7 @@ def hexaboard_readout_info(hxbserial, status = 'Untaped'):
     untrimmedruns.sort(key=sortkey)
     trimmedruns.sort(key=sortkey)
     
-    if len(trimmedruns) < 4 or len(untrimmedruns) < 1:
+    if len(trimmedruns) < 4 or len(untrimmedruns) < 2:
         print(f' >> DBTools: not enough pedestal tests: {status} {len(untrimmedruns)} untrimmed {len(trimmedruns)} trimmed')
         return None
     
