@@ -57,7 +57,7 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
     configuration['FPGAHostname'] = configuration['TrenzHostname']
     configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
-from DBTools import add_RH_T, readout_info, hexaboard_readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes, upload_bonding_instructions
+from DBTools import add_RH_T, readout_info, hexaboard_readout_info, iv_info, assembly_info, summary_upload, upload_bonding_instructions
 
 # Create theme
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
@@ -939,11 +939,12 @@ while True:
                 except Exception:
                     print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
 
-                try:
-                    deadcells, noisycells = hexaboard_readout_info(current_state['-Module-Serial-'], status=current_state['-Module-Status-'])
-                    upload_bonding_instructions(current_state['-Module-Serial-'], list_dead_ground=deadcells, list_noisy_ground=noisycells)
-                except Exception:
-                    print(' -- TestingGUIBase: hexaboard wirebond uploading error:', traceback.format_exc())
+                if configuration['HasLocalDB']:
+                    try:
+                        deadcells, noisycells = hexaboard_readout_info(current_state['-Module-Serial-'], status=current_state['-Module-Status-'])
+                        upload_bonding_instructions(current_state['-Module-Serial-'], list_dead_ground=deadcells, list_noisy_ground=noisycells)
+                    except Exception:
+                        print(' -- TestingGUIBase: hexaboard wirebond uploading error:', traceback.format_exc())
                     
                 exit_tests()
                 continue
@@ -985,21 +986,22 @@ while True:
             # if not encapsulated, show out rebonding information
             modulestatus = values["-Module-Status-"]
             if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-                try:
-                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-                    dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
-                    uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
-
+                if configuration['HasLocalDB']:
                     try:
-                        upload_bonding_instructions(current_state['-Module-Serial-'], list_rebond=uncon_and_ungrounded, 
-                                                    list_dead_ground=dead_and_ungrounded, list_noisy_ground=noisycells)
-                    except Exception:
-                        print(' -- TestingGUIBase: module rebonding uploading error:', traceback.format_exc())
+                        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+                        dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
+                        uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
 
-                    if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
-                        module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
-                except TypeError:
-                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+                        try:
+                            upload_bonding_instructions(current_state['-Module-Serial-'], list_rebond=uncon_and_ungrounded, 
+                                                        list_dead_ground=dead_and_ungrounded, list_noisy_ground=noisycells)
+                        except Exception:
+                            print(' -- TestingGUIBase: module rebonding uploading error:', traceback.format_exc())
+
+                        if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
+                            module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
+                    except TypeError:
+                        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
                 try:
                     status = run_other_script('inputdac_scan', current_state, 500)
