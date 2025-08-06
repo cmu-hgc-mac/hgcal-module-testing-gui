@@ -21,10 +21,7 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
-if configuration['HasLocalDB']:
-    from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments, serial_remove_dashes
-
-from DBTools import add_RH_T, iv_save
+from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments, serial_remove_dashes, add_RH_T, iv_save
 
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -1118,14 +1115,15 @@ def plot_IV_curves(state):
             plt.plot(data[:,1], data[:,2], 'o-', label=f"{datadict['RH']}% RH; {datadict['Temp']}ºC")
         
         # add sensor IV to plot if in DB
-        try:
-            v0, i0, di0 = fetch_sensor_iv(state["-Module-Serial-"])
-            i0 *= 1e-9
-            di0 *= 1e-9
-            ax.plot(np.abs(v0), np.abs(i0), 'o-', label='Bare Sensor', color = 'grey')
-            ax.fill_between(np.abs(v0), np.abs(i0)-di0, np.abs(i0)+di0, color = 'grey', alpha = 0.15)
-        except Exception:
-            print(" -- InteractionGUI: can't add sensor IV;", traceback.format_exc())
+        if configuration['HasLocalDB']:
+            try:
+                v0, i0, di0 = fetch_sensor_iv(state["-Module-Serial-"])
+                i0 *= 1e-9
+                di0 *= 1e-9
+                ax.plot(np.abs(v0), np.abs(i0), 'o-', label='Bare Sensor', color = 'grey')
+                ax.fill_between(np.abs(v0), np.abs(i0)-di0, np.abs(i0)+di0, color = 'grey', alpha = 0.15)
+            except Exception:
+                print(" -- InteractionGUI: can't add sensor IV;", traceback.format_exc())
             
         outdir = state['-Output-Subdir-']
 
