@@ -1,5 +1,7 @@
 # HGCal Module Testing GUI
-A GUI for HGCAL hexaboard and silicon module testing and a component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac)
+A GUI for HGCAL hexaboard and silicon module testing and a component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac).
+
+For latest updates, refer to the repository on CERN GitLab: https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui/
 
 Andrew C. Roberts
 
