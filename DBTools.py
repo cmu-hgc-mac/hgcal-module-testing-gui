@@ -501,7 +501,7 @@ def other_test_upload(state, test_name, BV, ind=-1):
             db_upload_other['meas_leakage_current'] = state['-Leakage-Current-']
 
     if '-Trophy-Serial-' in state.keys():
-        db_upload_ped['trophy_board_name'] = state['-Trophy-Serial-']
+        db_upload_other['trophy_board_name'] = state['-Trophy-Serial-']
             
     # upload
     coro = upload_PostgreSQL(table_name = 'mod_hxb_other_test', db_upload_data = db_upload_other)
@@ -951,8 +951,8 @@ def summary_upload(moduleserial, qc_summary):
     #ead_table('module_qc_summary')
 
 def upload_bonding_instructions(moduleserial, list_rebond=[], list_dead_ground=[], list_noisy_ground=[]):
-  
-    coro = add_bonding_instructions(moduleserial, list_rebond=list_rebond, list_dead_ground=list_dead_ground, list_noisy_ground=list_noisy_ground)
+    
+    coro = add_bonding_instructions(serial_remove_dashes(moduleserial), list_rebond=list_rebond, list_dead_ground=list_dead_ground, list_noisy_ground=list_noisy_ground)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
