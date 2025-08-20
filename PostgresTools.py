@@ -268,6 +268,9 @@ async def add_bonding_instructions(part_name, list_rebond=[], list_dead_ground=[
 
         value = await conn.execute(query, part_name, list_dead_ground, list_noisy_ground, list_rebond)
 
+        fr_wirebond_incomplete_query = f"UPDATE fr_wirebond SET wb_fr_marked_done = FALSE WHERE module_name = $1;"
+        value += await conn.execute(fr_wirebond_incomplete_query, part_name)
+        
     await conn.close()
     return value
 

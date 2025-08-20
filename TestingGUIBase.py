@@ -1088,7 +1088,7 @@ while True:
                 try:
                     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
                     i_500v = iv_info(moduleserial)
-                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
                 except TypeError:
                     can_grade = False
                     err_msg = "Tests not complete"
@@ -1309,7 +1309,7 @@ while True:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
             i_500v = iv_info(moduleserial)
-            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue

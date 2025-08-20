@@ -106,7 +106,7 @@ def add_mapping(df, hb_type = "LF"):
         chan_map_fname = hr_board_chan
         geo_fname = hr_board_geo
         
-    print(chan_map_fname, geo_fname)
+    print(f'   >> hexaboard_geometries: using channel mapping {chan_map_fname} geometry {geo_fname}')
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
 
@@ -119,16 +119,17 @@ def add_mapping(df, hb_type = "LF"):
     df_data["x"] = df_data["pad"].map(d_pad_map["xposition"])
     df_data["y"] = df_data["pad"].map(d_pad_map["yposition"])
 
-    print('neg pads')
-    print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] < 0])
-    print('zero pads')
-    print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] == 0])
-    print('zero noise')
-    print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['adc_stdd'] == 0])
-    print('calibration')
-    print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 1])
-    print('common mode')
-    print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 100])
+    # really useful for debugging mappings so leaving here commented
+    #print('neg pads')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] < 0])
+    #print('zero pads')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] == 0])
+    #print('zero noise')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['adc_stdd'] == 0])
+    #print('calibration')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 1])
+    #print('common mode')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 100])
     
     return df_data
 

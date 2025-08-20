@@ -937,7 +937,7 @@ def assembly_info(moduleserial):
         print(f' >> DBTools: no assembly info')
         return None
 
-    return protoins[-1]['avg_thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['avg_thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg']
+    return protoins[-1]['avg_thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['avg_thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg'], protoins[-1]['max_thickness'], moduleins[-1]['max_thickness']
 
 def summary_upload(moduleserial, qc_summary):
 
