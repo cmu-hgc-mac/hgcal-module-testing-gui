@@ -664,7 +664,7 @@ def run_pedestals(state, BV, TIMEOUT=30, inftoa=False):
             testtag = trimmed
 
         if inftoa:
-            testtag += 'InfToAVref'
+            testtag += '_InfToAVref'
             
         # rename, but prevent crash if it fails
         try:

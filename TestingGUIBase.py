@@ -1003,25 +1003,6 @@ while True:
                     except TypeError:
                         print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
-                try:
-                    status = run_other_script('inputdac_scan', current_state, 500)
-                    if status != 'CONT':
-                        exit_tests()
-                        continue
-                    
-                    status = multi_run_pedestals(current_state, [300, 300, 500, 500], showplots = False)
-                    if status != 'CONT':
-                        exit_tests()
-                        continue
-                    
-                    status = take_IV_curve(current_state, maxV=maxV)
-                    if status != 'CONT':
-                        exit_tests()
-                        continue
-                    plot_IV_curves(current_state)
-                except Exception:
-                    print(' -- TestingGUIBase: inputdac or following test exception:', traceback.format_exc())
-                    
             elif modulestatus == 'Completely Encapsulated' or modulestatus == 'Bolted':
                                     
                 # open dry air valve manually or automatically            
