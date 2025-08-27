@@ -847,8 +847,7 @@ while True:
         if configuration['HasRHSensor'] and not current_state['-Debug-Mode-']:
             from AirControl import AirControl
             ac = AirControl()
-            for i in range(10):
-                ac.set_air_off()
+            ac.set_air_off()
             ac.close()
         
     # Run the selected tests
@@ -932,6 +931,13 @@ while True:
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
+                try:    
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(current_state, None, inftoa = True)
+                        if status == 'CONT':
+                            hexpath,status = run_pedestals(current_state, None, inftoa = True)
+                except Exception:
+                    print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
 
                 if configuration['HasLocalDB']:
                     try:
@@ -953,7 +959,13 @@ while True:
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
                 status = multi_run_pedestals(current_state, [1, 10, 100, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
-
+            try:
+                if status == 'CONT':
+                    hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+            except Exception:
+                print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
             if not current_state['-Debug-Mode-']:
                 # pedestal run in InteractionGUI handles wire polarization
                 current_state['ps'].outputOff()
@@ -1000,8 +1012,7 @@ while True:
                 else:
                     from AirControl import AirControl
                     ac = AirControl()
-                    for i in range(10):
-                        ac.set_air_on()
+                    ac.set_air_on()
                     ac.close()
                                             
                 wait_time_s = 20*60 # 20 min    
@@ -1058,7 +1069,8 @@ while True:
                 try:
                     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
                     i_500v = iv_info(moduleserial)
-                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
+
                 except TypeError:
                     can_grade = False
                     err_msg = "Tests not complete"
@@ -1074,7 +1086,7 @@ while True:
                     ending = waiting_window(f"Can't grade module: {err_msg}", title="Can't Grade Module")
                     sleep(2)
                     ending.close()
-               
+
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -1172,8 +1184,7 @@ while True:
             else:
                 from AirControl import AirControl
                 ac = AirControl()
-                for i in range(10):
-                    ac.set_air_on()
+                ac.set_air_on()
                 ac.close()
                             
             for iV in range(int(values['-N-Dry-IV-'])):
@@ -1279,7 +1290,7 @@ while True:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
             i_500v = iv_info(moduleserial)
-            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue

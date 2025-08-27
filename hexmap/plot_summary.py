@@ -564,7 +564,7 @@ if __name__ == "__main__":
     # parser arguments
     parser.add_argument("infname", type=str, help="Input summary file name")
     parser.add_argument("-d", "--figdir", type=str, default=None, help="Plot directory, if None (default), use same directory as input file")
-    parser.add_argument("-t", "--hb_type", type=str, default=None, help="Hexaboard type", choices=["LF","LL","LR","LB","LT","HF","HR","HL","HT","HB"])
+    parser.add_argument("-t", "--hb_type", type=str, default=None, help="Hexaboard type", choices=["LF","LL","LR","LB","LT","L5","HF","HR","HL","HT","HB"])
     parser.add_argument("-l", "--label", type=str, default=None, help="Label to use in plots")
     parser.add_argument("-b", "--bias_vol", type=int, default=None, help="bias voltage for the live module")
     parser.add_argument("--live", action=BooleanOptionalAction, help="Is live module")

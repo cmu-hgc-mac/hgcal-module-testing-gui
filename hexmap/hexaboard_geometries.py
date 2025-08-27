@@ -62,13 +62,13 @@ def add_mapping(df, hb_type = "LF"):
     lf_board_chan = s + "channel_maps/ld_pad_to_channel_mapping_V3.csv" # ld full  
     lr_board_chan = s + "channel_maps/lr_pad_to_channel_mapping_Nov2024.csv" # ld right 
     ll_board_chan = s + "channel_maps/ll_pad_to_channel_mapping_Nov2024.csv" # ld left 
-    l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Nov2024.csv" # ld five 
+    l5_board_chan = s + "channel_maps/l5_pad_to_channel_mapping_Aug2025.csv" # ld five 
     lt_board_chan = s + "channel_maps/lt_pad_to_channel_mapping_Nov2024.csv" # ld top
     lb_board_chan = s + "channel_maps/lb_pad_to_channel_mapping_Feb2025.csv" # ld bottom 
     hf_board_chan = s + "channel_maps/hd_pad_to_channel_mapping_V2p1.csv"    # hd full
     hb_board_chan = s + "channel_maps/hb_pad_to_channel_mapping_Nov2024.csv" # hd bottom
     hl_board_chan = s + "channel_maps/hl_pad_to_channel_mapping_Nov2024.csv" # hd left
-    ht_board_chan = s + "channel_maps/ht_pad_to_channel_mapping_Jan2025.csv" # hd top
+    ht_board_chan = s + "channel_maps/ht_pad_to_channel_mapping_Aug2025.csv" # hd top
     hr_board_chan = s + "channel_maps/hr_pad_to_channel_mapping_Feb2025.csv" # hd top
      
     #import mapping files to pandas dataFrames and transform to python dicts
@@ -106,7 +106,7 @@ def add_mapping(df, hb_type = "LF"):
         chan_map_fname = hr_board_chan
         geo_fname = hr_board_geo
         
-    print(chan_map_fname, geo_fname)
+    print(f'   >> hexaboard_geometries: using channel mapping {chan_map_fname} geometry {geo_fname}')
     df_ch_map = pd.read_csv(chan_map_fname)
     d_ch_map = df_ch_map.set_index(["ASIC", "Channel", "Channeltype"]).to_dict()
 
@@ -119,6 +119,18 @@ def add_mapping(df, hb_type = "LF"):
     df_data["x"] = df_data["pad"].map(d_pad_map["xposition"])
     df_data["y"] = df_data["pad"].map(d_pad_map["yposition"])
 
+    # really useful for debugging mappings so leaving here commented
+    #print('neg pads')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] < 0])
+    #print('zero pads')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['pad'] == 0])
+    #print('zero noise')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['adc_stdd'] == 0])
+    #print('calibration')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 1])
+    #print('common mode')
+    #print(df_data[["pad", "chip", "channel", "channeltype", "adc_stdd"]][df_data['channeltype'] == 100])
+    
     return df_data
 
 
@@ -138,8 +150,8 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
     label_upper_left = (-4.9, 2.64)
     label_diff_x = 0.75
     label_diff_y = 1.3
-    # up-to-date as of 2025/7/16: LF, LR, LL, LT, LB, HF, HL, HR
-    # L5 lacks mapping 
+    # up-to-date as of 2025/8/6: LF, LR, LL, LT, LB, L5, HF, HL, HR
+    # L5 mapping needs confirmation
     # HB looks ok but would like confirmation
     # HT has weirdness
     
@@ -380,8 +392,8 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-2., 1.5)      
         chip0_angle = 90.
-        chip0_anno_pos = (-4.9, 2.8)    
-        chip0_anno_angle = 63
+        chip0_anno_pos = label_upper_left    
+        chip0_anno_angle = 60
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (0.6, -0.5)
@@ -392,7 +404,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip2
         chip2_pos = (-1.6, -2.7)
         chip2_angle = 90.
-        chip2_anno_pos = (-0.7, -5.95)
+        chip2_anno_pos = label_bottom
         chip2_anno_angle = 0.0
 
         # lists of chip positions, angles and annotation positions, angles
@@ -402,7 +414,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
 
         # list of chip labels
-        chip_labels = ['Chip 0 (IC1)', 'Chip 1 (IC3)', 'Chip 2 (IC2)']
+        chip_labels = ['Chip 0 (IC1)', 'Chip 2 (IC2)', 'Chip 1 (IC3)']
 
     elif hb_type == "HF":
         ########################
@@ -582,6 +594,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         #########################
         # this layout disagrees with https://indico.cern.ch/event/1492551/contributions/6289012/attachments/2992039/5270825/Tsionou_DB_ROCpositions_6Jan25.pdf
         # need to investigate!
+        # 2025/8/7 seems like original chip layout is still correct
 
         # endpoints of line dividing chips 0 and 1 (l0)
         x_010 = [-1., 0.]    
@@ -605,19 +618,19 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         # marker posisition, angle and annotation position, angle for chip0
         chip0_pos = (-3., 2.1)      
         chip0_angle = 90.
-        chip0_anno_pos = (-5, 3)    
+        chip0_anno_pos = tuple(np.array(label_upper_left) + np.array([label_diff_x, label_diff_y]))
         chip0_anno_angle = 60.
 
         # marker posisition, angle and annotation position, angle for chip1
         chip1_pos = (-0.3, 3.1)
         chip1_angle = 0.
-        chip1_anno_pos = (1.2, 5.8)    
+        chip1_anno_pos = tuple(np.array(label_top) + np.array([1.5, 0]))
         chip1_anno_angle = 0.
 
         # marker posisition, angle and annotation position, angle for chip2
         chip2_pos = (3.2, 1.65)      
         chip2_angle = 90.
-        chip2_anno_pos = (5., 1.4)    
+        chip2_anno_pos = label_upper_right    
         chip2_anno_angle = -60.
 
         # lists of chip positions, angles and annotation positions, angles
@@ -627,7 +640,7 @@ def ad_chip_geo(ax, hb_type = "LF", add_noisy = False, add_uncon = False, add_co
         chip_anno_angles = [chip0_anno_angle, chip1_anno_angle, chip2_anno_angle]
 
         # list of chip labels 
-        chip_labels = ['Chip 0 (IC5)', 'Chip 1 (IC4)', 'Chip 2 (IC3)']
+        chip_labels = ['Chip 0 (IC3)', 'Chip 1 (IC4)', 'Chip 2 (IC5)']
 
     elif hb_type == "HB":
         ########################

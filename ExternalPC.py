@@ -211,33 +211,44 @@ class ExternalPC: # no longer Centos7
         #return f'{scriptname}/{thisrun}'
         return runs[-1]
 
-    def create_proc(self, scriptname):
+    def create_proc(self, scriptname, config=None):
             
         script = self.scriptloc + scriptname + '.py'
 
+        if config is None:
+            config = self.config
+        
         if not self.initiated:
-            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {self.config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1'
+            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} -I > /dev/null 2>&1'
         else:
-            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {self.config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1'
+            command = f'source {self.env} && python3 {script} -i {self.trenzhostname} -f {config} -o {configuration["DataLoc"]}/{self.basedir}/ -d {self.dut} > /dev/null 2>&1'
 
         proc = ScriptProcess(scriptname, command, self)
         return proc
 
-    def pedestal_proc(self, BV=None):
+    def pedestal_proc(self, BV=None, config=None):
 
-        proc = self.create_proc('pedestal_run')
+        proc = self.create_proc('pedestal_run', config=config)
         return proc
 
-    def script_proc(self, script, BV=None):
+    def pedestal_inftoa_proc(self, BV=None):
 
-        proc = self.create_proc(script)
+        # create new config file with Toa_vref = 1023 (infinite)
+        inftoa_config = create_inf_ToA_config(self.config)
+
+        # test with new config
+        proc = self.create_proc('pedestal_run', config=inftoa_config)
+        return proc
+    
+    def script_proc(self, script, BV=None, config=None):
+
+        proc = self.create_proc(script, config=config)
         return proc
 
     def pedestal_run(self, BV=None):
         """
-        Runs the pedestal_run.py script and then, if the bias voltage isn't None, renames the output dir to include the bias voltage.
+        Runs the pedestal_run.py script 
         """
-        
         dirname = self._run_script('pedestal_run')
         return dirname
         
@@ -336,8 +347,8 @@ def updateconf(conffile, updfile):
 
 def check_hexactrl_sw():
 
-    # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts                                                                                                                          
-    # in feature-alma9 branch, use specific paths                                                                                                                                                              
+    # in Centos7 or Alma9 branch ROCv3, stick to main path of environment and scripts                      
+    # in feature-alma9 branch, use specific paths                                  
     if configuration['TestingPCOpSys'] == 'Centos7':
         env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
         scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
@@ -355,11 +366,29 @@ def check_hexactrl_sw():
         env = '/opt/hexactrl/ROCv3/ctrl/etc/env.sh'
         scriptloc = '/opt/hexactrl/ROCv3/ctrl/'
 
-    # make sure above files exist                                                                                                                                                                              
+    # make sure above files exist  
     assert os.path.isfile(f'{env}')
     assert os.path.isfile(f'{scriptloc}pedestal_run.py')
 
+def create_inf_ToA_config(current_conf_path):
+    """create new configuration file with Toa_vref = 1023 (infinite) for all ROC hal
+    """
+    
+    conf = {}
+    with open(current_conf_path, 'r') as fileconf:
+        conf = yaml.safe_load(fileconf)
 
+    rocs = [key for key in conf.keys() if 'roc_s' in key]
+    for roc in rocs:
+        conf[roc]['sc']['ReferenceVoltage'][0]['Toa_vref'] = 1023
+        conf[roc]['sc']['ReferenceVoltage'][1]['Toa_vref'] = 1023
+        
+    new_conf_path = current_conf_path.split('.yaml')[0] + '_inftoa.yaml'
+    with open(new_conf_path, 'w') as filenew:
+        yaml_string=yaml.dump(conf, filenew)
+
+    return new_conf_path
+        
 # Class to handle detached test script processes running on the PC 
 class ScriptProcess:
 

@@ -589,7 +589,7 @@ def configure_test_stand(state, fpgahostname):
     ready.close()
     return 'CONT'
 
-def run_pedestals(state, BV, TIMEOUT=30):
+def run_pedestals(state, BV, TIMEOUT=30, inftoa=False):
     """
     Runs pedestals via the PC and then makes hexmap plots. If the module is live, sets the bias voltage 
     according to the BV argument.
@@ -627,7 +627,10 @@ def run_pedestals(state, BV, TIMEOUT=30):
 
         #pedestalpath = state['pc'].pedestal_run(BV=BV)
         # testing this detached test run
-        proc = state['pc'].pedestal_proc(BV=BV_to_use)
+        if not inftoa:
+            proc = state['pc'].pedestal_proc(BV=BV_to_use)
+        else:
+            proc = state['pc'].pedestal_inftoa_proc(BV=BV_to_use)
         while not proc.is_finished():
             elapsed_time = time() - start_time
             event, values = pedestals.read(timeout=1)
@@ -659,7 +662,10 @@ def run_pedestals(state, BV, TIMEOUT=30):
             testtag = f'BV{int(BV)}_RH{state["-Box-RH-"]}_T{state["-Box-T-"]}_{trimmed}'
         else:
             testtag = trimmed
-        
+
+        if inftoa:
+            testtag += '_InfToAVref'
+            
         # rename, but prevent crash if it fails
         try:
             os.system(f'mv {pedestalpath} {pedestalpath}_{testtag}')
@@ -1206,7 +1212,7 @@ def grade_module(moduleserial):
     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
     #i_600v, i_850v = iv_info(moduleserial)                                                                                                                                           
     i_500v = iv_info(moduleserial)
-    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, pmaxthickness, mmaxthickness = assembly_info(moduleserial)
     
     comments = fetch_comments(moduleserial)
 
@@ -1261,14 +1267,14 @@ def grade_module(moduleserial):
                   'final_grade': final_grade,
                   'final_grade_def': final_grade_def,
                   'proto_flatness': pflatness,
-                  'proto_ave_thickness': pthickness,
+                  'proto_avg_thickness': pthickness,
                   'proto_x_offset': pxoffset,
                   'proto_y_offset': pyoffset,
                   'proto_ang_offset': pangoffset,
                   'proto_grade': proto_grade,
                   'proto_grade_def': proto_grade_def,
                   'module_flatness': mflatness,
-                  'module_ave_thickness': mthickness,
+                  'module_avg_thickness': mthickness,
                   'module_x_offset': mxoffset,
                   'module_y_offset': myoffset,
                   'module_ang_offset': mangoffset,
@@ -1293,6 +1299,8 @@ def grade_module(moduleserial):
                   'i_ratio_ref_b_over_a': 1e10, # not taking IV past 500V
                   'iv_grade': iv_grade,
                   'iv_grade_def': iv_grade_def,
+                  'proto_max_thickness': pmaxthickness,
+                  'module_max_thickness': mmaxthickness, 
                   #'grade_version': 'preproduction_1_2024-10-16',                                                                                                                         
                   'comments_all': comments
                   }
@@ -1337,5 +1345,7 @@ def grade_module_window(moduleserial, qc_summary):
             break
 
     window.close()
+    comment = comment.replace("'", "`")
+    comment = comment.replace('"', '`')
     qc_summary['comments_all'] = comment
     return qc_summary
