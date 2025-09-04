@@ -1062,7 +1062,7 @@ while True:
                 # now that standard test completes, automatically grade modules
                 can_grade = True
                 err_msg = ''
-                
+
                 if not configuration['HasLocalDB']:
                     can_grade = False
                     err_msg = "Grading requires local db"
@@ -1086,7 +1086,7 @@ while True:
                     ending = waiting_window(f"Can't grade module: {err_msg}", title="Can't Grade Module")
                     sleep(2)
                     ending.close()
-
+                                
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()

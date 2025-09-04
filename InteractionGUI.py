@@ -1023,6 +1023,10 @@ def take_IV_curve(state, step=10, maxV=500):
         # Append data into IVdata:
         if status == 'RUN':
             state['ps'].IVdata.append(curve)
+            # update the new voltage
+            v_now, _, _ = state['ps'].measureVoltage()
+            state['ps'].voltage_now = v_now
+            # update status
             status = 'CONT'
         else:
             # Clear queues: Error queue and Out queue
