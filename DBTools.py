@@ -791,7 +791,9 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
         bv1t10ratio = np.array(bv1runs[-1]['adc_stdd']) / np.array(bv10runs[-1]['adc_stdd'])
         bv10t100ratio = np.array(bv10runs[-1]['adc_stdd']) / np.array(bv100runs[-1]['adc_stdd'])
 
-        checksum = ((bv1noise < 1.2) & (bv1noise > 0.)).astype(int) + ((bv1t10ratio < 1.1) & (bv10noise > 0.)).astype(int) + ((bv10t100ratio < 1.1) & (bv100noise > 0.)).astype(int)
+        checksum = ((bv1noise < 1.2) & (bv1noise > 0.)).astype(int)
+                 + ((bv1t10ratio < 1.1) & (bv10noise > 0.) & (bv1noise < 2.)).astype(int) # bv1 noise check to catch flat noisy channels
+                 + ((bv10t100ratio < 1.1) & (bv100noise > 0.) & (bv1noise < 2.)).astype(int)
         uncon2 = checksum >= 2 # pass at least two of three checks
         # start using if necessary pedestal runs are present
         unconcells = cellid[uncon2 & (norm_mask | calib_mask)]
