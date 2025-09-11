@@ -1,10 +1,13 @@
 import sys
 import PySimpleGUI as sg
-from Keithley2410 import Keithley2410
+from KeithleyPowerSupply import KeithleyPowerSupply
 from time import sleep, time
 from InteractionGUI import *
 import yaml
 from datetime import datetime, timedelta
+import os
+from pathlib import Path
+import subprocess
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -12,6 +15,38 @@ then creates the GUI layout and then the GUI window. Once done, the script runs 
 interaction with the layout.
 """
 
+# direct print statements to both terminal and log file
+class Tee:
+    def __init__(self, file, stream):
+        self.file = file
+        self.stream = stream
+
+    def write(self, message):
+        self.file.write(message)
+        self.stream.write(message)
+        self.file.flush()
+    def flush(self):
+        self.file.flush()
+        self.stream.flush()
+
+# create and open new file for logging
+now = datetime.now()
+timestamp = now.strftime("%Y-%m-%d_%Hh%Mm%Ss")
+folder_path = Path("logs")
+filename = f"log_{timestamp}.log"
+
+folder_path.mkdir(parents = True, exist_ok = True)
+filepath = f'{folder_path}/{filename}'
+logfile = open(filepath, 'w')
+
+# redirect stdout to both console and file
+sys.stdout = Tee(logfile, sys.__stdout__)
+
+            
+#prints current date and time
+print(f' >> TestingGUIBase: start GUI {timestamp}')
+
+#sets max output voltage to 500V
 default_max_V = 500
 
 # Load configuration file
@@ -22,9 +57,8 @@ if 'FPGAHostname' not in configuration.keys() or 'FPGAType' not in configuration
     configuration['FPGAHostname'] = configuration['TrenzHostname']
     configuration['FPGAType'] = ['Trenz' for k in configuration['TrenzHostname']]
 
-    
-from DBTools import add_RH_T, readout_info, iv_info, assembly_info, summary_upload, fetch_comments, serial_remove_dashes
-    
+from DBTools import add_RH_T, readout_info, hexaboard_readout_info, iv_info, assembly_info, summary_upload, upload_bonding_instructions
+
 # Create theme
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -73,25 +107,15 @@ livemoduleonly = [[sg.Text('Sensor Thickness: '),
                    sg.Radio('Titanium', 5, key='-Ti-', enable_events=True),
                    sg.Radio("Carbon Fiber", 5, key='-CF-', default=True, enable_events=True),
                    sg.Radio("Copper-Tungsten", 5, key='-CuW-', enable_events=True)]]
-                  #[sg.Text('ROC Version: '),
-                  # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                  # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
-                  # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
-                  # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
-                  # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)]]
-                  #[sg.Checkbox('Preseries Module', default=True, key='-Preseries-', enable_events=True)]]
 
 # Module Setup fields for hexaboards only
-# for now, including Hexaboard/ROC version as input for backwards compatibility -
-# will hopfully change to radio buttons once `F03` format is obsolete
-hexaboardonly = [#[sg.Text('ROC Version: '),
-                 # sg.Radio('Preseries', 7, key='-Preseries-', default=True, enable_events=True),
-                 # sg.Radio("V3b SU02 ('2')", 7, key='-V3b-2-', enable_events=True),
-                 # sg.Radio("V3b SU03 ('B')", 7, key='-V3b-B-', enable_events=True),
-                 # sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
-                 # sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
-                 #[sg.Text('Hexaboard/ROC version: '), sg.Input(s=5, key='-HB-ROC-Version-', enable_events=True)],
-                 [sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
+hexaboardonly = [[sg.Text("Hexaboard Vendors: "), sg.Input(s=5, key='-HB-Manufacturer-', enable_events=True)]]
+
+# Field only for use outside of MACs
+nonmaconly = [[sg.Text('MAC Code: '), sg.Radio('CM', 8, key='-CM-', enable_events=True),
+               sg.Radio('SB', 8, key='-SB-', enable_events=True), sg.Radio('TT', 8, key='-TT-', enable_events=True),
+               sg.Radio('NT', 8, key='-NT-', enable_events=True), sg.Radio('IH', 8, key='-IH-', enable_events=True),
+               sg.Radio('TI', 8, key='-TI-', enable_events=True)]]
 
 # Module Setup section which has both live module and hexaboard fields from above but initially hides them
 modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), sg.Radio('Hexaboard', 1, key='-IsHB-', enable_events=True)],
@@ -107,9 +131,11 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                 sg.Radio("V3b SU04 ('4')", 7, key='-V3b-4-', enable_events=True),
                 sg.Radio('V3c', 7, key='-V3c-', enable_events=True)],
                [sg.pin(sg.Column(hexaboardonly, key='-HB-Menu-', visible=False))],
+               [sg.pin(sg.Column(nonmaconly, key='-Non-MAC-Menu-', visible=False))],
                [sg.Text("Module Index: "), sg.Input(s=5, key='-Module-Index-', enable_events=True)],
                [sg.Text("Scan QR Code: "), sg.Input(s=20, key='-Scanned-QR-Code-', enable_events=True), sg.Button('Clear')],
                [sg.Text("Module Serial Number: "), sg.Text('', key='-Module-Serial-')],
+               [sg.Text("Trophy Serial No.: "), sg.Input(s=15, key='-Trophy-Serial-', enable_events=True), sg.Button('Clear', key='-Trophy-Clear-')],
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['FPGAHostname'], default_value=configuration['FPGAHostname'][0], key="-FPGAHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
                [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
@@ -123,7 +149,7 @@ BVonly = [[sg.Text('Bias Voltage (per run): '),
 
 # Select Tests section
 other_scripts = ['pedestal_scan', 'delay_scan', 'injection_scan', 'phase_scan', 'sampling_scan', 'toa_trim_scan', 
-                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan']
+                 'toa_vref_scan_noinj', 'toa_vref_scan', 'vref2D_scan', 'vrefinv_scan', 'vrefnoinv_scan', 'inputdac_scan']
 testsetup = [[sg.Text('Tests to run: ')],
              [sg.Checkbox('Standard Test Procedure', key='-Standard-Test-'), sg.Text('IV Max Voltage:'), sg.Input(s=5,key='-StandardIV-MaxV-')],
              [sg.Checkbox('Trim Pedestals', key='-Trim-Pedestals-'), sg.Text('Bias Voltage: ', key='-Bias-Voltage-PedTrim-Text-'), sg.Input(s=5, key='-Bias-Voltage-PedTrim-')],
@@ -269,7 +295,7 @@ ivonly_skip = False
 empty = ''
 majortype = ['X', 'L']
 minortype = ['F', '2', 'C', '']
-macserial = configuration['MACSerial']
+macserial = configuration['MACSerial'] if configuration['MACSerial'] in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI'] else ''
 moduleindex = ''
 vendorserial = ''
 moduleserial = ''
@@ -373,6 +399,9 @@ while True:
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
 
+    if event == '-Trophy-Clear-':
+        basewindow['-Trophy-Serial-'].update(value='')
+
     if values['-Scanned-QR-Code-'] != '':
 
         # ensure scanner is done typing  
@@ -472,7 +501,22 @@ while True:
 
             if not values['-IsHB-']:
                 basewindow.write_event_value('-IsHB-', True)
-
+                
+        # if not at MAC, populate MAC code
+        if configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI']:
+            macserial = serialsections[3]
+            if macserial == 'CM': basewindow['-CM-'].update(value=True)
+            elif macserial == 'SB': basewindow['-SB-'].update(value=True)
+            elif macserial == 'TT': basewindow['-TT-'].update(value=True)
+            elif macserial == 'NT': basewindow['-NT-'].update(value=True)
+            elif macserial == 'IH': basewindow['-IH-'].update(value=True)
+            elif macserial == 'TI': basewindow['-TI-'].update(value=True)
+            else:
+                basewindow['-Scanned-QR-Code-'].update(value='')
+                continue
+        else:
+            macserial = configuration['MACSerial']
+        
     # Ensure clicking on Live or HB overrides scanned QR code
     if (event == '-IsLive-' and values['-IsHB-']) or (event == '-IsHB-' and values['-IsLive-']):
         toggleval = (event == '-IsLive-')
@@ -497,6 +541,7 @@ while True:
     # Change visibility of sections based on if live module or not
     basewindow['-LM-Menu-'].update(visible=values['-IsLive-'])
     basewindow['-HB-Menu-'].update(visible=values['-IsHB-'])
+    basewindow['-Non-MAC-Menu-'].update(visible=values['-IsLive-'] and configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI'])
     basewindow['-Mod-Status-Text-'].update('Module Status:' if values['-IsLive-'] else 'Hexaboard Status:')
     thesestatuses = mod_statuses if values['-IsLive-'] else hxb_statuses
     if basewindow['-Module-Status-'].Values != thesestatuses:
@@ -580,6 +625,17 @@ while True:
         if len(vendorid) == 2:
             pcbvendor = vendorid[0]
             assemblyvendor = vendorid[1]
+
+    # if not at MAC check MAC code
+    if configuration['MACSerial'] not in ['CM', 'SB', 'TT', 'NT', 'IH', 'TI']:
+        if values['-CM-']: macserial = 'CM'
+        elif values['-SB-']: macserial = 'SB'
+        elif values['-TT-']: macserial = 'TT'
+        elif values['-NT-']: macserial = 'NT'
+        elif values['-IH-']: macserial = 'IH'
+        elif values['-TI-']: macserial = 'TI'
+    else:
+        macserial = configuration['MACSerial']
         
     # Only using DCDC if LD Full
     if majortype[1] != 'L' or minortype[0] != 'F':
@@ -679,12 +735,19 @@ while True:
 
         fpgahostname = values['-FPGAHostname-'].rstrip()
         
+        # print out the testing module/hxb serial
+        if values['-IsLive-']:
+            print(" >> TestingGUIBase: Beginning test of live module", moduleserial)
+        if values['-IsHB-']:
+            print(" >> TestingGUIBase: Beginning test of hexaboard", moduleserial)
+        
         # Initialize test stand state dictionary
         init_state()
         current_state['-Skip-Checks-'] = values['-Skip-Checks-']
+        current_state['-Trophy-Serial-'] = values['-Trophy-Serial-']
         # Disable the module setup section
         disable_module_setup()
-
+        
         # Run initial checks on module, including pad resistance and power
         # If the checks show a problem, the function handles the ending of the test session
         outcode = initial_module_checks(current_state)
@@ -742,6 +805,9 @@ while True:
         if (values['-HD-'] and (values['-Five-'])): # all geometries
             show_string("Not Implemented")
             continue
+
+        # print out the testing module
+        print(" >> TestingGUIBase: Beginning IV-only test for live module", moduleserial)
         
         # Initialize state dictionary
         init_state()
@@ -781,8 +847,8 @@ while True:
         if configuration['HasRHSensor'] and not current_state['-Debug-Mode-']:
             from AirControl import AirControl
             ac = AirControl()
-            for i in range(10):
-                ac.set_air_off()
+            ac.set_air_off()
+            ac.close()
         
     # Run the selected tests
     if event == 'Run Tests':
@@ -865,6 +931,21 @@ while True:
                     status = trim_pedestals(current_state, None)
                 if status == 'CONT':
                     status = multi_run_pedestals(current_state, [None, None, None, None, None])
+                try:    
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(current_state, None, inftoa = True)
+                        if status == 'CONT':
+                            hexpath,status = run_pedestals(current_state, None, inftoa = True)
+                except Exception:
+                    print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
+
+                if configuration['HasLocalDB']:
+                    try:
+                        deadcells, noisycells = hexaboard_readout_info(current_state['-Module-Serial-'], status=current_state['-Module-Status-'])
+                        upload_bonding_instructions(current_state['-Module-Serial-'], list_dead_ground=deadcells, list_noisy_ground=noisycells)
+                    except Exception:
+                        print(' -- TestingGUIBase: hexaboard wirebond uploading error:', traceback.format_exc())
+                    
                 exit_tests()
                 continue
 
@@ -877,8 +958,14 @@ while True:
             if status == 'CONT':
                 status = trim_pedestals(current_state, 300)
             if status == 'CONT':
-                status = multi_run_pedestals(current_state, [2, 10, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
-
+                status = multi_run_pedestals(current_state, [1, 10, 100, 300, 300, 300, 300, 300, min(maxV, 800), min(maxV, 800)])
+            try:
+                if status == 'CONT':
+                    hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+                    if status == 'CONT':
+                        hexpath, status = run_pedestals(current_state, min(maxV, 800), inftoa = True)
+            except Exception:
+                print(' -- TestingGUIBase: InfToA pedestal run exception:', traceback.format_exc())
             if not current_state['-Debug-Mode-']:
                 # pedestal run in InteractionGUI handles wire polarization
                 current_state['ps'].outputOff()
@@ -899,12 +986,22 @@ while True:
             # if not encapsulated, show out rebonding information
             modulestatus = values["-Module-Status-"]
             if modulestatus == 'Completely Bonded' or modulestatus == 'Frontside Bonded' or modulestatus == 'Bonds Reworked':
-                try:
-                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
-                    if len(unconcells) > 0 or len(noisycells) > 0:
-                        module_rebond_window(current_state, unconcells, noisycells)
-                except TypeError:
-                    print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
+                if configuration['HasLocalDB']:
+                    try:
+                        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial, modulestatus = modulestatus) 
+                        dead_and_ungrounded = [x for x in deadcells if x not in groundedcells]
+                        uncon_and_ungrounded = [x for x in unconcells if x not in groundedcells]
+
+                        try:
+                            upload_bonding_instructions(current_state['-Module-Serial-'], list_rebond=uncon_and_ungrounded, 
+                                                        list_dead_ground=dead_and_ungrounded, list_noisy_ground=noisycells)
+                        except Exception:
+                            print(' -- TestingGUIBase: module rebonding uploading error:', traceback.format_exc())
+
+                        if len(uncon_and_ungrounded) > 0 or len(noisycells) > 0 or len(dead_and_ungrounded) > 0:
+                            module_rebond_window(current_state, uncon_and_ungrounded, noisycells, dead_and_ungrounded)
+                    except TypeError:
+                        print(' >> TestingGUIBase: pedestal tests did not complete or did not upload, cannot give bond rework instructions, continuing')
 
             elif modulestatus == 'Completely Encapsulated' or modulestatus == 'Bolted':
                                     
@@ -915,9 +1012,9 @@ while True:
                 else:
                     from AirControl import AirControl
                     ac = AirControl()
-                    for i in range(10):
-                        ac.set_air_on()
-                    
+                    ac.set_air_on()
+                    ac.close()
+                                            
                 wait_time_s = 20*60 # 20 min    
                 dry_date = datetime.now()
                 finalIV_date = dry_date + timedelta(seconds=wait_time_s)
@@ -961,7 +1058,35 @@ while True:
                     exit_tests()
                     continue
                 plot_IV_curves(current_state)
- 
+
+                # now that standard test completes, automatically grade modules
+                can_grade = True
+                err_msg = ''
+
+                if not configuration['HasLocalDB']:
+                    can_grade = False
+                    err_msg = "Grading requires local db"
+                try:
+                    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
+                    i_500v = iv_info(moduleserial)
+                    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
+
+                except TypeError:
+                    can_grade = False
+                    err_msg = "Tests not complete"
+                if i_500v is None:
+                    can_grade = False
+                    err_msg = "Tests not complete"
+
+                if can_grade:
+                    print(f' >> TestingGUIBase: Grading {moduleserial}')
+                    qc_summary = grade_module(moduleserial)
+                    summary_upload(moduleserial, qc_summary)
+                else:
+                    ending = waiting_window(f"Can't grade module: {err_msg}", title="Can't Grade Module")
+                    sleep(2)
+                    ending.close()
+                                
         # For trimming pedestals, check to make sure bias voltage is entered if needed and then run
         if values['-Trim-Pedestals-']:
             tpbv = values['-Bias-Voltage-PedTrim-'].rstrip()
@@ -1059,8 +1184,8 @@ while True:
             else:
                 from AirControl import AirControl
                 ac = AirControl()
-                for i in range(10):
-                    ac.set_air_on()
+                ac.set_air_on()
+                ac.close()
                             
             for iV in range(int(values['-N-Dry-IV-'])):
 
@@ -1165,7 +1290,7 @@ while True:
             unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
             #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
             i_500v = iv_info(moduleserial)
-            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset = assembly_info(moduleserial)
+            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
         except TypeError:
             show_string("Tests not complete", field='Right')
             continue
@@ -1185,4 +1310,6 @@ while True:
     # exit
     if event == 'Close GUI':
         exit()
-        
+
+#Closes .txt file         
+logfile.close        

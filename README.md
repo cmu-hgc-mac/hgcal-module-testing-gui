@@ -1,11 +1,9 @@
 # HGCal Module Testing GUI
-A GUI for HGCAL hexaboard and silicon module testing and a component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac).
-
-For latest updates, refer to the repository on CERN GitLab: https://gitlab.cern.ch/acrobert/hgcal-module-testing-gui/
+A GUI for HGCAL hexaboard and silicon module testing and a component of the [CMU HGCAL MAC Software Ecosystem](https://github.com/cmu-hgc-mac)
 
 Andrew C. Roberts
 
-with contributions from Carter Stiteler, Siyu (Rain) Chen, Eva Kloiber, Valdis Slokenbergs, and Xinyue (Joyce) Zhuang
+with contributions from Siyu (Rain) Chen, Eva Kloiber, Sindhu Murthy, Valdis Slokenbergs, Carter Stiteler, and Xinyue (Joyce) Zhuang
 
 ## Motivation
 We have been using detailed procedures for module testing, and though these do work, I found it was very easy for people new to the system to skip steps and make mistakes. Additionally, it seemed that a large portion of the test sequence can be automated. A GUI would greatly simplify training, force users to follow the correct steps in the correct order, and hide the parts of the sequence that require special skills (i.e. bash) behind automation. Also, this GUI is integrated with the database and may soon serve as the starting point for the multimodule testing GUI.
@@ -109,4 +107,47 @@ The `AirControl.py` class is used to control the dry air valve and automatically
 
 Please inform me of any bugs you encounter or any features you would like me to implement!
 
+## Standard Test Procedure and Rebonding/Grading Criteria
+What follows is the documentation of the standard test procedure and how it is used to grade modules and do bond rework.
+
+Update 2025/7/30: New unbonded detection implemented; previous method used single pedestal run with BV=2 and all cells with less than 1.2 ADC counts called unbonded
+
+The GUI, in addition to the ability to run any of several tests, includes an option to run a "Standard Test Procedure". This I created in attempt to standardize tests across modules and across MACs, but all parts are subject to change.
+
+### Hexaboards:
+
+Run two pedestal tests, trim the pedestals, and then run five pedestal tests. The purpose of this is to collect data for comparison with the live module and to discover dead cells (that is, cells with exactly zero noise). A cell is determined to be "dead" if it is dead in all five tests after trimming as occasionally cells can appear dead transiently. In such case, that cell should be grounded when the module made with the hexaboard is wirebonded.
+
+### Live Modules - after wirebonding, before encapsulation 
+
+Run two untrimmed pedestal tests with BV=300 and then trim the pedestals at BV=300. Afterward, run pedestal tests at BV=1, BV=10, and BV=100, then five tests at BV=300, and two last pedestal runs with BV=500. Finally, run an IV curve at ambient humidity from 0V to 500V in steps of 10V.
+
+A cell is determined to be "unbonded" if two or more of the following three criteria are met:
+- Its noise at BV=1 is less than 1.2 ADC counts, $\sigma_1 < 1.2$ ADC counts
+- The decrease in noise from BV=1 to BV=10 is less than 10%, $\sigma_1 / \sigma_{10} < 1.1$
+- The decrease in noise from BV=10 to BV=100 is less than 10%, $\sigma_{10} / \sigma_{100} < 1.1$
+
+This is the purpose of the first three pedestal runs after trimming. If a cell is detected to be unbonded and was not intentionally grounded, it should be inspected under a microscope and rebonded if possible.
+
+A cell is determined to be "dead" if it is dead (zero noise) in all five 300V pedestal runs. If a cell is detected to be dead, it should be grounded so the conditions of the Si cell are controlled and do not affect adjacent cells.
+
+A cell is considered "noisy" if it is noisy in either of the two 500V pedestal runs. A cell is flagged as noisy in a single pedestal run if its noise is more than two ADC counts greater than the module's median noise across normal cells (calibration cells are excluded), $\sigma > \mathrm{med}(\sigma) + 2$ ADC counts. Both of these choices (definition of noisy cell and that it can be noisy in either test) are arbitrary and will almost certainly change. If a cell is detected to be noisy, it should be grounded.
+
+No dry IV curve is done before encapsulation to save time as such a curve would not affect rebonding.
+
+The GUI will show a pop-up window after this standard test telling the user which cells need bond rework, and the GUI will upload information about which cells must be redone which can then be accessed and used during bond rework.
+
+### Live Modules - after encapsulation
+
+Run two	untrimmed pedestal tests with BV=300 and then trim the pedestals at BV=300. Afterward, run pedestal tests at BV=1, BV=10, and BV=100, then five	tests at BV=300, and two last pedestal runs with BV=500. Run an IV curve at ambient humidity from 0V to 500V in steps of 10V. Then, turn the dry air on and wait for twenty minutes as the module dries, then do a second identical IV curve.
+
+As the module is encapsulated, no bond rework can be done, so the module is graded. The grading criteria is currently the following:
+- (last updated 2025/4/7 from https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf)
+- Assembly: for grade A, x and y offsets less than 100 microns and angular offset less than 0.02 degrees; for grade B, protomodule x and y offsets less than 200 microns and angular offset less than 0.04 degrees, and module x and y offsets less than 0.06 degrees; grade C otherwise
+- Readout: for grade A, bad cell fraction < 2%; for grade B, bad cell fraction < 4%; grade C otherwise. A "bad" cell is either unbonded, grounded, dead, or noisy by the above definitions, but using the tests from post-encapsulation.
+- IV: for grade A, current at 500V less than 100 microamps; for grade B, current at 500V less than one milliamp; grade C otherwise.
+
+Grading is done automatically after the standard test, and QC information and grades are uploaded to the database. Users are shown all comments entered for the module during assembly and may edit them or add additional comments.
+
+I am considering for addition to the above: leakage current compensation, infinite ToA runs to test noisy TDCs
 

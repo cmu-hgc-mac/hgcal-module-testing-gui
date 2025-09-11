@@ -112,7 +112,7 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     print(f'  >> PostgresTools: Executing query: {query}')
     await conn.execute(query, *db_upload_data.values())
 
-    print(f'  >> PostgresTools: Data is successfully uploaded to the {table_name}!')
+    print(f'  >> PostgresTools: Data is successfully uploaded to {table_name}!')
     
     await conn.close()
 
@@ -140,8 +140,8 @@ def get_query_read(table_name, part_name = None):
             FROM {table_name}   
             WHERE REPLACE(module_name,'-','') = '{part_name}';"""
     elif table_name == 'module_pedestal_plots':
-        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                                                                           
-            FROM {table_name}                                                                                                                                                                                
+        query = f"""SELECT REPLACE(module_name,'-','') as module_name, inspector, comment_plot_test                                               
+            FROM {table_name}
             ORDER BY mod_plottest_no DESC LIMIT 10;"""
     else:
         query = None
@@ -235,3 +235,42 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
     value = await conn.fetch(query)
     await conn.close()
     return value
+
+async def add_bonding_instructions(part_name, list_rebond=[], list_dead_ground=[], list_noisy_ground=[]):
+    """
+    General read function. Instantiates the connection to the database and reads the data. Returns the raw data.
+    """
+
+    # instantiate db connection
+    conn = await asyncpg.connect(
+        host = configuration['DBHostname'],
+        database = configuration['DBDatabase'],
+        user = configuration['DBUsername'],
+	password = configuration['DBPassword']
+    )
+
+    if '320-X' in part_name or '320X' in part_name: # hexaboard
+        query = """UPDATE hexaboard
+                   SET mac_dead_pad_to_be_ground = $2,
+                       mac_noisy_pad_to_be_ground = $3
+                   WHERE 
+                   hxb_name = $1;"""
+
+        value = await conn.execute(query, part_name, list_dead_ground, list_noisy_ground)
+
+    elif '320-M' in part_name or '320M' in part_name: # live module
+        query = """UPDATE module_info
+                   SET dead_pad_to_be_ground = $2,
+                       noisy_pad_to_be_ground = $3,
+                       pad_to_attempt_rebond = $4
+                   WHERE 
+                   module_name = $1;"""
+
+        value = await conn.execute(query, part_name, list_dead_ground, list_noisy_ground, list_rebond)
+
+        fr_wirebond_incomplete_query = f"UPDATE fr_wirebond SET wb_fr_marked_done = FALSE WHERE module_name = $1;"
+        value += await conn.execute(fr_wirebond_incomplete_query, part_name)
+
+    await conn.close()
+    return value
+

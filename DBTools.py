@@ -7,7 +7,7 @@ import pickle
 from argparse import ArgumentParser
 from datetime import datetime 
 import os
-from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL
+from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL, add_bonding_instructions
 import pandas as pd
 import glob
 import asyncio
@@ -17,6 +17,7 @@ from hexmap.plot_summary import add_mapping
 from hexmap.plot_summary import get_pad_id
 from hexmap.plot_summary import create_masks
 from functools import reduce
+import json
 
 import yaml
 configuration = {}
@@ -39,10 +40,10 @@ def iv_save(datadict, state):
 
     moduleserial = state['-Module-Serial-']
     outdir = state['-Output-Subdir-']
-    with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}.pkl', 'wb') as datafile:
+    with open(f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"].replace(":", "")}_{datadict["RH"]}.pkl', 'wb') as datafile:
         pickle.dump(datadict, datafile)
 
-    return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"]}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
+    return f'{configuration["DataLoc"]}/{outdir}/{moduleserial}_IVset_{datadict["date"]}_{datadict["time"].replace(":", "")}_{datadict["RH"]}_{datadict["Temp"]}.pkl'
         
 def read_table(tablename, printall=False):
     """
@@ -75,6 +76,26 @@ def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
     
     for r in result:
         if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
+            runs.append(r)
+
+    return runs        
+        
+def hexaboard_fetch_pedestal(hxbserial, trimmed, status):
+    """
+    Reads hxb_pedestal_test in the local database and returns the most recent test with the requested
+    module serial number, bias voltage, and trimming conditions
+    """
+
+    coro = fetch_serial_PostgreSQL('hxb_pedestal_test', serial_remove_dashes(hxbserial))
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    runs = []
+    
+    for r in result:
+        if trimmed is None and r['trim_bias_voltage'] is None and r['status_desc'] == status:
+            runs.append(r)
+        elif r['trim_bias_voltage'] == trimmed and r['status_desc'] == status:
             runs.append(r)
 
     return runs        
@@ -156,8 +177,6 @@ def pedestal_upload(state, ind=-1):
         highval = df_data[column] > noisy_limit
     # median + 2 adc counts as temporary check for high noise? we'll see how it goes
 
-
-
     count_bad_cells = np.sum((zeros) & (df_data["pad"] > 0)) + np.sum(highval & (df_data["pad"] > 0) & ~(calib_mask))
     list_dead_cells = df_data["pad"][zeros & (df_data["pad"] > 0)].tolist()
     list_noisy_cells = df_data["pad"][highval & (df_data["pad"] > 0) & ~(calib_mask)].tolist()
@@ -184,6 +203,13 @@ def pedestal_upload(state, ind=-1):
     
     trimval = None if '-Pedestals-Trimmed-' not in state.keys() else (0. if state['-Pedestals-Trimmed-'] == True else float(state['-Pedestals-Trimmed-']))
 
+    # grab test configuration .yaml file and convert to json to upload
+    test_config_yaml_path = runs[ind]+'/initial_full_config.yaml'
+    test_config = {}
+    with open(test_config_yaml_path, 'r') as file:
+        test_config = yaml.safe_load(file)
+    test_config_json_string = json.dumps(test_config)
+    
     # build upload row list
     namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
     db_upload_ped = {namekey: serial_remove_dashes(moduleserial),
@@ -199,7 +225,8 @@ def pedestal_upload(state, ind=-1):
                      'inspector': state['-Inspector-'],
                      'comment': comment,
                      'trim_bias_voltage': trimval,
-                     'cell': df_data['pad'].tolist() # rename pad -> cell
+                     'cell': df_data['pad'].tolist(), # rename pad -> cell
+                     'pedestal_config_json': test_config_json_string,
                      }
 
     dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
@@ -225,6 +252,9 @@ def pedestal_upload(state, ind=-1):
     else:
         pass
     
+    if '-Trophy-Serial-' in state.keys():
+        db_upload_ped['trophy_board_name'] = state['-Trophy-Serial-']
+        
     table = 'module_pedestal_test' if ('320-M' in moduleserial) else 'hxb_pedestal_test'
     
     # upload
@@ -279,6 +309,13 @@ def previous_pedestal_upload(path):
                 status = key
                 datelist = [int(i) for i in run.removeprefix(configuration["DataLoc"]).split('/')[1].split('_')[-1].split('-')]
                 date_test = date(datelist[0], datelist[1], datelist[2])
+
+        # grab test configuration .yaml file and convert to json to upload
+        test_config_yaml_path = run+'/initial_full_config.yaml'
+        test_config = {}
+        with open(test_config_yaml_path, 'r') as file:
+            test_config = yaml.safe_load(file)
+        test_config_json_string = json.dumps(test_config)
                 
         # build upload row list
         namekey = 'module_name' if '320-M' in moduleserial else 'hxb_name'
@@ -289,7 +326,8 @@ def previous_pedestal_upload(path):
                          'list_dead_cells': list_dead_cells,
                          'list_noisy_cells':list_noisy_cells,
                          'date_test': date_test,
-                         'cell': df_data['pad'].tolist() # rename pad -> cell
+                         'cell': df_data['pad'].tolist(), # rename pad -> cell
+                         'pedestal_config_json': test_config_json_string
                          }
 
         dfkeys = ['chip', 'channel', 'channeltype', 'adc_median', 'adc_iqr', 'tot_median', 'tot_iqr', 'toa_median', 'toa_iqr',
@@ -462,6 +500,9 @@ def other_test_upload(state, test_name, BV, ind=-1):
         if '-Leakage-Current-' in state.keys(): # add measured leakage current
             db_upload_other['meas_leakage_current'] = state['-Leakage-Current-']
 
+    if '-Trophy-Serial-' in state.keys():
+        db_upload_other['trophy_board_name'] = state['-Trophy-Serial-']
+            
     # upload
     coro = upload_PostgreSQL(table_name = 'mod_hxb_other_test', db_upload_data = db_upload_other)
     loop = asyncio.get_event_loop()
@@ -497,6 +538,9 @@ def plots_upload(state, ind=-1):
     # open hexmaps
     hexpaths = glob.glob(f'{hexpath}_*.png')
     for path in hexpaths:
+
+        compress_png(path)
+        
         if 'mean' in path:
             with open(path, 'rb') as f:
                 hexmean = f.read()
@@ -693,14 +737,18 @@ def fetch_sensor_iv(moduleserial):
 
 def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
 
-    lowBVruns = fetch_pedestal(moduleserial, 2, 300, modulestatus)
+    lowBVruns = fetch_pedestal(moduleserial, 1, 300, modulestatus)
+    if len(lowBVruns) == 0:
+        lowBVruns = fetch_pedestal(moduleserial, 2, 300, modulestatus)
+    if len(lowBVruns) == 0:
+        lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+
     midBVruns = fetch_pedestal(moduleserial, 300, 300, modulestatus)
+
     highBVruns = fetch_pedestal(moduleserial, 800, 300, modulestatus)
     if len(highBVruns) == 0:
         highBVruns = fetch_pedestal(moduleserial, 500, 300, modulestatus)
-    if len(lowBVruns) == 0:
-        lowBVruns = fetch_pedestal(moduleserial, 10, 300, modulestatus)
-        
+
     # backwards compatibility
     if len(lowBVruns) < 1 or len(midBVruns) < 5 or len(highBVruns) < 2 and (modulestatus == 'Completely Bonded' or modulestatus == 'Completely Encapsulated'):
         status = modulestatus.replace('Completely','Frontside')
@@ -730,7 +778,26 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
     calib_mask = celltype == 1
     uncon = (noise[norm_mask | calib_mask] <= unbondthresh) & (noise[norm_mask | calib_mask] > 0.)
     unconcells = cellid[norm_mask | calib_mask][uncon]
-            
+
+    # more sophisticated unbonded detection
+    bv1runs = fetch_pedestal(moduleserial, 1, 300, modulestatus)
+    bv10runs = fetch_pedestal(moduleserial, 10, 300, modulestatus)
+    bv100runs = fetch_pedestal(moduleserial, 100, 300, modulestatus)
+
+    if len(bv1runs) > 0 and len(bv10runs) > 0 or len(bv100runs) > 0:
+        bv1noise = np.array(bv1runs[-1]['adc_stdd'])
+        bv10noise = np.array(bv10runs[-1]['adc_stdd'])
+        bv100noise = np.array(bv100runs[-1]['adc_stdd'])
+        bv1t10ratio = np.array(bv1runs[-1]['adc_stdd']) / np.array(bv10runs[-1]['adc_stdd'])
+        bv10t100ratio = np.array(bv10runs[-1]['adc_stdd']) / np.array(bv100runs[-1]['adc_stdd'])
+
+        checksum = (((bv1noise < 1.2) & (bv1noise > 0.)).astype(int)
+                  + ((bv1t10ratio < 1.1) & (bv10noise > 0.) & (bv1noise < 2.)).astype(int) # bv1 noise check to catch flat noisy channels
+                  + ((bv10t100ratio < 1.1) & (bv100noise > 0.) & (bv1noise < 2.)).astype(int))
+        uncon2 = checksum >= 2 # pass at least two of three checks
+        # start using if necessary pedestal runs are present
+        unconcells = cellid[uncon2 & (norm_mask | calib_mask)]
+        
     # check dead channels
     ldeadcells = []
     for run in midBVruns[-5:]:
@@ -764,7 +831,8 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
         # median + 2 adc counts as temporary check for high noise? we'll see how it goes
         noisycell = cellid[norm_mask | calib_mask][(noise[norm_mask | calib_mask] - med_norm) > noisy_limit]
         lnoisycells.append(noisycell)
-        noisycells = reduce(np.union1d, lnoisycells)
+        #noisycells = reduce(np.union1d, lnoisycells)
+        noisycells = reduce(np.intersect1d, lnoisycells)
     for cell in noisycells:
         badcell.add(cell)
 
@@ -780,6 +848,68 @@ def readout_info(moduleserial, modulestatus = 'Completely Encapsulated'):
     print(f'  >> DBTools: uncon {unconcells} dead {deadcells} noisy {noisycells} grounded {groundedcells}')
     badfrac = len(badcell) / len(cellid[norm_mask | calib_mask])
     return unconcells, deadcells, noisycells, groundedcells, badcell, badfrac
+
+def hexaboard_readout_info(hxbserial, status = 'Untaped'):
+    
+    untrimmedruns = hexaboard_fetch_pedestal(hxbserial, None, status)
+    trimmedruns = hexaboard_fetch_pedestal(hxbserial, 0, status)
+
+    def sortkey(run):
+        dt = datetime.combine(run['date_test'], run['time_test'])
+        return int(dt.strftime("%Y%m%d%H%M%S"))
+
+    untrimmedruns.sort(key=sortkey)
+    trimmedruns.sort(key=sortkey)
+    
+    if len(trimmedruns) < 4 or len(untrimmedruns) < 2:
+        print(f' >> DBTools: not enough pedestal tests: {status} {len(untrimmedruns)} untrimmed {len(trimmedruns)} trimmed')
+        return None
+    
+    badcell = set()
+    runs = untrimmedruns[-2:] + trimmedruns[-4:]
+    
+    # check dead channels
+    ldeadcells = []
+    for run in runs:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        zeros = noise == 0
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        deadcell = cellid[zeros & (norm_mask | calib_mask)]
+        ldeadcells.append(deadcell)
+    # Find intersection
+    # require dead in all tests, trimmed and untrimmed
+    deadcells = reduce(np.intersect1d, ldeadcells)
+    for cell in deadcells:
+        badcell.add(cell)
+    
+    # check noisy channels
+    lnoisycells = []
+    for run in runs:
+        noise = np.array(run['adc_stdd'])
+        cellid = np.array(run['cell'])
+        celltype = np.array(run['channeltype'])
+        norm_mask = (celltype == 0) & (cellid > 0)
+        nc_mask = (celltype == 0) & (cellid < 0)
+        calib_mask = celltype == 1
+        med_norm = np.median(noise[norm_mask])
+        mean_norm = np.mean(noise[norm_mask])
+        std_norm = np.std(noise[norm_mask])
+        noisy_limit = 2.
+        # hxb standard def noise > 2 ADC counts
+        noisycell = cellid[norm_mask | calib_mask][(noise[norm_mask | calib_mask]) > noisy_limit]
+        lnoisycells.append(noisycell)
+    # require noisy in all trimmed tests
+    # maybe a bit tight but don't want to preemptively ground cells
+    noisycells = reduce(np.intersect1d, lnoisycells)
+    for cell in noisycells:
+        badcell.add(cell)
+
+    print(f'  >> DBTools: dead {deadcells} noisy {noisycells}')
+    return deadcells, noisycells
 
 def iv_info(moduleserial):
 
@@ -809,7 +939,7 @@ def assembly_info(moduleserial):
         print(f' >> DBTools: no assembly info')
         return None
 
-    return protoins[-1]['avg_thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['avg_thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg']
+    return protoins[-1]['avg_thickness'], protoins[-1]['flatness'], protoins[-1]['x_offset_mu'], protoins[-1]['y_offset_mu'], protoins[-1]['ang_offset_deg'], moduleins[-1]['avg_thickness'], moduleins[-1]['flatness'], moduleins[-1]['x_offset_mu'], moduleins[-1]['y_offset_mu'], moduleins[-1]['ang_offset_deg'], protoins[-1]['max_thickness'], moduleins[-1]['max_thickness']
 
 def summary_upload(moduleserial, qc_summary):
 
@@ -821,6 +951,15 @@ def summary_upload(moduleserial, qc_summary):
 
     print(f" >> DBTools: Uploaded to qc summary table for {moduleserial}")
     #ead_table('module_qc_summary')
+
+def upload_bonding_instructions(moduleserial, list_rebond=[], list_dead_ground=[], list_noisy_ground=[]):
+
+    coro = add_bonding_instructions(serial_remove_dashes(moduleserial), list_rebond=list_rebond, list_dead_ground=list_dead_ground, list_noisy_ground=list_noisy_ground)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    print(f" >> DBTools: Uploaded rebonding instructions for {moduleserial}")
+
     
 def add_RH_T(state, force=False):
     """
@@ -915,3 +1054,13 @@ def serial_remove_dashes(moduleserial):
         raise ValueError
         
     return undashedserial
+
+from PIL import Image
+def compress_png(image_path):
+    """Compress image before uploading to DB
+    """
+    img = Image.open(image_path)
+    img = img.convert("P", palette=Image.ADAPTIVE, colors=256) # limit the colors
+    img.save(image_path, optimize=True)
+    print(" >> DBTools: Image compressed")
+
