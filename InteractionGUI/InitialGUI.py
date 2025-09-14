@@ -18,14 +18,14 @@ def start_backend():
     thread.start()
 
 def start_backend():
-    # 手动创建 Config 和 Server
+    # create Config 和 Server manually
     config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
     server = uvicorn.Server(config)
 
-    # 保存到 backend.py 里的全局引用
+    # save to global reference in backend.py
     server_ref["server"] = server
 
-    # 在线程里跑 server.run()
+    # run server.run() in a thread
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
@@ -34,12 +34,15 @@ def start_backend():
 if __name__ == "__main__":
     start_backend()
 
-    webbrowser.open(front_path)
+    # not using frontend because for unknown reason it fails to automatically pop up sometimes
+    webbrowser.open("http://127.0.0.1:8000/")
+    print(">>> Frontend opened in browser")
 
     # Keep the main thread alive to keep the backend running
     try:
         while True:
             time.sleep(1)
+            # shutdown if backend asked to stop ("Close GUI" clicked)
             if server_ref["server"] and server_ref["server"].should_exit:
                     print(">>> Main loop exiting because backend asked to stop")
                     break

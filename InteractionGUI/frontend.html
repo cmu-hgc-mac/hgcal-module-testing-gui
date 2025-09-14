@@ -31,11 +31,16 @@
 
     // relate events to .action-btn
     document.querySelectorAll(".action-btn").forEach(button => {
-      button.addEventListener("click", () => {
-        const action = button.getAttribute("data-action");
-        callAPI(action);
-      });
+    button.addEventListener("click", async () => {
+      const action = button.getAttribute("data-action");
+      const data = await callAPI(action);
+
+      // close window if shutdown is successful
+      if (action === "shutdown" && data.status === "success") {
+        window.close();
+      }
     });
+  });
   </script>
 </body>
 </html>
