@@ -35,7 +35,7 @@ if __name__ == "__main__":
     start_backend()
 
     # not using frontend because for unknown reason it fails to automatically pop up sometimes
-    webbrowser.open("http://127.0.0.1:8000/")
+    webbrowser.open_new("http://127.0.0.1:8000/")
     print(">>> Frontend opened in browser")
 
     # Keep the main thread alive to keep the backend running

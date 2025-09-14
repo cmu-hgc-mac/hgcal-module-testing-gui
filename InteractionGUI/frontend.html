@@ -35,11 +35,20 @@
       const action = button.getAttribute("data-action");
       const data = await callAPI(action);
 
-      // close window if shutdown is successful
-      if (action === "shutdown" && data.status === "success") {
+      // close window if shutdown
+      if (action === "shutdown") {
         window.close();
       }
     });
+  });
+
+    // ensure backend shutdown on window close
+    window.addEventListener("beforeunload", async (event) => {
+    try {
+      await fetch("http://127.0.0.1:8000/shutdown", { method: "POST" });
+    } catch (err) {
+      console.log("Shutdown request failed:", err);
+    }
   });
   </script>
 </body>
