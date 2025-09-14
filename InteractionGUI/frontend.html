@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>InteractionGUI Web</title>
+</head>
+<body>
+  <h2>Module Interaction GUI</h2>
+
+  <!-- add data-action for each button-->
+  <button class="action-btn" data-action="run_test">Run Test</button>
+  <button class="action-btn" data-action="run_pedestal_test">Run Pedestal Test</button>
+  <button class="action-btn" data-action="shutdown">Close GUI</button>
+
+  <p id="output"></p>
+
+  <script>
+    // function to call backend APIs
+    async function callAPI(action) {
+      try {
+        const response = await fetch(`http://127.0.0.1:8000/${action}`, {
+          method: "POST"
+        });
+        const data = await response.json();
+        document.getElementById("output").textContent =
+          `${action} Response: ` + JSON.stringify(data);
+      } catch (error) {
+        document.getElementById("output").textContent =
+          `${action} Error: ` + error;
+      }
+    }
+
+    // relate events to .action-btn
+    document.querySelectorAll(".action-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        const action = button.getAttribute("data-action");
+        callAPI(action);
+      });
+    });
+  </script>
+</body>
+</html>
