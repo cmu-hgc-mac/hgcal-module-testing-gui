@@ -3,11 +3,112 @@
 <head>
   <title>InteractionGUI Web</title>
 </head>
+
+<!-- simple styling -->
+<style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    label {
+      font-weight: bold;
+    }
+    #result {
+      margin-left: 10px;
+      color: blue;
+    }
+  </style>
+
+
+
+
+<!-- GUI layout -->
 <body>
   <h2>Module Interaction GUI</h2>
+  
+  <!-- Module Setup Section -->
+  <fieldset>
+    <legend>Module Setup</legend>
+    
+    <!-- Radio buttons -->
+    <div>
+      <label><input type="radio" name="moduleType" value="Live"> Live Module</label>
+      <label><input type="radio" name="moduleType" value="Hexa"> Hexaboard</label>
+    </div>
+
+    <div>
+      Hexaboard Density:
+      <label><input type="radio" name="density" value="Low" checked> Low</label>
+      <label><input type="radio" name="density" value="High"> High</label>
+    </div>
+
+    <div>
+      ROC Version:
+      <label><input type="radio" name="roc" value="Pre" checked> Preseries</label>
+      <label><input type="radio" name="roc" value="SU02"> V3b SU02</label>
+      <label><input type="radio" name="roc" value="SU03"> V3b SU03</label>
+    </div>
+
+    <!-- Text inputs -->
+    <div>
+      <label> Module Index:
+        <input type="text" id="moduleIndexInput" placeholder="eg.123">
+      </label>
+      <button class="btn" onclick="clearInput('moduleIndexInput')">Clear</button>
+    </div>
+
+    <div>
+      <label> Scan QR Code:
+        <input type="text" id="qrInput" placeholder="320 - MM - TT [TT,TN, NN] NNNNNN">
+      </label>
+      <button class="btn" onclick="clearInput('qrInput')">Clear</button>
+    </div>
+
+    <div>
+      <label>Module Serial Number:</label>
+      <span id="serialDisplay"></span>
+    </div>
+
+
+    <div>
+      <label>Trophy Serial No.:
+        <input type="text" id="trophyInput">
+      </label>
+      <button class="btn" onclick="clearTrophy()">Clear</button>
+    </div>
+
+    <!-- Dropdown -->
+    <div>
+      <label>Inspector:
+        <select id="inspector">
+          <option value="">-- Select --</option>
+          <option value="Alice">Alice</option>
+          <option value="Bob">Bob</option>
+        </select>
+      </label>
+    </div>
+
+    <!-- Buttons -->
+    <div>
+      <button class="btn">Configure Test Stand</button>
+      <button class="btn">Only IV Test</button>
+    </div>
+
+    <!-- Checkboxes -->
+    <div>
+      <label><input type="checkbox" id="debug"> Debug Mode</label>
+      <label><input type="checkbox" id="skip"> Skip Electrical Checks</label>
+    </div>
+  </fieldset>
+
+
+
+
+
+
+
 
   <!-- add data-action for each button-->
-  <button class="action-btn" data-action="run_test">Run Test</button>
   <button class="action-btn" data-action="run_pedestal_test">Run Pedestal Test</button>
   <button class="action-btn" data-action="shutdown">Close GUI</button>
 
@@ -27,6 +128,11 @@
         document.getElementById("output").textContent =
           `${action} Error: ` + error;
       }
+    }
+
+    // clear input fields
+    function clearInput(inputId) {
+      document.getElementById(inputId).value = "";
     }
 
     // relate events to .action-btn

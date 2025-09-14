@@ -5,9 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from fastapi.responses import FileResponse
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 app = FastAPI()
-server_ref = {"server": None}  # 用 dict 存全局引用，避免作用域问题
+server_ref = {"server": None} 
 
 # allow frontend access
 app.add_middleware(
@@ -21,7 +22,7 @@ app.add_middleware(
 # events
 @app.get("/")
 def serve_frontend():
-    return FileResponse(os.path.abspath("frontend.html"))
+    return FileResponse(os.path.abspath("InteractionGUI/frontend.html"))
 
 @app.post("/shutdown")
 def shutdown():
