@@ -9,6 +9,7 @@
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
+      line-height: 1.6;
     }
     label {
       font-weight: bold;
@@ -17,6 +18,7 @@
       margin-left: 10px;
       color: blue;
     }
+    .hidden { display: none; } /* CSS class to hide elements */
   </style>
 
 
@@ -32,22 +34,39 @@
     
     <!-- Radio buttons -->
     <div>
-      <label><input type="radio" name="moduleType" value="Live"> Live Module</label>
-      <label><input type="radio" name="moduleType" value="Hexa"> Hexaboard</label>
+      <label><input type="radio" name="moduleType" value="Live" onclick="toggleOptions()"> Live Module</label>
+      <label><input type="radio" name="moduleType" value="Hexa" onclick="toggleOptions()"> Hexaboard</label>
     </div>
 
-    <div>
-      Hexaboard Density:
-      <label><input type="radio" name="density" value="Low" checked> Low</label>
-      <label><input type="radio" name="density" value="High"> High</label>
-    </div>
+    <!-- Live Module options -->
+    <fieldset id="liveOptions" class="hidden">
+      <legend>Live Module Options</legend>
+      <label>Module Index: <input type="text"></label><br>
+      <label>ROC Version:
+        <select>
+          <option>V3b SU02</option>
+          <option>V3b SU03</option>
+          <option>V3b SU04</option>
+        </select>
+      </label>
+    </fieldset>
 
-    <div>
-      ROC Version:
-      <label><input type="radio" name="roc" value="Pre" checked> Preseries</label>
-      <label><input type="radio" name="roc" value="SU02"> V3b SU02</label>
-      <label><input type="radio" name="roc" value="SU03"> V3b SU03</label>
-    </div>
+    <!-- Hexaboard options -->
+    <fieldset id="hexaOptions" class="hidden">
+      <legend>Hexaboard Options</legend>
+      <label>
+        Density:
+        <input type="radio" name="density" value="low"> Low
+        <input type="radio" name="density" value="high"> High
+      </label><br>
+      <label>Shape:
+        <select>
+          <option>Type A</option>
+          <option>Type B</option>
+          <option>Type C</option>
+        </select>
+      </label>
+    </fieldset>
 
     <!-- Text inputs -->
     <div>
@@ -74,7 +93,7 @@
       <label>Trophy Serial No.:
         <input type="text" id="trophyInput">
       </label>
-      <button class="btn" onclick="clearTrophy()">Clear</button>
+      <button class="btn" onclick="clearInput('trophyInput')">Clear</button>
     </div>
 
     <!-- Dropdown -->
@@ -115,6 +134,26 @@
   <p id="output"></p>
 
   <script>
+
+    //define functions
+    function clearInput(inputId) {
+      document.getElementById(inputId).value = "";
+    }
+
+    function toggleOptions() {
+      const selected = document.querySelector("input[name='moduleType']:checked").value;
+      const liveOptions = document.getElementById("liveOptions");
+      const hexaOptions = document.getElementById("hexaOptions");
+
+      if (selected === "Live") {
+        liveOptions.classList.remove("hidden");
+        hexaOptions.classList.add("hidden");
+      } else if (selected === "Hexa") {
+        hexaOptions.classList.remove("hidden");
+        liveOptions.classList.add("hidden");
+      }
+    }
+
     // function to call backend APIs
     async function callAPI(action) {
       try {
@@ -130,11 +169,7 @@
       }
     }
 
-    // clear input fields
-    function clearInput(inputId) {
-      document.getElementById(inputId).value = "";
-    }
-
+    
     // relate events to .action-btn
     document.querySelectorAll(".action-btn").forEach(button => {
     button.addEventListener("click", async () => {
