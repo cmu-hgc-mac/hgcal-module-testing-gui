@@ -54,16 +54,31 @@
     <!-- Hexaboard options -->
     <fieldset id="hexaOptions" class="hidden">
       <legend>Hexaboard Options</legend>
+
       <label>
-        Density:
+        Hexaboard Density:
         <input type="radio" name="density" value="low"> Low
         <input type="radio" name="density" value="high"> High
       </label><br>
-      <label>Shape:
+
+      <label>
+        Hexaboard Shape:
+        <input type="radio" name="shape" value="shape_Full" checked> Full
+        <input type="radio" name="shape" value="shape_Top"> Top
+        <input type="radio" name="shape" value="shape_Bottom"> Bottom
+        <input type="radio" name="shape" value="shape_Left"> Left
+        <input type="radio" name="shape" value="shape_Right"> Right
+        <input type="radio" name="shape" value="shape_Five"> Five
+      </label><br>
+
+      <label>
+        ROC Version:
         <select>
-          <option>Type A</option>
-          <option>Type B</option>
-          <option>Type C</option>
+          <option>Preseries</option>
+          <option>V3B SU02('2')</option>
+          <option>V3B SU03('B')</option>
+          <option>V3B SU04('4')</option>
+          <option>V3C</option>
         </select>
       </label>
     </fieldset>
