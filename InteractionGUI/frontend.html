@@ -14,6 +14,16 @@
     label {
       font-weight: bold;
     }
+    .container {
+      display: flex;           /* enable flex layout */
+      gap: 30px;               /* horizontal spacing */
+    }
+    .left, .right {
+      flex: 1;                 /* equal space distribution */
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
     #result {
       margin-left: 10px;
       color: blue;
@@ -27,76 +37,87 @@
 <!-- GUI layout -->
 <body>
   <h2>Module Interaction GUI</h2>
-  
-  <!-- Module Setup Section -->
-  <fieldset>
-    <legend>Module Setup</legend>
-    
-    <!-- Radio buttons -->
-    <div>
-      <label><input type="radio" name="moduleType" value="Live" onclick="toggleOptions()"> Live Module</label>
-      <label><input type="radio" name="moduleType" value="Hexa" onclick="toggleOptions()"> Hexaboard</label>
-    </div>
 
-    <!-- Live Module options -->
-    <fieldset id="liveOptions" class="hidden">
-      <legend>Live Module Options</legend>
-      <label>Module Index: <input type="text"></label><br>
-      <label>ROC Version:
-        <select>
-          <option>V3b SU02</option>
-          <option>V3b SU03</option>
-          <option>V3b SU04</option>
-        </select>
-      </label>
-    </fieldset>
-
-    <!-- Hexaboard options -->
-    <fieldset id="hexaOptions" class="hidden">
-      <legend>Hexaboard Options</legend>
-
+  <div class="container">
+    <!-- left column: Scan QR code and directly get Serial Number -->
+    <div class="left">
+      <h2> Module Serial Number</h2>
       <label>
-        Hexaboard Density:
-        <input type="radio" name="density" value="low"> Low
-        <input type="radio" name="density" value="high"> High
-      </label><br>
-
-      <label>
-        Hexaboard Shape:
-        <input type="radio" name="shape" value="shape_Full" checked> Full
-        <input type="radio" name="shape" value="shape_Top"> Top
-        <input type="radio" name="shape" value="shape_Bottom"> Bottom
-        <input type="radio" name="shape" value="shape_Left"> Left
-        <input type="radio" name="shape" value="shape_Right"> Right
-        <input type="radio" name="shape" value="shape_Five"> Five
-      </label><br>
-
-      <label>
-        ROC Version:
-        <select>
-          <option>Preseries</option>
-          <option>V3B SU02('2')</option>
-          <option>V3B SU03('B')</option>
-          <option>V3B SU04('4')</option>
-          <option>V3C</option>
-        </select>
-      </label>
-    </fieldset>
-
-    <!-- Text inputs -->
-    <div>
-      <label> Module Index:
-        <input type="text" id="moduleIndexInput" placeholder="eg.123">
-      </label>
-      <button class="btn" onclick="clearInput('moduleIndexInput')">Clear</button>
-    </div>
-
-    <div>
-      <label> Scan QR Code:
+        <label> Scan QR Code:
         <input type="text" id="qrInput" placeholder="320 - MM - TT [TT,TN, NN] NNNNNN">
       </label>
       <button class="btn" onclick="clearInput('qrInput')">Clear</button>
+      <p><strong>Module Info:</strong> <span id="result"></span></p>
     </div>
+
+    <!-- right column: Module Setup manually -->
+    <div class="right">
+      <h2> Module Setup</h2>
+      <!-- Module Setup Section -->
+      <fieldset>
+        <legend>Module Setup</legend>
+
+      <!-- Radio buttons -->
+      <div>
+        <label><input type="radio" name="moduleType" value="Live" onclick="toggleOptions()"> Live Module</label>
+        <label><input type="radio" name="moduleType" value="Hexa" onclick="toggleOptions()"> Hexaboard</label>
+      </div>
+
+      <!-- Live Module options -->
+      <fieldset id="liveOptions" class="hidden">
+        <legend>Live Module Options</legend>
+        <label>Module Index: <input type="text"></label><br>
+        <label>ROC Version:
+          <select>
+            <option>V3b SU02</option>
+            <option>V3b SU03</option>
+            <option>V3b SU04</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <!-- Hexaboard options -->
+      <fieldset id="hexaOptions" class="hidden">
+        <legend>Hexaboard Options</legend>
+
+        <label>
+          Hexaboard Density:
+          <input type="radio" name="density" value="low"> Low
+          <input type="radio" name="density" value="high"> High
+        </label><br>
+
+        <label>
+          Hexaboard Shape:
+          <input type="radio" name="shape" value="shape_Full" checked> Full
+          <input type="radio" name="shape" value="shape_Top"> Top
+          <input type="radio" name="shape" value="shape_Bottom"> Bottom
+          <input type="radio" name="shape" value="shape_Left"> Left
+          <input type="radio" name="shape" value="shape_Right"> Right
+          <input type="radio" name="shape" value="shape_Five"> Five
+        </label><br>
+
+        <label>
+          ROC Version:
+          <select>
+            <option>Preseries</option>
+            <option>V3B SU02('2')</option>
+            <option>V3B SU03('B')</option>
+            <option>V3B SU04('4')</option>
+            <option>V3C</option>
+          </select>
+        </label>
+
+        <div>
+          <label> Module Index:
+            <input type="text" id="moduleIndexInput" placeholder="eg.123">
+          </label>
+          <button class="btn" onclick="clearInput('moduleIndexInput')">Clear</button>
+        </div>
+      </fieldset>
+    </div>
+  </div><br>
+
+      <!-- Text inputs -->
 
     <div>
       <label>Module Serial Number:</label>
