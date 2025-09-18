@@ -7,7 +7,6 @@ import yaml
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
-import subprocess
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -1275,6 +1274,7 @@ while True:
         check_services(current_state)
 
     if event == 'Grade Module':
+
         if '320-X' in moduleserial:
             show_string("Can't grade hexaboard", field='Right')
             continue
@@ -1285,22 +1285,10 @@ while True:
         if not configuration['HasLocalDB']:
             show_string("Grading requires local db", field='Right')
             continue
-
-        try:
-            unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
-            #i_600v, i_850v = iv_info(moduleserial)                                                                                                                  
-            i_500v = iv_info(moduleserial)
-            pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, _, _ = assembly_info(moduleserial)
-        except TypeError:
-            show_string("Tests not complete", field='Right')
-            continue
-        if i_500v is None:
-            show_string("Tests not complete", field='Right')
-            continue
         
         print(f' >> TestingGUIBase: Grading {moduleserial}')
         qc_summary = grade_module(moduleserial)
-        summary_upload(moduleserial, qc_summary)
+        # summary_upload(moduleserial, qc_summary)
         
     # This shouldn't ever happen. To kill the window, kill it from the terminal window where you ran it
     # or press the 'Close GUI' button.

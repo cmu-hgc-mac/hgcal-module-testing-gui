@@ -7,7 +7,7 @@ import pickle
 from argparse import ArgumentParser
 from datetime import datetime 
 import os
-from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL, add_bonding_instructions
+from PostgresTools import upload_PostgreSQL, fetch_PostgreSQL, fetch_serial_PostgreSQL, add_bonding_instructions, get_pedestal, serial_remove_dashes, get_comments
 import pandas as pd
 import glob
 import asyncio
@@ -68,17 +68,19 @@ def fetch_pedestal(moduleserial, BV, trimBV, modulestatus):
     module serial number, bias voltage, and trimming conditions
     """
 
-    coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    # coro = fetch_serial_PostgreSQL('module_pedestal_test', serial_remove_dashes(moduleserial))
+    coro = get_pedestal(moduleserial, BV, trimBV, modulestatus)
     loop = asyncio.get_event_loop()
     result = loop.run_until_complete(coro)
 
     runs = []
     
     for r in result:
-        if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
-            runs.append(r)
+        # if r['bias_vol'] == BV and r['trim_bias_voltage'] == trimBV and r['status_desc'] == modulestatus:
+        #     runs.append(r)
+        runs.append(r)
 
-    return runs        
+    return runs     
         
 def hexaboard_fetch_pedestal(hxbserial, trimmed, status):
     """
@@ -640,60 +642,19 @@ def fetch_proto_inspect(moduleserial):
 
 def fetch_comments(moduleserial):
 
-    tables = ['baseplate', 'bp_inspect', 'sensor', 'hexaboard', 'hxb_inspect', 'hxb_pedestal_test', 'module_info', 'proto_assembly', 'proto_inspect', 'module_assembly', 'module_inspect', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap', 'module_pedestal_test', 'module_iv_test']
-    column = 'comment'
-
-    coro = fetch_serial_PostgreSQL('module_info', serial_remove_dashes(moduleserial))
-    loop = asyncio.get_event_loop()
-    result = loop.run_until_complete(coro)
-
-    runs = []
-    for r in result:
-        runs.append(r)
-
-    thisrun = runs[-1]
-    hxbser = thisrun['hxb_name']
-    senser = thisrun['sen_name']
-    bpser = thisrun['bp_name']
-
-    del runs
-
     comments = []
-    
-    for tab in tables:
 
-        if tab in ['baseplate', 'bp_inspect']:
-            ser = bpser
-        elif tab in ['sensor']:
-            ser = senser
-        elif tab in ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test']:
-            ser = hxbser
-        elif tab in ['proto_assembly', 'proto_inspect']:
-            ser = moduleserial.replace('M', 'P', 1) # protomodule serial number
-        else: # module
-            ser = moduleserial
+    try:
+        coro = get_comments(moduleserial)
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(coro)
 
-        try:
-            coro = fetch_serial_PostgreSQL(tab, serial_remove_dashes(ser))
-            loop = asyncio.get_event_loop()
-            result = loop.run_until_complete(coro)
-                        
-            runs = []
-            for r in result:
-                runs.append(r)
-                
-            thesecomments = []
-            for r in runs:
-                if r[column] is not None and r[column] != '' and r[column] != ' ':                
-                    if 'trimmed' not in r[column]:
-                        thesecomments.append(r[column])
+        for r in result:
+            comments.append(r)
 
-            if thesecomments != []:
-                comments.append(thesecomments)
-                
-        except Exception:
-            print('  -- DBTools comments exception; continuing:', traceback.format_exc())
-            
+    except Exception:
+        print('  -- DBTools comments exception; continuing:', traceback.format_exc())
+
     return comments
 
 def fetch_sensor_iv(moduleserial):
@@ -1035,25 +996,6 @@ def serial_add_dashes(moduleserial):
         raise ValueError
         
     return dashedserial
-
-def serial_remove_dashes(moduleserial):
-
-    if moduleserial.count('-') == 0:
-        return moduleserial
-    elif moduleserial.count('-') > 0 and moduleserial.count('-') < 4:
-        raise ValueError
-
-    undashedserial = moduleserial[0:3]+moduleserial[4:6]
-
-    if '320M' in undashedserial or '320P' in undashedserial: # live module
-        undashedserial += moduleserial[7:11]+moduleserial[12:14]+moduleserial[15:19]
-    elif '320X' in undashedserial: # hexaboard
-        undashedserial += moduleserial[7:10]+moduleserial[11:13]+moduleserial[14:19]
-    else:
-        print(undashedserial)
-        raise ValueError
-        
-    return undashedserial
 
 from PIL import Image
 def compress_png(image_path):

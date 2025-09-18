@@ -1212,13 +1212,22 @@ def module_rebond_window(state, uncon_and_ungrounded, noisycells, dead_and_ungro
     rebond.close()
         
 def grade_module(moduleserial):
-
+    start_time = time()
     unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
+    print("   >>>> readout_info: ", time() - start_time, "s")
+
+    start_time = time()
     #i_600v, i_850v = iv_info(moduleserial)                                                                                                                                           
     i_500v = iv_info(moduleserial)
+    print("   >>>> i_500v: ", time() - start_time, "s")
+
+    start_time = time()
     pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, pmaxthickness, mmaxthickness = assembly_info(moduleserial)
-    
+    print("   >>>> assembly_info: ", time() - start_time, "s")
+
+    start_time = time()
     comments = fetch_comments(moduleserial)
+    print("   >>>> comments: ", time() - start_time, "s")
 
     # four individual grades
     # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf

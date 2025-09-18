@@ -7,7 +7,37 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
+# Initiallize connection pool
+_pool = None
 
+async def _get_pool():
+    """Create the connection pool.
+    """
+
+    global _pool
+
+    if _pool is None:
+        _pool = await asyncpg.create_pool(
+            host=configuration['DBHostname'],
+            database=configuration['DBDatabase'],
+            user=configuration['DBUsername'],
+            password=configuration['DBPassword']
+        )
+
+    return _pool
+
+async def close_pool():
+    """Close the connection pool.
+    """
+
+    global _pool
+
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
+
+
+# Functions for uploading/fetching data to PostgreSQL
 def get_query_old(table_name):
     """
     General function for db get queries. Defines which columns and what order of columns are used by the db tools functions to 
@@ -62,59 +92,53 @@ async def upload_PostgreSQL(table_name, db_upload_data):
     """
     
     # create db connection
-    conn = await asyncpg.connect(
-        host = configuration['DBHostname'],
-        database = configuration['DBDatabase'],
-        user = configuration['DBUsername'],
-        password = configuration['DBPassword']
-    )
-    
+    pool = await _get_pool()
     print(f'  >> Postgres Tools: Connection successful.')
 
-    # define query to check if table exists
-    schema_name = 'public'
-    table_exists_query = """
-    SELECT EXISTS (
-        SELECT 1 
-        FROM information_schema.tables 
-        WHERE table_schema = $1 
-        AND table_name = $2
-    );
-    """
+    async with pool.acquire() as conn:
+        # define query to check if table exists
+        schema_name = 'public'
+        table_exists_query = """
+        SELECT EXISTS (
+            SELECT 1 
+            FROM information_schema.tables 
+            WHERE table_schema = $1 
+            AND table_name = $2
+        );
+        """
 
-    # check table exists and upload
-    table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
+        # check table exists and upload
+        table_exists = await conn.fetchval(table_exists_query, schema_name, table_name)  ### Returns True/False
 
-    if not table_exists:
-        print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')
-        await conn.close()
-        return
+        if not table_exists:
+            print(f'  >> PostgresTools: Table {table_name} does not exist in the database.')
+            await conn.close()
+            return
 
-    # remove key-value pairs from dict if not present in database table schema
-    col_query = f"""SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'; """
-    columns = await conn.fetch(col_query)
-    valid_columns = [row['column_name'] for row in columns]
-    
-    keylist = list(db_upload_data.keys())
-    for key in keylist:
-        if key not in valid_columns:
-            db_upload_data.pop(key, None)
-            print(f'  >> PostgresTools: upload key {key} not in schema of table {table_name}; removing from upload')
+        # remove key-value pairs from dict if not present in database table schema
+        col_query = f"""SELECT column_name FROM information_schema.columns WHERE table_name = '{table_name}'; """
+        columns = await conn.fetch(col_query)
+        valid_columns = [row['column_name'] for row in columns]
+        
+        keylist = list(db_upload_data.keys())
+        for key in keylist:
+            if key not in valid_columns:
+                db_upload_data.pop(key, None)
+                print(f'  >> PostgresTools: upload key {key} not in schema of table {table_name}; removing from upload')
 
-    # don't bother uploading an empty dictionary
-    if len(db_upload_data.keys()) == 0:
-        print(f'  >> PostgresTools: upload dictionary is empty, not uploading')
-        await conn.close()
-        return
-            
-    # new db uploading scheme
-    query = get_query(table_name, db_upload_data.keys())
-    print(f'  >> PostgresTools: Executing query: {query}')
-    await conn.execute(query, *db_upload_data.values())
+        # don't bother uploading an empty dictionary
+        if len(db_upload_data.keys()) == 0:
+            print(f'  >> PostgresTools: upload dictionary is empty, not uploading')
+            await conn.close()
+            return
+                
+        # new db uploading scheme
+        query = get_query(table_name, db_upload_data.keys())
+        print(f'  >> PostgresTools: Executing query: {query}')
+        await conn.execute(query, *db_upload_data.values())
 
-    print(f'  >> PostgresTools: Data is successfully uploaded to {table_name}!')
-    
-    await conn.close()
+        print(f'  >> PostgresTools: Data is successfully uploaded to {table_name}!')
+
 
 def get_query_read(table_name, part_name = None):
     """
@@ -154,28 +178,21 @@ async def fetch_PostgreSQL(table_name, part_name = None):
     """
 
     # instantiate db connection
-    conn = await asyncpg.connect(
-        host = configuration['DBHostname'],
-        database = configuration['DBDatabase'],
-        user = configuration['DBUsername'],
-	password = configuration['DBPassword']
-    )
+    pool = await _get_pool()
 
-    # fetch and return
-    value = await conn.fetch(get_query_read(table_name, part_name))
-    await conn.close()
-    return value
+    # fetech and return
+    query = get_query_read(table_name, part_name)
+    async with pool.acquire() as conn:
+        return await conn.fetch(query)
+
 
 async def fetch_serial_PostgreSQL(table_name, part_name):
-    """                                                                                                                                                                                                        General read function. Instantiates the connection to the database and reads the data. Returns the raw data.                                                                                               """
+    """                                                                                                                                                                                                        
+    General read function. Instantiates the connection to the database and reads the data. Returns the raw data.                                                                                               
+    """
 
     # instantiate db connection  
-    conn = await asyncpg.connect(
-	host = configuration['DBHostname'],
-	database = configuration['DBDatabase'],
-	user = configuration['DBUsername'],
-	password = configuration['DBPassword']
-    )
+    pool = await _get_pool()
 
     if table_name == 'module_pedestal_test' or table_name == 'module_iv_test':
         query = f"""SELECT *
@@ -232,9 +249,8 @@ async def fetch_serial_PostgreSQL(table_name, part_name):
             WHERE REPLACE(scratchpad_id,'-','') = '{part_name}';"""
 
     # fetch and return
-    value = await conn.fetch(query)
-    await conn.close()
-    return value
+    async with pool.acquire() as conn:
+        return await conn.fetch(query)
 
 async def add_bonding_instructions(part_name, list_rebond=[], list_dead_ground=[], list_noisy_ground=[]):
     """
@@ -242,35 +258,168 @@ async def add_bonding_instructions(part_name, list_rebond=[], list_dead_ground=[
     """
 
     # instantiate db connection
-    conn = await asyncpg.connect(
-        host = configuration['DBHostname'],
-        database = configuration['DBDatabase'],
-        user = configuration['DBUsername'],
-	password = configuration['DBPassword']
-    )
+    pool = await _get_pool()
 
-    if '320-X' in part_name or '320X' in part_name: # hexaboard
-        query = """UPDATE hexaboard
-                   SET mac_dead_pad_to_be_ground = $2,
-                       mac_noisy_pad_to_be_ground = $3
-                   WHERE 
-                   hxb_name = $1;"""
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if ('320-X' in part_name) or ('320X' in part_name):  # hexaboard
+                cmd = await conn.execute(
+                    """
+                    UPDATE hexaboard
+                    SET mac_dead_pad_to_be_ground = $2,
+                        mac_noisy_pad_to_be_ground = $3
+                    WHERE hxb_name = $1;
+                    """,
+                    part_name, list_dead_ground, list_noisy_ground
+                )
+                return cmd
 
-        value = await conn.execute(query, part_name, list_dead_ground, list_noisy_ground)
+            elif ('320-M' in part_name) or ('320M' in part_name):  # live module
+                cmd1 = await conn.execute(
+                    """
+                    UPDATE module_info
+                    SET dead_pad_to_be_ground = $2,
+                        noisy_pad_to_be_ground = $3,
+                        pad_to_attempt_rebond = $4
+                    WHERE module_name = $1;
+                    """,
+                    part_name, list_dead_ground, list_noisy_ground, list_rebond
+                )
+                # Update front_wirebond table to mark all wirebonds as not done
+                cmd2 = await conn.execute(
+                    """
+                    UPDATE front_wirebond
+                    SET wb_fr_marked_done = FALSE
+                    WHERE module_name = $1;
+                    """,
+                    part_name
+                )
+                return cmd1 + " & " + cmd2
 
-    elif '320-M' in part_name or '320M' in part_name: # live module
-        query = """UPDATE module_info
-                   SET dead_pad_to_be_ground = $2,
-                       noisy_pad_to_be_ground = $3,
-                       pad_to_attempt_rebond = $4
-                   WHERE 
-                   module_name = $1;"""
+            else:
+                return "UPDATE 0"
 
-        value = await conn.execute(query, part_name, list_dead_ground, list_noisy_ground, list_rebond)
+def serial_remove_dashes(moduleserial):
 
-        fr_wirebond_incomplete_query = f"UPDATE fr_wirebond SET wb_fr_marked_done = FALSE WHERE module_name = $1;"
-        value += await conn.execute(fr_wirebond_incomplete_query, part_name)
+    if moduleserial.count('-') == 0:
+        return moduleserial
+    elif moduleserial.count('-') > 0 and moduleserial.count('-') < 4:
+        raise ValueError
 
-    await conn.close()
-    return value
+    undashedserial = moduleserial[0:3]+moduleserial[4:6]
 
+    if '320M' in undashedserial or '320P' in undashedserial: # live module
+        undashedserial += moduleserial[7:11]+moduleserial[12:14]+moduleserial[15:19]
+    elif '320X' in undashedserial: # hexaboard
+        undashedserial += moduleserial[7:10]+moduleserial[11:13]+moduleserial[14:19]
+    else:
+        print(undashedserial)
+        raise ValueError
+        
+    return undashedserial
+
+
+async def get_pedestal(moduleserial, BV, trimBV, modulestatus):
+    """Fetches the pedestal data for a given module serial number, bias voltage, trim bias voltage, and module status (text).
+    """
+
+    # instantiate db connection  
+    pool = await _get_pool()
+
+    undashedserial = serial_remove_dashes(moduleserial)
+
+    query = f"""SELECT *
+        FROM module_pedestal_test
+        WHERE module_name = '{undashedserial}'
+            AND bias_vol = {BV}
+            AND trim_bias_voltage = {trimBV}
+            AND status_desc = '{modulestatus}'
+        ORDER BY date_test, time_test;""" 
+
+    async with pool.acquire() as conn:
+        return await conn.fetch(query)
+
+
+async def get_comments(moduleserial):
+    """Fetches all the comments from the related tables for a given module serial number.
+    """
+
+    # instantiate db connection  
+    pool = await _get_pool()
+    undashedserial = serial_remove_dashes(moduleserial)
+
+    # Define the list of tables and their columns to fetch comments from
+    TABLES_DICT = {
+        'bp_name': ['baseplate', 'bp_inspect'],
+        'sen_name': ['sensor'],
+        'hxb_name': ['hexaboard', 'hxb_inspect', 'hxb_pedestal_test'],
+        'proto_name': ['proto_assembly', 'proto_inspect'],
+       'module_name': ['module_assembly', 'module_inspect', 'back_wirebond', 'back_encap', 'front_wirebond', 'bond_pull_test', 'front_encap', 'module_pedestal_test', 'module_iv_test']
+    }
+
+    # Initialize the argument list and the union list for the query
+    arg_list = []
+    union_list = []
+
+    # Loop through the tables and their columns to fetch comments from
+    for key, values in TABLES_DICT.items():
+        for table in values:
+            # Define a new table for fetched comments
+            arg = f"""
+            {table}_comment AS (
+                SELECT DISTINCT ON ({table}.{key})
+                    {table}.comment
+                FROM {table}
+                JOIN mi ON REPLACE({table}.{key},'-','') = mi.{key}
+                WHERE 
+                    {table}.comment IS NOT NULL 
+                    AND {table}.comment != '' 
+                    AND {table}.comment != ' '
+                    AND {table}.comment != '""'
+                    AND {table}.comment != 'NULL'
+                    AND REPLACE({table}.{key},'-','') = mi.{key}
+            )
+            """
+            arg_list.append(arg)
+            # Add the new table to the union list
+            union_list.append(f"""SELECT * FROM {table}_comment""")
+
+    # Construct the query
+    query = rf"""
+    WITH mi AS (
+      SELECT
+        REPLACE(module_name,'-','') AS module_name,
+        REPLACE(bp_name,'-','')     AS bp_name,
+        REPLACE(sen_name,'-','')    AS sen_name,
+        REPLACE(hxb_name,'-','')    AS hxb_name,
+        REPLACE(proto_name,'-','')  AS proto_name
+      FROM module_info
+      WHERE REPLACE(module_name,'-','') = $1
+      LIMIT 1
+    ),
+
+    module_info_comment AS (
+        SELECT DISTINCT ON (module_info.module_name)
+            module_info.comment
+        FROM module_info
+        JOIN mi ON REPLACE(module_info.module_name,'-','') = mi.module_name
+        WHERE 
+            module_info.comment IS NOT NULL 
+            AND module_info.comment != '' 
+            AND module_info.comment != ' '
+            AND module_info.comment != '""'
+            AND module_info.comment != 'NULL'
+            AND REPLACE(module_info.module_name,'-','') = mi.module_name
+    ), 
+
+    {', '.join(arg_list)}
+
+    SELECT *
+    FROM (
+    SELECT * FROM module_info_comment
+    UNION ALL {' UNION ALL '.join(union_list)}
+    ) AS all_comments;
+    """
+
+    async with pool.acquire() as conn:
+        return await conn.fetch(query, undashedserial)
