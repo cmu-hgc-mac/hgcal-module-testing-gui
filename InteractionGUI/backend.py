@@ -1,7 +1,13 @@
+"""
+This python file implements the backend server for the Interaction GUI.
+It uses FastAPI to create a web server that can handle requests from the frontend.
+"""
+
+
 import sys
 import re
 import threading
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from fastapi.responses import FileResponse
@@ -22,6 +28,8 @@ app.add_middleware(
 
 
 # events
+
+# This function is used for ensuring the webpage/server can be properly activated.
 @app.get("/")
 def serve_frontend():
     return FileResponse(os.path.abspath("InteractionGUI/frontend.html"))
@@ -36,10 +44,21 @@ def shutdown():
     return {"status": "error", "message": "No server instance found"}
 
 
+@app.post("/check_valid_module_serial")
+async def get_module_info(request: Request):
+    data = await request.json()          # get the json data from frontend
+    print(f">>> Received data: {data}")  # print the received data for debugging
+    serial_number = data.get("serial")   # get the value of "serial"
+
+    # call the function to check the module serial
+    return check_valid_module_serial(serial_number)
+
 
 def check_valid_module_serial(moduleserial):
     """Check if the module or hexaboard serial is valid.
     """
+
+    print(f">>> Checking module serial: {moduleserial}")
 
     # Module: 320-[M][Resolution]-[Shape][Thickness][BP_Material][ROC]-[MAC]-[NNNN]
     pattern_module = r"^320-(ML|MH)-([FTBLR5])([123])([WTPC])([A-Z0-9])-([A-Z0-9]{2})-(\d{4})$"
@@ -104,4 +123,6 @@ def check_valid_module_serial(moduleserial):
         if valid:
             module_type = 'hxb'
 
-    return module_type, valid
+    print(f">>> Module serial '{moduleserial}' is of type '{module_type}' (valid={valid})")
+    # Not returning valid here because http can only return one value
+    return module_type

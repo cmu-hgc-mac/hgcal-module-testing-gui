@@ -1,3 +1,18 @@
+<!--
+This html file creates the webpage GUI for the testingGUI.
+
+The overall structure of this file is as following:
+1. HTML head section: includes title and basic styling
+2. Body section: contains the main GUI layout with forms, buttons, and input fields
+  To be more specific, the body section includes:
+    - Left column: QR code scanning input and display of module info
+    - Right column: Manual module setup with radio buttons, dropdowns, and checkboxes
+    - Action buttons at the bottom to trigger backend functions (e.g., run pedestal tests, shutdown)
+3. JavaScript section: defines functions for interactivity, API calls, and event handling (link to backend)
+
+-->
+
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -42,7 +57,7 @@
     <!-- left column: Scan QR code and directly get Serial Number -->
     <div class="left">
       <h2> Scan QR Code</h2>
-      <form onsubmit="updateSerial(); return false;">
+      <form onsubmit="serialNumInfo(); return false;">
         <label>
           <label> Scan QR Code:
           <input type="text" id="qrInput" placeholder="320 - MM - TT [TT,TN, NN] NNNNNN">
@@ -63,8 +78,8 @@
 
       <!-- Radio buttons -->
       <div>
-        <label><input type="radio" name="moduleType" value="Live" onclick="toggleOptions()"> Live Module</label>
-        <label><input type="radio" name="moduleType" value="Hexa" onclick="toggleOptions()"> Hexaboard</label>
+        <label><input type="radio" name="moduleType" value="live" onclick="toggleOptions()"> Live Module</label>
+        <label><input type="radio" name="moduleType" value="hxb" onclick="toggleOptions()"> Hexaboard</label>
       </div>
 
       <!-- Live Module options -->
@@ -176,6 +191,35 @@
   <script>
 
     //define functions
+    async function serialNumInfo() {
+      const serial = document.getElementById("qrInput").value;
+
+      document.getElementById("serialDisplay").textContent = serial;
+
+      try {
+        const response = await fetch("http://127.0.0.1:8000/check_valid_module_serial", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serial: serial })
+        });
+
+        const moduleValue = await response.text(); // get raw text response: "live", "hxb", or "invalid"
+
+        document.getElementById("result").innerText = "Backend returned: " + moduleValue;
+
+        // check radio button based on response
+        const radio = document.querySelector(`input[name="moduleType"][value="${moduleValue}"]`);
+        if (radio) {
+          radio.checked = true;
+        } else {
+          console.warn("No radio button matches:", moduleValue);
+        }
+
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    }
+
     function clearInput(inputId) {
       document.getElementById(inputId).value = "";
     }
@@ -185,22 +229,14 @@
       const liveOptions = document.getElementById("liveOptions");
       const hexaOptions = document.getElementById("hexaOptions");
 
-      if (selected === "Live") {
+      if (selected === "live") {
         liveOptions.classList.remove("hidden");
         hexaOptions.classList.add("hidden");
-      } else if (selected === "Hexa") {
+      } else if (selected === "hxb") {
         hexaOptions.classList.remove("hidden");
         liveOptions.classList.add("hidden");
       }
     }
-
-    function updateSerial() {
-    // Getting the value from QR code scanning input
-    const value = document.getElementById("qrInput").value;
-
-    // Putting it into the span
-    document.getElementById("serialDisplay").textContent = value;
-  }
 
     // function to call backend APIs
     async function callAPI(action) {

@@ -9,13 +9,7 @@ from backend import app,server_ref
 
 #path
 front_path = "InteractionGUI/frontend.html"
-
-def start_backend():
-    global server
-    config = uvicorn.Config("backend:app", host="127.0.0.1", port=8000, log_level="info")
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
+backend_url = "http://127.0.0.1:8000"
 
 def start_backend():
     # create Config 和 Server manually
@@ -29,13 +23,13 @@ def start_backend():
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
-    print(">>> Backend started at http://127.0.0.1:8000")
+    print(f">>> Backend started at {backend_url}")
 
 if __name__ == "__main__":
     start_backend()
 
     # not using frontend because for unknown reason it fails to automatically pop up sometimes
-    webbrowser.open_new("http://127.0.0.1:8000/")
+    webbrowser.open_new(backend_url)
     print(">>> Frontend opened in browser")
 
     # Keep the main thread alive to keep the backend running
