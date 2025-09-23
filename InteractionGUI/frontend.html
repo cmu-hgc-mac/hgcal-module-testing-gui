@@ -203,7 +203,8 @@ The overall structure of this file is as following:
           body: JSON.stringify({ serial: serial })
         });
 
-        const moduleValue = await response.text(); // get raw text response: "live", "hxb", or "invalid"
+        let moduleValue = await response.text(); // get raw text response: "live", "hxb", or "invalid"
+        moduleValue = moduleValue.trim().replace(/^"(.*)"$/, "$1"); // clean up quotes if any
 
         document.getElementById("result").innerText = "Backend returned: " + moduleValue;
 
@@ -211,6 +212,7 @@ The overall structure of this file is as following:
         const radio = document.querySelector(`input[name="moduleType"][value="${moduleValue}"]`);
         if (radio) {
           radio.checked = true;
+          toggleOptions(); // show/hide options based on selection
         } else {
           console.warn("No radio button matches:", moduleValue);
         }

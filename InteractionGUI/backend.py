@@ -53,7 +53,6 @@ async def get_module_info(request: Request):
     # call the function to check the module serial
     return check_valid_module_serial(serial_number)
 
-
 def serial_remove_dashes(moduleserial):
 
     if moduleserial.count('-') == 0:
@@ -73,9 +72,6 @@ def serial_remove_dashes(moduleserial):
         
     return undashedserial
 
-
-
-
 def serial_add_dashes(moduleserial):
 
     if moduleserial.count('-') == 4:
@@ -93,7 +89,6 @@ def serial_add_dashes(moduleserial):
         raise ValueError
         
     return dashedserial
-
 
 def check_valid_module_serial(moduleserial):
     """Check if the module or hexaboard serial is valid.
