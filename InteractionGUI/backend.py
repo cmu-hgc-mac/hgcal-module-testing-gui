@@ -97,7 +97,10 @@ def check_valid_module_serial(moduleserial):
     print(f">>> Checking module serial: {moduleserial}")
 
     # add dashes
-    moduleserial = serial_add_dashes(moduleserial)
+    try:
+        moduleserial = serial_add_dashes(moduleserial)
+    except:
+        return "Invalid Input"
 
     # Module: 320-[M][Resolution]-[Shape][Thickness][BP_Material][ROC]-[MAC]-[NNNN]
     pattern_module = r"^320-(ML|MH)-([FTBLR5])([123])([WTPC])([A-Z0-9])-([A-Z0-9]{2})-(\d{4})$"
