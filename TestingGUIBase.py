@@ -7,6 +7,8 @@ import yaml
 from datetime import datetime, timedelta
 import os
 from pathlib import Path
+import tkinter as tk
+import subprocess
 
 """
 This script creates and runs the main GUI window for the testing system. It firsts establishes a theme and sets some functions, 
@@ -138,7 +140,7 @@ modulesetup = [[sg.Radio('Live Module', 1, key="-IsLive-", enable_events=True), 
                [sg.Text("Test Stand IP: "), sg.Combo(configuration['FPGAHostname'], default_value=configuration['FPGAHostname'][0], key="-FPGAHostname-")],
                [sg.Text("Inspector: "), sg.Combo(configuration['Inspectors'], key="-Inspector-")],
                [sg.Text("Module Status: ", key="-Mod-Status-Text-"), sg.Combo(['                   '], key="-Module-Status-")], # blank replaced dynamically when live/hxb specified
-               [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
+               [sg.Button("Configure Test Stand"), sg.Button('Only IV Test'), sg.Button('Restart Keyboard'), sg.Text('', visible=False, key='-Display-Str-Left-')]]
 
 # Select Tests fields only shown if able to bias the module
 BVonly = [[sg.Text('Bias Voltage (per run): '),
@@ -370,6 +372,20 @@ basewindow['End Session'].update(disabled=True)
 clear_tests()
 clear_setup()
 
+# Re-assign focus to entry fields when clicked (to avoid focus issues in PySimpleGUI)
+root: tk.Tk = basewindow.TKroot
+def on_entry_click(event):
+    try:
+        root.grab_release()
+    except tk.TclError:
+        pass
+    # def set_and_print(w=event.widget):
+    #     w.focus_set()
+    #     print(f'Set focus to {w}')
+    event.widget.after_idle(lambda w=event.widget: w.focus_set())
+    # event.widget.after_idle(set_and_print)
+root.bind_class('Entry', '<Button-1>', on_entry_click, add='+')
+
 # Main window loop
 while True:
 
@@ -377,7 +393,7 @@ while True:
     # a field is modified. It does _not_ run continually.
     
     event, values = basewindow.read()
-    basewindow.maximize() # Fullscreen
+    # basewindow.maximize() # Fullscreen
    
     SetLED(basewindow, '-Debug-Mode-', 'green' if values['-DEBUG-MODE-'] else 'red')
     DEBUG_MODE = values['-DEBUG-MODE-']        
@@ -397,6 +413,9 @@ while True:
 
     if event == 'Clear':
         basewindow['-Scanned-QR-Code-'].update(value='')
+    
+    if event == 'Restart Keyboard':
+        subprocess.run(['bash', '-c', 'ibus restart'])
 
     if event == '-Trophy-Clear-':
         basewindow['-Trophy-Serial-'].update(value='')
