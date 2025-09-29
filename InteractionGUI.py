@@ -1,3 +1,4 @@
+import re
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -21,7 +22,7 @@ configuration = {}
 with open('configuration.yaml', 'r') as file:
     configuration = yaml.safe_load(file)
 
-from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments, serial_remove_dashes, add_RH_T, iv_save
+from DBTools import pedestal_upload, iv_upload, plots_upload, other_test_upload, fetch_sensor_iv, readout_info, iv_info, assembly_info, fetch_comments, serial_remove_dashes, serial_add_dashes,add_RH_T, iv_save
 
 lgfont = ('Arial', 2*int(configuration['DefaultFontSize']))
 sg.set_options(font=("Arial", int(configuration['DefaultFontSize'])))
@@ -84,7 +85,7 @@ def waiting_window(message, title=None, description=None):
     return window
 
     
-def end_session(state):
+def end_session(state, module_no=None):
     """
     Ends the testing session. The state of the testing system is contained in the `state` dictionary; this 
     function uses those flags to tell the user what must be done (and in what order) to safely shut down the
@@ -97,8 +98,13 @@ def end_session(state):
     """
 
     # read density and shape from module serial
-    density = state['-Module-Serial-'].split('-')[1][1]
-    shape = state['-Module-Serial-'].split('-')[2][0]
+    if module_no:
+        density = state[f'-Module-Serial-{module_no}-'].split('-')[1][1]
+        shape = state[f'-Module-Serial-{module_no}-'].split('-')[2][0]
+    else:
+        density = state['-Module-Serial-'].split('-')[1][1]
+        shape = state['-Module-Serial-'].split('-')[2][0]
+
     if density == 'L':
         if shape not in ['F', 'L', 'R', 'T', 'B', '5']:
             raise NotImplementedError
@@ -201,7 +207,7 @@ def update_state(state, field, val, color=None):
         SetLED(state['basewindow'], field, color)
     event, values = state['basewindow'].read(timeout=10)
 
-def initial_module_checks(state):
+def initial_module_checks(state, module_no=None):
     """
     Guides the user through initial checks to ensure the module is safe to test. Right now, this involves
     measuring pad resistance, measuring the DC power on the same pads, and verifying the behavior under
@@ -213,8 +219,13 @@ def initial_module_checks(state):
     """
 
     # read density and shape from module serial
-    density = state['-Module-Serial-'].split('-')[1][1]
-    shape = state['-Module-Serial-'].split('-')[2][0]
+    if module_no:
+        density = state[f'-Module-Serial-{module_no}-'].split('-')[1][1]
+        shape = state[f'-Module-Serial-{module_no}-'].split('-')[2][0]
+    else:
+        density = state['-Module-Serial-'].split('-')[1][1]
+        shape = state['-Module-Serial-'].split('-')[2][0]
+
     if density == 'L':
         if shape not in ['F', 'L', 'R', 'T', '5', 'B']:
             raise NotImplementedError
@@ -230,7 +241,7 @@ def initial_module_checks(state):
         ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
         sleep(2)
         ending.close()
-        end_session(state)
+        end_session(state, module_no)
         return 'END'
         
     do_something_window("Ensure you are grounded (i.e. with grounding strap)", "Grounded", title="Ground Yourself")
@@ -280,13 +291,13 @@ def initial_module_checks(state):
                 noshorts = all([values[f"-{pad}-No-Short-"] for pad in thesepads])
                 if not noshorts:
                     window.close()
-                    end_session(state)
+                    end_session(state, module_no)
                     return 'END'
                 else:
                     break
             if event == sg.WIN_CLOSED:
                 window.close()
-                end_session(state)
+                end_session(state, module_no)
                 return 'END'
 
         window.close()
@@ -330,7 +341,7 @@ def initial_module_checks(state):
                 allcorr = all([values[f"-{pad}-corr-"] for pad in thesepads])
                 if not allcorr:
                     window.close()
-                    end_session(state)
+                    end_session(state, module_no)
                     return 'END'
                 else:
                     break
@@ -338,7 +349,7 @@ def initial_module_checks(state):
                 break
             if event == sg.WIN_CLOSED or event == "Power incorrect":
                 window.close()
-                end_session(state)
+                end_session(state, module_no)
                 return 'END'
                 
         window.close()
@@ -475,13 +486,13 @@ def check_leakage_current(state):
                 break
             if event=="End Test":
                 window.close()
-                end_session(state)
+                end_session(state, module_no)
                 return 'END'
                 
         window.close()
     return 'CONT'
 
-def configure_test_stand(state, fpgahostname):
+def configure_test_stand(state, fpgahostname, module_no=None):
     """
     Guides the user through connecting the various boards and then handles the startup of the testing system. At
     the moment, it assumes the DCDC has already been connected but is not powered. The FPGA test stand is added to
@@ -489,10 +500,14 @@ def configure_test_stand(state, fpgahostname):
     detect errors in the firmware or services, the function returns 'END' after ending the sesion; if all succeed, 
     it returns 'CONT'.
     """
-    
     # read density and shape from module serial
-    density = state['-Module-Serial-'].split('-')[1][1]
-    shape = state['-Module-Serial-'].split('-')[2][0]
+    if module_no:
+        density = state[f'-Module-Serial-{module_no}-'].split('-')[1][1]
+        shape = state[f'-Module-Serial-{module_no}-'].split('-')[2][0]
+    else:
+        density = state['-Module-Serial-'].split('-')[1][1]
+        shape = state['-Module-Serial-'].split('-')[2][0]
+    
     if density == 'L':
         if shape not in ['F', 'L', 'R', 'T', 'B', '5']:
             raise NotImplementedError
@@ -527,7 +542,7 @@ def configure_test_stand(state, fpgahostname):
         sleep(5)
         ts = None
     else:
-        ts = FPGATestStand(fpgahostname, state['-Module-Serial-'], fpgatype=state['-FPGA-Type-']) # will take some time if the FPGA was just powered
+        ts = FPGATestStand(fpgahostname, state['-Module-Serial-'], fpgatype=state['-FPGA-Type-'], trophyserial=state['-Trophy-Serial-']) # will take some time if the FPGA was just powered
     connecting.close()
     update_state(state, '-Hexactrl-Accessed-', True, 'green')
     update_state(state, 'ts', ts)
@@ -547,7 +562,7 @@ def configure_test_stand(state, fpgahostname):
         ending = waiting_window("Firmware loading error or unable to find ROC channels. Exiting...", title="Error in Firmware")
         sleep(2)
         ending.close()
-        end_session(state)
+        end_session(state, module_no)
         return 'END'
 
     starting = waiting_window("Starting services on test stand...", title="Starting Services...", description='systemctl restart daq-server && systemctl restart i2c-server')
@@ -563,7 +578,7 @@ def configure_test_stand(state, fpgahostname):
         ending = waiting_window("Error in FPGA services. Exiting...", title="Error in Services")
         sleep(2)
         ending.close()
-        end_session(state)
+        end_session(state, module_no)
         return 'END'
 
     daq = waiting_window("Starting services on PC...", title="Starting Services...", description='systemctl restart daq-client')
@@ -577,7 +592,7 @@ def configure_test_stand(state, fpgahostname):
             ending = waiting_window("Can't find hexactrl-sw on PC. Exiting...", title="Error on PC")
             sleep(2)
             ending.close()
-            end_session(state)
+            end_session(state, module_no)
             return 'END'
 
     daq.close()
@@ -1210,24 +1225,23 @@ def module_rebond_window(state, uncon_and_ungrounded, noisycells, dead_and_ungro
             break
 
     rebond.close()
-        
+
 def grade_module(moduleserial):
-    start_time = time()
-    unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
-    print("   >>>> readout_info: ", time() - start_time, "s")
 
-    start_time = time()
-    #i_600v, i_850v = iv_info(moduleserial)                                                                                                                                           
-    i_500v = iv_info(moduleserial)
-    print("   >>>> i_500v: ", time() - start_time, "s")
+    try:
+        unconcells, deadcells, noisycells, groundedcells, badcell, badfrac = readout_info(moduleserial)
+        #i_600v, i_850v = iv_info(moduleserial)                                                                                                                                           
+        i_500v = iv_info(moduleserial)
+        pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, pmaxthickness, mmaxthickness = assembly_info(moduleserial)
+        comments = fetch_comments(moduleserial)
 
-    start_time = time()
-    pthickness, pflatness, pxoffset, pyoffset, pangoffset, mthickness, mflatness, mxoffset, myoffset, mangoffset, pmaxthickness, mmaxthickness = assembly_info(moduleserial)
-    print("   >>>> assembly_info: ", time() - start_time, "s")
+    except TypeError:
+        print("Tests not complete")
+        return
 
-    start_time = time()
-    comments = fetch_comments(moduleserial)
-    print("   >>>> comments: ", time() - start_time, "s")
+    if i_500v is None:
+        print("Tests not complete")
+        return
 
     # four individual grades
     # last updated 2025/4/7 by adapting https://indico.cern.ch/event/1523208/contributions/6408499/attachments/3034525/5358749/ModuleProdNumbers_Mar19_2025.pdf
@@ -1362,3 +1376,127 @@ def grade_module_window(moduleserial, qc_summary):
     comment = comment.replace('"', '`')
     qc_summary['comments_all'] = comment
     return qc_summary
+
+def check_serial(moduleserial):
+    """Check if the module or hexaboard serial is valid.
+    """
+    # Module: 320-[M][Resolution]-[Shape][Sensor_Thickness][BP_Material][ROC]-[MAC]-[NNNN]
+    pattern_module = r"^320-(ML|MH)-([FTBLR5])([123])([WTC])([A-Z0-9])-([A-Z]{2})-(\d{4})$"
+    # Hxb: 320-[X][Resolution]-[Shape][Version][ROC]-[PCB][Assembly]-[NNNNN]
+    pattern_hxb    = r"^320-(XL|XH)-([FTBLR5])([0-4])([A-Z0-9])-([A-Z])([A-Z])-\d{5}$"
+
+    match_module = re.match(pattern_module, moduleserial)
+    match_hxb = re.match(pattern_hxb, moduleserial)
+
+    # valid ROC codes
+    valid_roc_codes = ['X', '1', '2', '3', '4', 'C', 'B', 'D', 'E']
+
+    # Initialize the output result
+    module_type = 'invalid'
+    valid = False
+
+    # -------- MODULE CHECK --------
+    if match_module:
+        major_type = match_module.group(1)  # ML or MH
+        shape = match_module.group(2)
+        thickness = match_module.group(3)
+        material = match_module.group(4)
+        roc_code = match_module.group(5)
+
+        valid = True    # temp-assert it to be valid
+
+        # HD modules (MH) cannot have shape = '5'
+        if major_type == 'MH' and shape == '5':
+            valid = False
+
+        # Valid sensor thickness
+        valid_thickness = {
+            'ML': ['2', '3'],  # 200/300 µm
+            'MH': ['1', '2'],  # 120/200 µm
+        }
+        if thickness not in valid_thickness[major_type]:
+            valid = False
+
+        # Valid ROC code
+        if roc_code not in valid_roc_codes:
+            valid = False
+
+        if valid:
+            module_type = 'live'
+
+    # -------- HXB CHECK --------
+    elif match_hxb:
+        major_type = match_hxb.group(1)  # XL or XH
+        shape = match_hxb.group(2)
+        roc_code = match_hxb.group(4)
+
+        valid = True    # temp-assert it to be valid
+
+        # HD modules (XH) cannot have shape = '5'
+        if major_type == 'XH' and shape == '5':
+            valid = False
+        
+        # Valid ROC code
+        if roc_code not in valid_roc_codes:
+            valid = False
+
+        if valid:
+            module_type = 'hxb'
+
+    return module_type, valid
+
+def update_Module_Serial(basewindow, module_no, scannedcode, state):
+    """Updates the module serial number in the GUI state after scanning or entering it.
+    """
+    # Add dashes if not present
+    if '-' not in scannedcode:
+        try:
+            moduleserial = serial_add_dashes(scannedcode)
+        except:
+            moduleserial = None
+    else:
+        moduleserial = scannedcode
+    
+    # Check if the serial number is valid
+    if moduleserial:
+        module_type, valid = check_serial(moduleserial)
+
+        if valid and module_type == 'live':
+            basewindow[f'-Module-Serial-{module_no}-'].update(value=moduleserial)
+            basewindow[f'-BV-Menu-{module_no}-'].update(visible=True)
+            state[f'-Module-Serial-{module_no}-'] = moduleserial
+            state[f'Module-Status-{module_no}-'] = 'Bolted' # default status when serial entered
+            SetLED(basewindow, '-Live-Module-', 'green')
+
+        elif valid and module_type == 'hxb':
+            basewindow[f'-Module-Serial-{module_no}-'].update(value=moduleserial)
+            basewindow[f'-BV-Menu-{module_no}-'].update(visible=False)
+            state[f'-Module-Serial-{module_no}-'] = moduleserial
+            SetLED(basewindow, '-Live-Module-', 'black')
+
+        else:
+            basewindow[f'-Module-Serial-{module_no}-'].update(value='')
+
+def handle_grade_module(basewindow, module_no):
+    """Handles the grading of the module when the "Grade All Modules" button is pressed.
+    """
+
+    if basewindow[f'-Module-Serial-{module_no}-'].get():
+        moduleserial = basewindow[f'-Module-Serial-{module_no}-'].get()
+    else:
+        print(f" -- TestingGUIBase: No module serial found for module {module_no}")
+        return
+
+    if '320-X' in moduleserial and moduleserial:
+        print("Can't grade hexaboard")
+        return
+    
+    if not configuration['HasLocalDB']:
+        print("Grading requires local db")
+        return
+    
+    print(f' >> TestingGUIBase: Grading {moduleserial}')
+    qc_summary = grade_module(moduleserial)
+    
+    if qc_summary:
+        summary_upload(moduleserial, qc_summary)
