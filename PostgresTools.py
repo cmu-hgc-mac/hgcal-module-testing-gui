@@ -423,3 +423,44 @@ async def get_comments(moduleserial):
 
     async with pool.acquire() as conn:
         return await conn.fetch(query, undashedserial)
+
+async def async_module_exists(moduleserial):
+
+    # instantiate db connection
+    pool = await _get_pool()
+    undashedserial = serial_remove_dashes(moduleserial)
+
+    query = f"""SELECT COUNT(1)
+                FROM module_info
+                WHERE module_name = '{undashedserial}';"""
+
+    async with pool.acquire() as conn:
+        return await conn.fetch(query)
+
+def module_exists(moduleserial):
+
+    coro = async_module_exists(moduleserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    return result[0][0] > 0
+
+async def async_hxb_exists(hxbserial):
+
+    pool = await _get_pool()
+    undashedserial = serial_remove_dashes(hxbserial)
+
+    query = f"""SELECT COUNT(1)
+                FROM hexaboard
+                WHERE hxb_name = '{undashedserial}';"""
+
+    async with pool.acquire() as conn:
+        return await conn.fetch(query)
+
+def hxb_exists(hxbserial):
+
+    coro = async_hxb_exists(hxbserial)
+    loop = asyncio.get_event_loop()
+    result = loop.run_until_complete(coro)
+
+    return result[0][0] > 0
